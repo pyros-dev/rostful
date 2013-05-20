@@ -1,0 +1,42 @@
+#!/usr/bin/env python
+
+import roslib
+roslib.load_manifest('rostful')
+import rospy
+import rostful.server
+import rostful.message_conversion as msgconv
+
+import argparse
+
+def main():
+	rospy.init_node('server',anonymous=True,disable_signals=True)
+	
+	parser = argparse.ArgumentParser()
+	
+	parser.add_argument('services',nargs='+')
+	
+	parser.add_argument('--host',default='')
+	parser.add_argument('-p','--port',type=int,default=8080)
+	
+	args = parser.parse_args(rospy.myargv()[1:])
+	
+	try:
+		#server = HTTPServer(('', PORT_NUMBER), Handler)
+		server = rostful.server.RostfulServer((args.host, args.port))
+		print 'Started server on port %d' % args.port
+		
+		for service in args.services:
+			server.add_service(service)
+			print 'added service %s' % service
+		
+		#Wait forever for incoming http requests
+		server.serve_forever()
+		
+	except KeyboardInterrupt:
+		#print '^C received, shutting down the web server'
+		server.socket.close()
+		rospy.signal_shutdown('Closing')
+
+
+if __name__ == '__main__':
+	main()

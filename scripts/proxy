@@ -1,0 +1,26 @@
+#!/usr/bin/env python
+
+import roslib
+roslib.load_manifest('rostful')
+import rospy
+import rostful.proxy
+
+import argparse
+
+if __name__ == '__main__':
+	rospy.init_node('wsproxy',anonymous=True)
+	
+	parser = argparse.ArgumentParser()
+	
+	parser.add_argument('url')
+	
+	parser.add_argument('--test',action='store_true',default=False)
+	
+	args = parser.parse_args(rospy.myargv()[1:])
+	
+	if not args.url.startswith('http'):
+		args.url = 'http://' + args.url
+	
+	proxy = rostful.proxy.RostfulServiceProxy(args.url,args.test)
+	
+	rospy.spin()

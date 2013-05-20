@@ -1,0 +1,15 @@
+<package>
+  <description brief="rostful">
+
+     rostful
+
+  </description>
+  <author>Ben Kehoe</author>
+  <license>BSD</license>
+  <review status="unreviewed" notes=""/>
+  <url>http://ros.org/wiki/rostful</url>
+  <depend package="rospy"/>
+
+</package>
+
+
