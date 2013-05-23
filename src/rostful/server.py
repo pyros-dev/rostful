@@ -15,7 +15,7 @@ if JSON:
 else:
 	from StringIO import StringIO
 
-from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
+from wsgiref.simple_server import make_server
 
 class Service:
 	def __init__(self,service_name,service_type):
@@ -55,76 +55,10 @@ class Service:
 
 CONFIG_PATH = '_config'
 
-class Handler(BaseHTTPRequestHandler):
-	
-	
-	def do_GET(self):
-		if not self.path.endswith('/' + CONFIG_PATH):
-			self.send_error(404)
-			return
-		if self.path == '/' + CONFIG_PATH:
-			d = {'type': 'manifest', 'services': [], 'topics': []}
-			for service_name, service in self.server.services.iteritems():
-				srv_d = {'url': service_name, 'rostype': service.rostype_name}
-				d['services'].append(srv_d)
-			json_config = json.dumps(d)
-			
-			self.send_response(200)
-			self.send_header('Content-type','application/json')
-			self.end_headers()
-			
-			self.wfile.write(json_config)
-		else:
-			name = self.path[1:-(len(CONFIG_PATH)+1)]
-			if self.server.services.has_key(name):
-				service_name = name
-				
-				service = self.server.services[service_name]
-				d = {'type': 'service', 'url': service_name, 'rostype': service.rostype_name}
-				json_config = json.dumps(d)
-				
-				self.send_response(200)
-				self.send_header('Content-type','application/json')
-				self.end_headers()
-				
-				self.wfile.write(json_config)
-			else:
-				self.send_error(404)
-				return
-	
-	def do_POST(self):
-		service_name =  self.path[1:]
-		if not self.server.services.has_key(service_name):
-			self.send_error(404)
-			return
-		service = self.server.services[service_name]
-		length = int(self.headers.getheader('content-length'))
-		req = json.loads(self.rfile.read(length))
-		#from test_ros.srv import *
-		#rosreq = AddTwoIntsRequest(1,2)
-		#req = msgconv.extract_values(rosreq)
-		
-		try:
-			#print 'calling service ', service.name
-			
-			resp = service.call(req)
-			resp = json.dumps(resp)
-			
-			self.send_response(200)
-			self.send_header('Content-type','application/json')
-			self.end_headers()
-			
-			self.wfile.write(resp)
-		except Exception, e:
-			print type(e), e
-			#TODO: handle error
-			pass
-
-class RostfulServer(HTTPServer):
-	def __init__(self,server_address):
-		HTTPServer.__init__(self, server_address, Handler)
+class RostfulServer:
+	def __init__(self):
 		self.services = {}
-	
+		
 	def add_service(self,service_name,ws_name = None):
 		resolved_service_name = rospy.resolve_name(service_name)
 		service_type = rosservice.get_service_type(resolved_service_name)
@@ -135,3 +69,87 @@ class RostfulServer(HTTPServer):
 			ws_name = ws_name[1:]
 		
 		self.services[ws_name] = Service(service_name,service_type)
+	
+	def wsgifunc(self):
+		return self._handle
+	
+	def _handle(self,environ,start_response):
+		if environ['REQUEST_METHOD'] == 'GET':
+			return self._handle_get(environ,start_response)
+		elif environ['REQUEST_METHOD'] == 'POST':
+			return self._handle_post(environ,start_response)
+		else:
+			#TODO: flip out
+			pass
+	
+	def _handle_get(self,environ,start_response):
+		path = environ['PATH_INFO']
+		print path
+		if not path.endswith('/' + CONFIG_PATH):
+			print '404'
+			status = '404 Not Found'
+			headers = [('Content-type', 'text/plain')]
+			start_response(status, headers)
+			return []
+		if path == '/' + CONFIG_PATH:
+			d = {'type': 'manifest', 'services': [], 'topics': []}
+			for service_name, service in self.services.iteritems():
+				srv_d = {'url': service_name, 'rostype': service.rostype_name}
+				d['services'].append(srv_d)
+			json_config = json.dumps(d)
+			
+			status = '200 OK'
+			headers = [('Content-type', 'application/json'),('Content-length',str(len(json_config)))]
+			start_response(status, headers)
+			return json_config
+		else:
+			name = path[1:-(len(CONFIG_PATH)+1)]
+			if self.services.has_key(name):
+				service_name = name
+				
+				service = self.services[service_name]
+				d = {'type': 'service', 'url': service_name, 'rostype': service.rostype_name}
+				json_config = json.dumps(d)
+				
+				status = '200 OK'
+				headers = [('Content-type', 'application/json'),('Content-length',str(len(json_config)))]
+				start_response(status, headers)
+				return json_config
+			else:
+				status = '404 Not Found'
+				headers = [('Content-type', 'text/plain')]
+				start_response(status, headers)
+				return []
+		
+	def _handle_post(self,environ,start_response):
+		service_name =  environ['PATH_INFO'][1:]
+		if not self.services.has_key(service_name):
+			status = '404 Not Found'
+			headers = [('Content-type', 'text/plain')]
+			start_response(status, headers)
+			return []
+		service = self.services[service_name]
+		
+		length = int(environ['CONTENT_LENGTH'])
+		req = json.loads(environ['wsgi.input'].read(length))
+		#from test_ros.srv import *
+		#rosreq = AddTwoIntsRequest(1,2)
+		#req = msgconv.extract_values(rosreq)
+		
+		try:
+			#print 'calling service ', service.name
+			
+			resp = service.call(req)
+			resp = json.dumps(resp)
+			
+			status = '200 OK'
+			headers = [('Content-type', 'application/json'),('Content-length',str(len(resp)))]
+			start_response(status, headers)
+			return resp
+		except Exception, e:
+			e_str = '%s: %s' % (str(type(e)),str(e))
+			
+			status = '500 Internal Server Error'
+			headers = [('Content-type', 'text/plain'),('Content-length',str(len(e_str)))]
+			start_response(status, headers)
+			return e_str

@@ -8,6 +8,8 @@ import rostful.message_conversion as msgconv
 
 import argparse
 
+from wsgiref.simple_server import make_server
+
 def main():
 	rospy.init_node('server',anonymous=True,disable_signals=True)
 	
@@ -21,20 +23,22 @@ def main():
 	args = parser.parse_args(rospy.myargv()[1:])
 	
 	try:
-		#server = HTTPServer(('', PORT_NUMBER), Handler)
-		server = rostful.server.RostfulServer((args.host, args.port))
-		print 'Started server on port %d' % args.port
+		server = rostful.server.RostfulServer()
 		
 		for service in args.services:
 			server.add_service(service)
-			print 'added service %s' % service
+			print 'Added service %s' % service
+		
+		httpd = make_server(args.host, args.port, server.wsgifunc())
+		print 'Started server on port %d' % args.port
+		
 		
 		#Wait forever for incoming http requests
-		server.serve_forever()
+		httpd.serve_forever()
 		
 	except KeyboardInterrupt:
-		#print '^C received, shutting down the web server'
-		server.socket.close()
+		print 'Shutting down the server'
+		httpd.socket.close()
 		rospy.signal_shutdown('Closing')
 
 
