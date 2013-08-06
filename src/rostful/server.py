@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+
 import roslib
 roslib.load_manifest('rostful')
 import rospy
@@ -12,28 +14,17 @@ import sys
 import re
 from StringIO import StringIO
 
-import message_conversion as msgconv
-import deffile
+from . import message_conversion as msgconv
+from . import deffile
 
-ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
-def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
-	if isinstance(rostype,type):
-		name = rostype.__name__
-		module = rostype.__module__.split('.')[0]
-		rostype = module + '/' + name
-	return 'application/vnd.ros.msg; type=%s' % rostype
-
-def get_json_bool(b):
-	if b:
-		return 'true'
-	else:
-		return 'false'
+from .util import ROS_MSG_MIMETYPE, get_json_bool
 
 class Service:
 	def __init__(self,service_name,service_type):
 		self.name = service_name
 		
 		service_type_module,service_type_name = tuple(service_type.split('/'))
+		roslib.load_manifest(service_type_module)
 		srv_module = import_module(service_type_module + '.srv')
 		
 		self.rostype_name = service_type
@@ -43,33 +34,26 @@ class Service:
 		
 		self.proxy = rospy.ServiceProxy(self.name, self.rostype)
 	
-	def call(self,req,use_ros=False):
-		rosreq = self.rostype_req()
-		if use_ros:
-			rosreq.deserialize(req)
-		else:
-			msgconv.populate_instance(req,rosreq)
+	def call(self,rosreq):
+#		rosreq = self.rostype_req()
+#		if use_ros:
+#			rosreq.deserialize(req)
+#		else:
+#			msgconv.populate_instance(req,rosreq)
 		
 		fields = []
 		for slot in rosreq.__slots__:
 			fields.append(getattr(rosreq,slot))
 		fields = tuple(fields)
 		
-		rosresp = self.proxy(*fields)
-		
-		if use_ros:
-			resp = StringIO()
-			rosresp.serialize(resp)
-			resp = resp.getvalue()
-		else:
-			resp = msgconv.extract_values(rosresp)
-		return resp
+		return self.proxy(*fields)
 
 class Topic:
 	def __init__(self,topic_name,topic_type,allow_pub=True,allow_sub=True,queue_size=1):
 		self.name = topic_name
 		
 		topic_type_module,topic_type_name = tuple(topic_type.split('/'))
+		roslib.load_manifest(topic_type_module)
 		msg_module = import_module(topic_type_module + '.msg')
 		
 		self.rostype_name = topic_type
@@ -95,23 +79,14 @@ class Topic:
 		else:
 			msgconv.populate_instance(msg,rosmsg)
 		
-		self.pub(rosmsg)
+		self.pub.publish(rosmsg)
 	
 	def get(self,num=None,use_ros=False):
 		if not self.msg:
-			if use_ros:
-				return ''
-			else:
-				return {}
+			return None
 		
-		rosmsg = self.msg[0]
-		if use_ros:
-			msg = StringIO()
-			rosmsg.serialize(msg)
-			msg = msg.getvalue()
-		else:
-			msg = msgconv.extract_values(rosmsg)
-		return msg
+		return self.msg[0]
+		
 	
 	def topic_callback(self,msg):
 		self.msg.appendleft(msg)
@@ -150,12 +125,11 @@ class RostfulServer:
 	def __init__(self):
 		self.services = {}
 		self.topics = {}
-		
+	
 	def add_service(self,service_name,ws_name = None,service_type=None):
 		resolved_service_name = rospy.resolve_name(service_name)
 		if service_type is None:
 			service_type = rosservice.get_service_type(resolved_service_name)
-			
 			if not service_type:
 				print 'Unknown service %s' % service_name
 				return False
@@ -168,10 +142,21 @@ class RostfulServer:
 		self.services[ws_name] = Service(service_name,service_type)
 		return True
 	
+	def add_services(self,service_names):
+		if not service_names:
+			return
+		print "Adding services:"
+		for service_name in service_names:
+			ret = self.add_service(service_name)
+			if ret: print service_name
+	
 	def add_topic(self,topic_name,ws_name = None,topic_type=None,allow_pub=True,allow_sub=True):
 		resolved_topic_name = rospy.resolve_name(topic_name)
 		if topic_type is None:
-			topic_type = rostopic.get_topic_type(resolved_topic_name)
+			topic_type, _, _ = rostopic.get_topic_type(resolved_topic_name)
+			if not topic_type:
+				print 'Unknown topic %s' % topic_name
+				return False
 		
 		if ws_name is None:
 			ws_name = topic_name
@@ -179,6 +164,22 @@ class RostfulServer:
 			ws_name = ws_name[1:]
 		
 		self.topics[ws_name] = Topic(topic_name,topic_type,allow_pub=allow_pub,allow_sub=allow_sub)
+		return True
+	
+	def add_topics(self,topic_names,allow_pub=True,allow_sub=True):
+		if not topic_names:
+			return
+		if allow_pub and allow_sub:
+			print "Publishing and subscribing to topics:"
+		elif allow_sub:
+			print "Publishing topics:"
+		elif allow_pub:
+			print "Subscribing to topics"
+		for topic_name in topic_names:
+			ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
+			if ret:
+				print topic_name
+			
 	
 	def wsgifunc(self):
 		return self._handle
@@ -202,16 +203,16 @@ class RostfulServer:
 		dfile.add_section(service_section)
 		
 		topics_section = deffile.INISection('Topics')
-		publish_section = deffile.INISection('Published')
-		subscribe_section = deffile.INISection('Subscribed')
+		publish_section = deffile.INISection('Publishes')
+		subscribe_section = deffile.INISection('Subscribes')
 		
 		for topic_name, topic in topics.iteritems():
 			if topic.allow_pub and topic.allow_sub:
-				topics_section[topic_name] = topic.rostype_name
+				topics_section.fields[topic_name] = topic.rostype_name
 			elif topic.allow_sub:
-				publish_section[topic_name] = topic.rostype_name
+				publish_section.fields[topic_name] = topic.rostype_name
 			elif topic.allow_pub:
-				subscribe_section[topic_name] = topic.rostype_name
+				subscribe_section.fields[topic_name] = topic.rostype_name
 		
 		if topics_section.fields:
 			dfile.add_section(topics_section)
@@ -221,20 +222,6 @@ class RostfulServer:
 			dfile.add_section(subscribe_section)
 		
 		return dfile.tostring(suppress_formats=True)
-		
-		desc = ''
-		desc += indent + 'Type: Manifest\n'
-		
-		desc += indent + 'Services:\n'
-		for service_name, service in services.iteritems():
-			desc += self._describe_service(service_name, service, indent=indent + '  ')
-			desc += '\n'
-		
-		desc += indent + 'Topics:\n'
-		for topic_name, topic in topics.iteritems():
-			desc += self._describe_topic(topic_name, topic, indent=indent + '  ')
-			desc += '\n'
-		return desc[:-1]
 	
 	def _describe_service(self,service_name, service, indent = ''):
 		dfile = deffile.DefFile()
@@ -243,11 +230,6 @@ class RostfulServer:
 		dfile.manifest['Type'] = service.rostype_name
 		
 		return dfile.tostring(suppress_formats=True)
-		
-		desc = ''
-		desc += indent + 'Path: %s\n' % service_name
-		desc += indent + 'ROS_type: %s\n' % service.rostype_name
-		return desc[:-1]
 	
 	def _describe_topic(self,topic_name, topic, indent = ''):
 		dfile = deffile.DefFile()
@@ -258,13 +240,6 @@ class RostfulServer:
 		dfile.manifest['Subscribed'] = get_json_bool(topic.allow_pub)
 		
 		return dfile.tostring(suppress_formats=True)
-		
-		desc = ''
-		desc += indent + 'Path: %s\n' % topic_name
-		desc += indent + 'ROS_type: %s\n' % topic.rostype_name
-		desc += indent + 'Publish: %s\n' % get_json_bool(topic.allow_pub)
-		desc += indent + 'Subscribe: %s\n' % get_json_bool(topic.allow_sub)
-		return desc[:-1]
 	
 	def _handle_get(self,environ,start_response):
 		path = environ['PATH_INFO']
@@ -282,14 +257,19 @@ class RostfulServer:
 			if not topic.allow_sub:
 				return response_405(start_response)
 			
-			msg = json.dumps(topic.get(use_ros=use_ros))
+			msg = topic.get()
 			
 			if use_ros:
 				content_type = ROS_MSG_MIMETYPE
+				output_data = StringIO()
+				msg.serialize(output_data)
+				output_data = output_data.getvalue()
 			else:
 				content_type = 'application/json'
+				output_data = msgconv.extract_values(msg)
+				output_data = json.dumps(output_data)
 			
-			return response_200(start_response,msg,content_type=content_type)
+			return response_200(start_response,output_data,content_type=content_type)
 			
 		if path == '/' + CONFIG_PATH:
 			config_data = self._manifest(self.services, self.topics)
@@ -319,41 +299,54 @@ class RostfulServer:
 		if not self.services.has_key(name) and not self.topics.has_key(name):
 			return response_404(start_response)
 		
-		#from test_ros.srv import *
-		#rosreq = AddTwoIntsRequest(1,2)
-		#req = msgconv.extract_values(rosreq)
-		
 		try:
 			#print 'calling service ', service.name
-			
 			length = int(environ['CONTENT_LENGTH'])
 			content_type = environ['CONTENT_TYPE'].split(';')[0].strip()
 			use_ros = content_type == ROS_MSG_MIMETYPE
 			
-			if not use_ros:
-				input_msg = json.loads(environ['wsgi.input'].read(length))
-				input_msg.pop('_format',None)
+			input_data = environ['wsgi.input'].read(length)
 			
-			ret_msg = None
 			if self.services.has_key(name):
+				mode = 'service'
 				service = self.services[name]
-				ret_msg = service.call(input_msg,use_ros=use_ros)
+				input_msg_type = service.rostype_req
 			elif self.topics.has_key(name):
+				mode = 'topic'
 				topic = self.topics[name]
 				if not topic.allow_pub:
 					return response_405(start_response)
-				topic.publish(input_msg,use_ros=use_ros)
+				input_msg_type = topic.rostype
 			else:
 				return response_404(start_response)
 			
+			input_msg = input_msg_type()
+			if use_ros:
+				input_msg.deserialize(input_data)
+			else:
+				input_data = json.loads(input_data)
+				input_data.pop('_format',None)
+				msgconv.populate_instance(input_data,input_msg)
+			
+			ret_msg = None
+			if mode == 'service':
+				ret_msg = service.call(input_msg)
+			else:
+				topic.publish(input_msg,use_ros=use_ros)
+				return response_200(start_response, [], content_type='application/json')
+			
 			if use_ros:
 				content_type = ROS_MSG_MIMETYPE
+				output_data = StringIO()
+				ret_msg.serialize(output_data)
+				output_data = output_data.getvalue()
 			else:
-				ret_msg['_format'] = 'ros'
-				msg = json.dumps(ret_msg)
+				output_data = msgconv.extract_values(ret_msg)
+				output_data['_format'] = 'ros'
+				output_data = json.dumps(output_data)
 				content_type = 'application/json'
 			
-			return response_200(start_response, msg, content_type=content_type)
+			return response_200(start_response, output_data, content_type=content_type)
 		except Exception, e:
 			print 'Exception occurred!', e
 			return response_500(start_response, e)
@@ -366,7 +359,10 @@ def servermain():
 	
 	parser = argparse.ArgumentParser()
 	
-	parser.add_argument('services',nargs='+')
+	parser.add_argument('--services','--srv',nargs='+')
+	parser.add_argument('--topics',nargs='+')
+	parser.add_argument('--publishes','--pub',nargs='+')
+	parser.add_argument('--subscribes','--sub',nargs='+')
 	
 	parser.add_argument('--host',default='')
 	parser.add_argument('-p','--port',type=int,default=8080)
@@ -376,10 +372,10 @@ def servermain():
 	try:
 		server = RostfulServer()
 		
-		for service in args.services:
-			ret = server.add_service(service)
-			if ret:
-				print 'Added service %s' % service
+		server.add_services(args.services)
+		server.add_topics(args.topics)
+		server.add_topics(args.publishes, allow_pub=False)
+		server.add_topics(args.subscribes, allow_sub=False)
 		
 		httpd = make_server(args.host, args.port, server.wsgifunc())
 		print 'Started server on port %d' % args.port
