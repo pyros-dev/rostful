@@ -34,8 +34,6 @@
 import roslib
 import rospy
 
-import ros_loader
-
 import re
 import string
 from base64 import standard_b64encode, standard_b64decode
@@ -86,13 +84,13 @@ def extract_values(inst):
     if rostype is None:
         raise InvalidMessageException()
     return _from_inst(inst, rostype)
-
+dump = extract_values
 
 def populate_instance(msg, inst):
     """ Returns an instance of the provided class, with its fields populated
     according to the values in msg """
     return _to_inst(msg, inst._type, inst._type, inst)
-
+#load = populate_instance
 
 def _from_inst(inst, rostype):
     # Special case for uint8[], we base64 encode the string
@@ -159,7 +157,7 @@ def _to_inst(msg, rostype, roottype, inst=None, stack=[]):
 
     # Otherwise, the type has to be a full ros msg type, so msg must be a dict
     if inst is None:
-        inst = ros_loader.get_message_instance(rostype)
+        inst = _get_msg_class(rostype)()
 
     return _to_object_inst(msg, rostype, roottype, inst, stack)
 
@@ -255,3 +253,145 @@ def _to_object_inst(msg, rostype, roottype, inst, stack):
         setattr(inst, field_name, field_value)
 
     return inst
+
+from threading import Lock
+# Variable containing the loaded classes
+_loaded_msgs = {}
+_loaded_srvs = {}
+_msgs_lock = Lock()
+_srvs_lock = Lock()
+
+
+class InvalidTypeStringException(Exception):
+    def __init__(self, typestring):
+        Exception.__init__(self, "%s is not a valid type string" % typestring)
+
+
+class InvalidPackageException(Exception):
+    def __init__(self, package, original_exception):
+        Exception.__init__(self,
+           "Unable to load the manifest for package %s. Caused by: %s"
+           % (package, original_exception.message)
+       )
+
+
+class InvalidModuleException(Exception):
+    def __init__(self, modname, subname, original_exception):
+        Exception.__init__(self,
+           "Unable to import %s.%s from package %s. Caused by: %s"
+           % (modname, subname, modname, str(original_exception))
+        )
+
+
+class InvalidClassException(Exception):
+    def __init__(self, modname, subname, classname, original_exception):
+        Exception.__init__(self,
+           "Unable to import %s class %s from package %s. Caused by %s"
+           % (subname, classname, modname, str(original_exception))
+        )
+
+
+def _get_msg_class(typestring):
+    """ If not loaded, loads the specified msg class then returns an instance
+    of it
+
+    Throws various exceptions if loading the msg class fails """
+    global _loaded_msgs, _msgs_lock
+    return _get_class(typestring, "msg", _loaded_msgs, _msgs_lock)
+
+
+def _get_srv_class(typestring):
+    """ If not loaded, loads the specified srv class then returns an instance
+    of it
+
+    Throws various exceptions if loading the srv class fails """
+    global _loaded_srvs, _srvs_lock
+    return _get_class(typestring, "srv", _loaded_srvs, _srvs_lock)
+
+
+def _get_class(typestring, subname, cache, lock):
+    """ If not loaded, loads the specified class then returns an instance
+    of it.
+
+    Loaded classes are cached in the provided cache dict
+
+    Throws various exceptions if loading the msg class fails """
+
+    # First, see if we have this type string cached
+    cls = _get_from_cache(cache, lock, typestring)
+    if cls is not None:
+        return cls
+
+    # Now normalise the typestring
+    modname, classname = _splittype(typestring)
+    norm_typestring = modname + "/" + classname
+
+    # Check to see if the normalised type string is cached
+    cls = _get_from_cache(cache, lock, norm_typestring)
+    if cls is not None:
+        return cls
+
+    # Load the class
+    cls = _load_class(modname, subname, classname)
+
+    # Cache the class for both the regular and normalised typestring
+    _add_to_cache(cache, lock, typestring, cls)
+    _add_to_cache(cache, lock, norm_typestring, cls)
+
+    return cls
+
+
+def _load_class(modname, subname, classname):
+    """ Loads the manifest and imports the module that contains the specified
+    type.
+
+    Logic is similar to that of roslib.message.get_message_class, but we want
+    more expressive exceptions.
+
+    Returns the loaded module, or None on failure """
+    global loaded_modules
+
+    try:
+        # roslib maintains a cache of loaded manifests, so no need to duplicate
+        roslib.launcher.load_manifest(modname)
+    except Exception as exc:
+        raise InvalidPackageException(modname, exc)
+
+    try:
+        pypkg = __import__('%s.%s' % (modname, subname))
+    except Exception as exc:
+        raise InvalidModuleException(modname, subname, exc)
+
+    try:
+        return getattr(getattr(pypkg, subname), classname)
+    except Exception as exc:
+        raise InvalidClassException(modname, subname, classname, exc)
+
+
+def _splittype(typestring):
+    """ Split the string the / delimiter and strip out empty strings
+
+    Performs similar logic to roslib.names.package_resource_name but is a bit
+    more forgiving about excess slashes
+    """
+    splits = [x for x in typestring.split("/") if x]
+    if len(splits) == 2:
+        return splits
+    raise InvalidTypeStringException(typestring)
+
+
+def _add_to_cache(cache, lock, key, value):
+    lock.acquire()
+    cache[key] = value
+    lock.release()
+
+
+def _get_from_cache(cache, lock, key):
+    """ Returns the value for the specified key from the cache.
+    Locks the lock before doing anything. Returns None if key not in cache """
+    lock.acquire()
+    ret = None
+    if key in cache:
+        ret = cache[key]
+    lock.release()
+    return ret
