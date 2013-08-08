@@ -200,7 +200,7 @@ class RostfulServiceProxy:
 		
 		dfile = parser.parse(res.read().strip())
 		
-		if dfile.manifest_type == 'Node':
+		if dfile.type == 'Node':
 			prefix = dfile.manifest['Name'] or ''
 			if prefix:
 				prefix += '/'
@@ -232,9 +232,9 @@ class RostfulServiceProxy:
 					for topic_name, topic_type in subscribed_topics.fields.iteritems():
 						ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=False, sub=subscribe, remap=remap, publish_interval=publish_interval)
 						if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
-		elif dfile.manifest_type == 'Service':
+		elif dfile.type == 'Service':
 			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
-		elif dfile.manifest_type == 'Topic':
+		elif dfile.type == 'Topic':
 			pub = dfile.manifest['Subscribes'].lower() == 'true'
 			sub = dfile.manifest['Publishes'].lower() == 'true' and subscribe
 			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], pub=pub, sub=sub, remap=remap, publish_interval=publish_interval)

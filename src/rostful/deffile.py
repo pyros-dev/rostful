@@ -86,10 +86,16 @@ class DefFile(object):
         self.sections = dicti()
     
     @property
-    def manifest_type(self):
+    def type(self):
         if not self.manifest:
             return None
-        return self.manifest.type
+        return self.manifest.def_type
+    
+    @type.setter
+    def type(self, value):
+        if not self.manifest:
+            self.manifest = Manifest()
+        self.manifest.def_type = value
     
     def definition_types(self):
         types = set()
@@ -97,14 +103,14 @@ class DefFile(object):
             types.add(definition.type)
         return list(types)
     
-    def get_definition(self,def_type, name):
+    def get_definition(self,dfn_type, name):
         for d in self.definitions:
-            if d.type == def_type and d.name == name:
+            if d.type == dfn_type and d.name == name:
                 return d
         return None
     
-    def get_definitions_of_type(self,def_type):
-        return [d for d in self.definitions if d.type == def_type]
+    def get_definitions_of_type(self,dfn_type):
+        return [d for d in self.definitions if d.type == dfn_type]
     
     def add_definition(self,dfn,quiet=False):
         for d in self.definitions:
@@ -178,13 +184,30 @@ class DefFile(object):
         
         return '\n\n'.join(strs)
     
+    def get(self, key, default=None):
+        if isinstance(key, tuple):
+            sec = self.get_section(key[0])
+            if not sec: return default
+            if len(key) == 2:
+                return sec[key[1]]
+            else:
+                return sec.__getitem__(key[1:])
+        else:
+            if not self.manifest:
+                return default
+            else:
+                return self.manifest[key]
+    
+    def __getitem__(self, key):
+        return self.get(key)
+    
     def __str__(self):
         return self.tostring()
                 
 
 class Manifest(object):
     def __init__(self):
-        self.type = None
+        self.def_type = None
         self.includes = []
         self.fields = dicti()
     
@@ -196,13 +219,13 @@ class Manifest(object):
         
     def tojson(self):
         d = dict(self.fields.iteritems())
-        d['Manifest-Type'] = self.type
+        d['Def-Type'] = self.def_type
         return d
     
     def tostring(self):
         strs = []
-        if self.type is not None:
-            strs.append('Manifest-Type = %s' % self.type)
+        if self.def_type is not None:
+            strs.append('Def-Type = %s' % self.def_type)
         for include_file, include_type in self.includes:
             if include_type:
                 strs.append('Include.%s = %s' % (include_type, include_file))
@@ -312,8 +335,25 @@ class INISection(Section):
         super(INISection,self).__init__(name)
         self.fields = {}
     
-    def __getitem__(self,key):
-        return self.fields[key]
+    def has_key(self, key):
+        return self.fields.has_key(key)
+    
+    def get(self, key, default=None):
+        return self.fields.get(key, default)
+    
+    def __getitem__(self, key):
+        """If the section has the key, return a (possibly empty) string.
+        Otherwise, return None."""
+        if self.fields.has_key(key):
+            return self.fields.get(key) or ''
+        else:
+            return None
+    
+    def __setitem__(self, key, value):
+        self.fields[key] = value
+    
+    def __iter__(self):
+        return self.fields.iteritems()
     
     def tojson(self):
         return self.fields.copy()
@@ -327,6 +367,15 @@ class INISection(Section):
             else:
                 strs.append('%s = %s' % (key,value))
         return '\n'.join(strs)
+    
+    @staticmethod
+    def load_ini_dict(section_dict):
+        ini = {}
+        for section_name, section in section_dict.iteritems():
+            if not isinstance(section, INISection): continue
+            for key, value in section.fields:
+                ini[section_name + '.' + key] = value
+        return ini
 
 class RawSection(Section):
     FORMAT = 'raw'
@@ -342,13 +391,13 @@ class RawSection(Section):
 
 
 class DefFileParser(object):
-    DEF_TYPE_PATT = r'(?P<def_type>[a-zA-Z_]\w*)'
+    DEF_TYPE_PATT = r'(?P<dfn_type>[a-zA-Z_]\w*)'
     SEC_NAME_PATT = r'(?P<section>(?:[^][\\!#]|(?:\\[][\\!#]))+)'
     FORMAT_PATT = r'(?P<format>[a-zA-Z_]\w*)'
     COMMENT_PATT = r'(?:#(?P<comment>.*))?'
     
-    SECTION_PATT = r'\[\s*(?:(?:{def_type})?\s*:\s*)?{section}(?:\s*!\s*{format})?\s*\]'.format(
-            def_type=DEF_TYPE_PATT,section=SEC_NAME_PATT,format=FORMAT_PATT)
+    SECTION_PATT = r'\[\s*(?:(?:{dfn_type})?\s*:\s*)?{section}(?:\s*!\s*{format})?\s*\]'.format(
+            dfn_type=DEF_TYPE_PATT,section=SEC_NAME_PATT,format=FORMAT_PATT)
     SECTION_RE = re.compile(SECTION_PATT)
     
     KEY_VALUE_PATT_TEMPLATE = r'^(?P<key>{key_patt})\s*=\s*(?P<value>{value_patt})$'
@@ -372,21 +421,30 @@ class DefFileParser(object):
     def is_section_line(cls,line):
         return bool(cls.SECTION_RE.match(line))
     
-    def __init__(self,default_format=None):
+    def __init__(self,default_format=None, default_def_type=None, require_def_type=None):
         self.default_format = default_format
+        self.default_def_type = default_def_type
+        self.require_def_type = require_def_type or default_def_type
+        self.null_section_parser = None
         
         self.definition_parsers = {}
         self.section_parsers = {}
         
         self.fp = None
         self.current_line = 0
+        self.null_section = True
     
     def add_section_parser(self,parser, name, format, def_file_format=None):
         self.section_parsers[(name,format,def_file_format)] = parser
     
-    def add_default_section_parser(self,parser = None, def_file_format=None):
+    def add_default_section_parser(self,parser = None, def_file_format=None, null_section=False):
         parser = parser or RawSectionParser
         self.section_parsers[(None,None,def_file_format)] = parser
+        if null_section:
+            self.set_null_section_parser(parser)
+    
+    def set_null_section_parser(self,parser):
+        self.null_section_parser = parser
     
     def get_section_parser(self,name,format,def_file_format):
         matches = {}
@@ -409,16 +467,16 @@ class DefFileParser(object):
                 raise ParsingError('No section parser for section %s' % name)
         return matches[max(matches.keys())](name,format,self._get_reader())
     
-    def add_definition_parser(self,parser, def_type, format, def_file_format=None):
-        if not def_type:
-            raise TypeError('def_type cannot be None!')
-        self.definition_parsers[(def_type,format,def_file_format)] = parser
+    def add_definition_parser(self,parser, dfn_type, format, def_file_format=None):
+        if not dfn_type:
+            raise TypeError('dfn_type cannot be None!')
+        self.definition_parsers[(dfn_type,format,def_file_format)] = parser
     
-    def get_definition_parser(self,def_type,name,format,def_file_format):
+    def get_definition_parser(self,dfn_type,name,format,def_file_format):
         matches = {}
         for key, parser in self.definition_parsers.iteritems():
             parser_def_type, parser_format, parser_def_file_format = key
-            if (parser_def_type != def_type) or \
+            if (parser_def_type != dfn_type) or \
                     (parser_format and parser_format != format) or \
                     (parser_def_file_format and parser_def_file_format != def_file_format):
                 continue
@@ -428,10 +486,10 @@ class DefFileParser(object):
             matches[score] = parser
         if not matches:
             if format:
-                raise ParsingError('No definition parser for type %s and format %s' % (def_type,format))
+                raise ParsingError('No definition parser for type %s and format %s' % (dfn_type,format))
             else:
-                raise ParsingError('No definition parser for type %s' % def_type)
-        return matches[max(matches.keys())](def_type,name,format,self._get_reader())
+                raise ParsingError('No definition parser for type %s' % dfn_type)
+        return matches[max(matches.keys())](dfn_type,name,format,self._get_reader())
     
     def readline(self,new=True):
         if self.current_line == 0 or new:
@@ -451,7 +509,13 @@ class DefFileParser(object):
         while line is not None:
             section_info = self.get_section_data(line)
             if not section_info:
-                raise ParsingError('Parsing error: invalid section line\n%s' % line)
+                if self.null_section and self.null_section_parser:
+                    parser = self.null_section_parser(None,None,self._get_reader())
+                    sec = parser.parse()
+                    section_info = {'section': None, 'data': sec}
+                else:
+                    raise ParsingError('Parsing error: invalid section line\n%s' % line)
+            self.null_section = False
             yield section_info
             line = self.readline(new=False)
     
@@ -471,11 +535,14 @@ class DefFileParser(object):
                 fp = StringIO(unicode(fp))
         self.fp = fp
         self.current_line = 0
+        self.null_section = True
         default_format = kwargs.get('default_format',self.default_format)
         
         def_file = DefFile(manifest=False)
         for section in self.sections():
-            if section['section'].lower() == 'manifest':
+            if section['section'] is None:
+                def_file.sections[''] = section['data']
+            elif section['section'].lower() == 'manifest':
                 if def_file.definitions or def_file.sections:
                     raise ParsingError('Parsing error: manifest section must be first!')
                 def_file_format = None
@@ -486,13 +553,17 @@ class DefFileParser(object):
                 def_file.format = def_file_format
                 parser = DefFileParser.ManifestParser(section['section'],None,self._get_reader())
                 def_file.manifest = parser.parse()
-            elif section['def_type']:
-                parser = self.get_definition_parser(section['def_type'],section['section'], section['format'],def_file.format)
+            elif section['dfn_type']:
+                parser = self.get_definition_parser(section['dfn_type'],section['section'], section['format'],def_file.format)
                 definition = parser.parse()
                 def_file.definitions.append(definition)
             else:
                 parser = self.get_section_parser(section['section'], section['format'],def_file.format)
                 def_file.sections[section['section']] = parser.parse()
+        if not def_file.type and self.default_def_type:
+            def_file.type = self.default_def_type
+        if self.require_def_type and not re.match(self.require_def_type,def_file.type):
+            raise ParsingError("Require def file type %s, got %s" % (self.require_def_type,def_file.type))
         self.fp = None
         self.current_line = 0
         return def_file
@@ -510,9 +581,9 @@ class DefFileParser(object):
         pass
     
     class DefinitionParser(Subparser):
-        def __init__(self,def_type,name,format,reader):
+        def __init__(self,dfn_type,name,format,reader):
             super(DefFileParser.DefinitionParser,self).__init__(name,format,reader)
-            self.def_type = def_type
+            self.dfn_type = dfn_type
     
     class ManifestParser(Subparser):
         def parse(self):
@@ -523,7 +594,7 @@ class DefFileParser(object):
                     raise ParsingError('Parsing error: invalid manifest line\n{line}'.format(line=line))
                 key = match.group('key')
                 value = match.group('value')
-                if key.lower() == 'manifest-type':
+                if key.lower() == 'def-type':
                     mf.type = value
                 elif key.startswith('include'):
                     dot_loc = key.find('.')
@@ -540,6 +611,7 @@ class DefFileParser(object):
 class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
     TYPE_PATT = r'\S+'
     NAME_PATT = r'\S+'
+    ALLOW_EMPTY_SEGMENTS = True
     
     @classmethod
     def line_patt(cls):
@@ -550,7 +622,7 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
     def parse(self):
         line_re = re.compile(self.line_patt())
         
-        rosdef = ROSStyleDefinition(self.def_type,self.name,self.SEGMENT_NAMES)
+        rosdef = ROSStyleDefinition(self.dfn_type,self.name,self.SEGMENT_NAMES)
         
         num_segments = len(self.SEGMENT_NAMES)
         segs = []
@@ -571,8 +643,10 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
                 raise ParsingError('Parsing error: invalid ROS definition line\n{line}'.format(line=line))
             segment.append(Definition.Field(name=match.group('name'),type=match.group('type')))
         if seg_line_change:
-            raise ParsingError('Parsing error: empty segment')
-        segs.append(segment)
+            if not self.ALLOW_EMPTY_SEGMENTS:
+                raise ParsingError('Parsing error: empty segment')
+        else:
+            segs.append(segment)
         if num_segments and len(segs) != num_segments:
             raise ParsingError('Parsing error: ROS definition needs %d segments' % num_segments)
         rosdef.segments = tuple(segs)
@@ -584,15 +658,18 @@ def get_ros_style_msg_parser(type_patt=None,name_patt=None,super_cls=ROSStyleDef
             TYPE_PATT = type_patt
         if name_patt is not None:
             NAME_PATT = name_patt
+        ALLOW_EMPTY_SEGMENTS = False
         SEGMENT_NAMES = ['msg']
     return ROSStyleMsgDefinitionParser
 
-def get_ros_style_method_parser(type_patt=None,name_patt=None,super_cls=ROSStyleDefinitionParser):
+def get_ros_style_method_parser(type_patt=None,name_patt=None,allow_empty_segments=None,super_cls=ROSStyleDefinitionParser):
     class ROSStyleMethodDefinitionParser(super_cls):
         if type_patt is not None:
             TYPE_PATT = type_patt
         if name_patt is not None:
             NAME_PATT = name_patt
+        if allow_empty_segments is not None:
+            ALLOW_EMPTY_SEGMENTS = allow_empty_segments
         SEGMENT_NAMES = ['request','response']
     return ROSStyleMethodDefinitionParser
 
@@ -735,7 +812,7 @@ def get_validated_raw_section_parser(line_patt=None,content_patt=None,format=Non
 if __name__ == '__main__':
     data = \
 """[Manifest]
-manifest-type = Application
+def-type = Application
 name = my/application  
 
 [msg:Image]
@@ -755,7 +832,7 @@ reco = Reco
     f.write(data)
 
 """[Manifest!ros]
-manifest-type = ServiceCollection
+def-type = ServiceCollection
 name = my/application  
 
 [msg:Image]
@@ -773,7 +850,7 @@ reco_service = RecoService
 """
 
 """[Manifest]
-manifest-type = Service
+def-type = Service
 type = RecoService
 name = reco_service
 
@@ -792,7 +869,7 @@ reco = Reco
 """
 
 """[Manifest]
-manifest-type = ros:ServiceCollection
+def-type = ros:ServiceCollection
 type = RecoService
 name = reco_service
 
