@@ -63,6 +63,9 @@ class dicti(dict):
     def itervalues(self):
         for v in dict.itervalues(self):
             yield v.val
+    
+    def copy(self):
+        return dict(self.iteritems())
 
 class ParsingError(Exception):
     pass
@@ -131,7 +134,13 @@ class DefFile(object):
     def tojson(self):
         d = {}
         
-        pass
+        d['Manifest'] = self.manifest.tojson()
+        
+        d['Definitions'] = dict([(dfn.type + ':' + dfn.name, dfn.tojson()) for dfn in self.definitions])
+        
+        d['Sections'] = dict([(section_name, section.tojson()) for section_name, section in self.sections.iteritems()])
+        
+        return d
     
     def tostring(self,suppress_formats=False):
         strs = []
@@ -186,7 +195,9 @@ class Manifest(object):
         self.fields[key] = value
         
     def tojson(self):
-        return self.fields.copy()
+        d = dict(self.fields.iteritems())
+        d['Manifest-Type'] = self.type
+        return d
     
     def tostring(self):
         strs = []
@@ -278,7 +289,13 @@ class ROSStyleDefinition(Definition):
             return self.segment(index)
     
     def tojson(self):
-        pass
+        segs = []
+        for segment in self.segments:
+            segs.append(list(segment))
+        if len(self.segments) == 1:
+            return segs[0]
+        else:
+            return dict(zip(self.segment_names,segs))
     
     def tostring(self):
         segment_strs = []
@@ -299,7 +316,7 @@ class INISection(Section):
         return self.fields[key]
     
     def tojson(self):
-        pass
+        return self.fields.copy()
     
     def tostring(self):
         strs = []
@@ -318,7 +335,7 @@ class RawSection(Section):
         self.content = ''
     
     def tojson(self):
-        pass
+        self.content
     
     def tostring(self):
         return self.content
