@@ -207,7 +207,7 @@ class RostfulServer:
 		subscribe_section = deffile.INISection('Subscribes')
 		
 		for topic_name, topic in topics.iteritems():
-			if topic.allow_pub and topic.allow_sub:
+			if False and topic.allow_pub and topic.allow_sub:
 				topics_section.fields[topic_name] = topic.rostype_name
 			elif topic.allow_sub:
 				publish_section.fields[topic_name] = topic.rostype_name

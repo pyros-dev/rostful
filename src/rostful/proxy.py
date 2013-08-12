@@ -168,12 +168,14 @@ def create_topic_proxy(url,name,topic_type,pub=True,sub=True, publish_interval=N
 		return None
 
 class RostfulServiceProxy:
-	def __init__(self,url,remap=False, subscribe=False, publish_interval=None, binary=None):
+	def __init__(self,url,remap=False, subscribe=False, publish_interval=None, binary=None, prefix=None):
 		if url.endswith('/'):
 			url = url[:-1]
 		self.url = url
 		
 		self.binary = binary
+		
+		self.prefix=prefix
 		
 		self.services = {}
 		self.topics = {}
@@ -201,7 +203,10 @@ class RostfulServiceProxy:
 		dfile = parser.parse(res.read().strip())
 		
 		if dfile.type == 'Node':
-			prefix = dfile.manifest['Name'] or ''
+			if self.prefix is None:
+				prefix = dfile.manifest['Name'] or ''
+			else:
+				prefix = self.prefix
 			if prefix:
 				prefix += '/'
 			services = dfile.get_section('Services')
@@ -279,11 +284,15 @@ def proxymain():
 	
 	parser.add_argument('--test',action='store_true',default=False)
 	
+	grp = parser.add_mutually_exclusive_group()
+	grp.add_argument('--prefix')
+	grp.add_argument('--no-prefix', action='store_const', const = '', dest='prefix')
+	
 	args = parser.parse_args(rospy.myargv()[1:])
 	
 	if not args.url.startswith('http'):
 		args.url = 'http://' + args.url
 	
-	proxy = RostfulServiceProxy(args.url, remap=args.test, subscribe=args.subscribe, publish_interval = args.publish_interval, binary=args.binary)
+	proxy = RostfulServiceProxy(args.url, remap=args.test, subscribe=args.subscribe, publish_interval = args.publish_interval, binary=args.binary, prefix=args.prefix)
 	
 	rospy.spin()

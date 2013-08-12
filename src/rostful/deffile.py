@@ -1,71 +1,13 @@
 import re
 from collections import namedtuple
 from io import StringIO
+import inspect
 
-class dicti(dict):
-    """Dictionary that enables case insensitive searching while preserving case sensitivity 
-    when keys are listed, i.e., via keys() or items() methods. 
-    
-    Works by storing a lowercase version of the key as the new key and stores the original key-value 
-    pair as the key's value (values become dictionaries).
-    Adjusted from https://gist.github.com/babakness/3901174"""
-
-    _kv = namedtuple('kv','key val')
-
-    def __init__(self, initval={}):
-        if isinstance(initval, dict):
-            for key, value in initval.iteritems():
-                self.__setitem__(key, value)
-        elif isinstance(initval, list):
-            for (key, value) in initval:
-                self.__setitem__(key, value)
-            
-    def __contains__(self, key):
-        return dict.__contains__(self, key.lower())
-  
-    def __getitem__(self, key):
-        return dict.__getitem__(self, key.lower()).val
-  
-    def __setitem__(self, key, value):
-        return dict.__setitem__(self, key.lower(), self._kv(key, value))
-
-    def get(self, key, default=None):
-        try:
-            v = dict.__getitem__(self, key.lower())
-        except KeyError:
-            return default
-        else:
-            return v.val
-
-    def has_key(self,key):
-        if self.get(key):
-            return True
-        else:
-            return False    
-
-    def items(self):
-        return [(v.key, v.val) for v in dict.itervalues(self)]
-    
-    def keys(self):
-        return [v.key for v in dict.itervalues(self)]
-    
-    def values(self):
-        return [v.val for v in dict.itervalues(self)]
-    
-    def iteritems(self):
-        for v in dict.itervalues(self):
-            yield v.key, v.val
-        
-    def iterkeys(self):
-        for v in dict.itervalues(self):
-            yield v.key
-        
-    def itervalues(self):
-        for v in dict.itervalues(self):
-            yield v.val
-    
-    def copy(self):
-        return dict(self.iteritems())
+def _sec_name_to_dfn(name):
+    idx = name.find('Section')
+    if idx == -1:
+        return name + 'Definition'
+    return re.sub(r'Section','Definition',name)
 
 class ParsingError(Exception):
     pass
@@ -103,7 +45,13 @@ class DefFile(object):
             types.add(definition.type)
         return list(types)
     
-    def get_definition(self,dfn_type, name):
+    def has_definition(self, dfn_type, name):
+        for d in self.definitions:
+            if d.type == dfn_type and d.name == name:
+                return True
+        return False
+    
+    def get_definition(self, dfn_type, name):
         for d in self.definitions:
             if d.type == dfn_type and d.name == name:
                 return d
@@ -238,33 +186,6 @@ class Manifest(object):
     def __str__(self):
         return self.tostring()
 
-class Definition(object):
-    Field = namedtuple('Field', ['name','type'])
-    FORMAT = None
-    
-    def __init__(self,type,name):
-        self.type = type
-        self.name = name
-    
-    @property
-    def format(self):
-        if not hasattr(self, '_format'):
-            return self.FORMAT
-        else:
-            return self._format
-    @format.setter
-    def format(self,value):
-        setattr(self,'_format',value)
-    
-    def tojson(self):
-        raise NotImplementedError()
-    
-    def tostring(self):
-        raise NotImplementedError()
-    
-    def __str__(self):
-        return self.tostring()
-
 class Section(object):
     FORMAT = None
     def __init__(self,name):
@@ -289,50 +210,36 @@ class Section(object):
     def __str__(self):
         return self.tostring()
 
-class ROSStyleDefinition(Definition):
-    FORMAT = 'ros'
-    def __init__(self,type,name,segment_names):
-        super(ROSStyleDefinition,self).__init__(type,name)
-        
-        self.segments = tuple([[] for _ in xrange(len(segment_names))])
-        self.segment_names = segment_names
+class Definition(Section):
+    FORMAT = None
     
-    def segment(self,index):
-        if not isinstance(index,basestring):
-            return self.segments[index]
-        for idx, seg_name in enumerate(self.segment_names):
-            if seg_name == index:
-                return self.segment(idx)
-        raise IndexError("No segment named %s" % index)
-             
-    def __getitem__(self,index):
-        if len(self.segments) == 1:
-            return self.segments[0][index]
+    def __init__(self,type,name):
+        super(Definition,self).__init__(name)
+        self.type = type
+    
+    @property
+    def format(self):
+        if not hasattr(self, '_format'):
+            return self.FORMAT
         else:
-            return self.segment(index)
+            return self._format
+    @format.setter
+    def format(self,value):
+        setattr(self,'_format',value)
     
     def tojson(self):
-        segs = []
-        for segment in self.segments:
-            segs.append(list(segment))
-        if len(self.segments) == 1:
-            return segs[0]
-        else:
-            return dict(zip(self.segment_names,segs))
+        raise NotImplementedError()
     
     def tostring(self):
-        segment_strs = []
-        for segment in self.segments:
-            strs = []
-            for name, type in segment:
-                strs.append('%s %s' % (type, name))
-            segment_strs.append('\n'.join(strs))
-        return '\n----\n'.join(segment_strs)
+        raise NotImplementedError()
+    
+    def __str__(self):
+        return self.tostring()
 
 class INISection(Section):
     FORMAT = 'ini'
     def __init__(self,name):
-        super(INISection,self).__init__(name)
+        Section.__init__(self, name)
         self.fields = {}
     
     def has_key(self, key):
@@ -380,7 +287,7 @@ class INISection(Section):
 class RawSection(Section):
     FORMAT = 'raw'
     def __init__(self,name):
-        super(INISection,self).__init__(name)
+        Section.__init__(self,name)
         self.content = ''
     
     def tojson(self):
@@ -388,6 +295,57 @@ class RawSection(Section):
     
     def tostring(self):
         return self.content
+
+def get_definition_from_section(section_class):
+    class DfnClass(section_class,Definition):
+        def __init__(self,type,name):
+            Definition.__init__(self,type,name)
+            section_class.__init__(self,name)
+    DfnClass.__name__ = _sec_name_to_dfn(section_class.__name__)
+    return DfnClass
+
+INIDefinition = get_definition_from_section(INISection)
+
+class ROSStyleDefinition(Definition):
+    Field = namedtuple('Field', ['name','type'])
+    FORMAT = 'ros'
+    def __init__(self,type,name,segment_names):
+        super(ROSStyleDefinition,self).__init__(type,name)
+        
+        self.segments = tuple([[] for _ in xrange(len(segment_names))])
+        self.segment_names = segment_names
+    
+    def segment(self,index):
+        if not isinstance(index,basestring):
+            return self.segments[index]
+        for idx, seg_name in enumerate(self.segment_names):
+            if seg_name == index:
+                return self.segment(idx)
+        raise IndexError("No segment named %s" % index)
+             
+    def __getitem__(self,index):
+        if len(self.segments) == 1:
+            return self.segments[0][index]
+        else:
+            return self.segment(index)
+    
+    def tojson(self):
+        segs = []
+        for segment in self.segments:
+            segs.append(list(segment))
+        if len(self.segments) == 1:
+            return segs[0]
+        else:
+            return dict(zip(self.segment_names,segs))
+    
+    def tostring(self):
+        segment_strs = []
+        for segment in self.segments:
+            strs = []
+            for name, type in segment:
+                strs.append('%s %s' % (type, name))
+            segment_strs.append('\n'.join(strs))
+        return '\n----\n'.join(segment_strs)
 
 
 class DefFileParser(object):
@@ -446,7 +404,7 @@ class DefFileParser(object):
     def set_null_section_parser(self,parser):
         self.null_section_parser = parser
     
-    def get_section_parser(self,name,format,def_file_format):
+    def get_section_parser(self,name,format,def_file_format,go_easy=False):
         matches = {}
         for key, parser in self.section_parsers.iteritems():
             parser_name, parser_format, parser_def_file_format = key
@@ -461,7 +419,10 @@ class DefFileParser(object):
                 score += 2
             matches[score] = parser
         if not matches:
-            if format:
+            if go_easy:
+                return None
+            elif format:
+                print self.section_parsers
                 raise ParsingError('No section parser for section %s and format %s' % (name,format))
             else:
                 raise ParsingError('No section parser for section %s' % name)
@@ -472,7 +433,7 @@ class DefFileParser(object):
             raise TypeError('dfn_type cannot be None!')
         self.definition_parsers[(dfn_type,format,def_file_format)] = parser
     
-    def get_definition_parser(self,dfn_type,name,format,def_file_format):
+    def get_definition_parser(self,dfn_type,name,format,def_file_format,go_easy=False):
         matches = {}
         for key, parser in self.definition_parsers.iteritems():
             parser_def_type, parser_format, parser_def_file_format = key
@@ -485,7 +446,16 @@ class DefFileParser(object):
                 score +=1
             matches[score] = parser
         if not matches:
-            if format:
+            print dfn_type,name,format,def_file_format
+            print self.section_parsers
+            parser = self.get_section_parser(None, format, def_file_format, go_easy=True)
+            if parser:
+                return DefFileParser.DefinitionParser.from_section_parser(parser)
+        
+        if not matches:
+            if go_easy:
+                return None
+            elif format:
                 raise ParsingError('No definition parser for type %s and format %s' % (dfn_type,format))
             else:
                 raise ParsingError('No definition parser for type %s' % dfn_type)
@@ -555,11 +525,14 @@ class DefFileParser(object):
                 def_file.manifest = parser.parse()
             elif section['dfn_type']:
                 parser = self.get_definition_parser(section['dfn_type'],section['section'], section['format'],def_file.format)
-                definition = parser.parse()
+                definition = parser.new_section()
+                parser.parse(definition)
                 def_file.definitions.append(definition)
             else:
                 parser = self.get_section_parser(section['section'], section['format'],def_file.format)
-                def_file.sections[section['section']] = parser.parse()
+                sec = parser.new_section()
+                parser.parse(sec)
+                def_file.sections[section['section']] = sec
         if not def_file.type and self.default_def_type:
             def_file.type = self.default_def_type
         if self.require_def_type and not re.match(self.require_def_type,def_file.type):
@@ -574,16 +547,37 @@ class DefFileParser(object):
             self.format = format
             self.reader = reader
         
-        def parse(self):
+        def parse(self, section):
             raise NotImplementedError()
     
     class SectionParser(Subparser):
-        pass
+        SECTION_CLASS = None
+        
+        def new_section(self):
+            return self.SECTION_CLASS(self.name)
     
-    class DefinitionParser(Subparser):
+    class DefinitionParser(SectionParser):
         def __init__(self,dfn_type,name,format,reader):
-            super(DefFileParser.DefinitionParser,self).__init__(name,format,reader)
+            DefFileParser.SectionParser.__init__(self,name,format,reader)
             self.dfn_type = dfn_type
+        
+        def new_section(self):
+            return self.SECTION_CLASS(self.dfn_type, self.name)
+        
+        @staticmethod
+        def from_section_parser(section_parser):
+            if not inspect.isclass(section_parser):
+                section_parser = section_parser.__class__
+            class DfnParser(section_parser, DefFileParser.DefinitionParser):
+                def __init__(self,dfn_type,name,format,reader):
+                    DefFileParser.DefinitionParser.__init__(self, dfn_type, name, format, reader)
+                    print 'initing', section_parser
+                    section_parser.__init__(self,name,format,reader)
+                
+                def new_section(self):
+                    return get_definition_from_section(section_parser.SECTION_CLASS)(self.dfn_type, self.name)
+            DfnParser.__name__ = _sec_name_to_dfn(section_parser.__name__)
+            return DfnParser
     
     class ManifestParser(Subparser):
         def parse(self):
@@ -595,7 +589,7 @@ class DefFileParser(object):
                 key = match.group('key')
                 value = match.group('value')
                 if key.lower() == 'def-type':
-                    mf.type = value
+                    mf.def_type = value
                 elif key.startswith('include'):
                     dot_loc = key.find('.')
                     if dot_loc == -1:
@@ -606,7 +600,138 @@ class DefFileParser(object):
                 else:
                     mf.fields[key] = value
             return mf
+
+def get_definition_parser_from_section_parser(section_parser):
+    return DefFileParser.DefinitionParser.from_section_parser(section_parser)
+
+class INISectionParser(DefFileParser.SectionParser):
+    SECTION_CLASS = INISection
+    KEY_PATT = DefFileParser.BASIC_KEY_PATT
+    VALUE_PATT = DefFileParser.BASIC_VALUE_PATT
+    
+    def parse(self, section):
+        line_patt = DefFileParser.KEY_VALUE_PATT_TEMPLATE.format(key_patt=self.KEY_PATT,value_patt=self.VALUE_PATT)
+        line_re = re.compile(line_patt)
         
+        #section = INISection(self.name)
+        
+        for line in self.reader():
+            match = line_re.match(line)
+            if not match:
+                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
+            key = match.group('key')
+            value = match.group('value')
+            section.fields[key] = value
+        return section
+
+class ExtendedINISectionParser(INISectionParser):
+    KEY_PATT = DefFileParser.BASIC_KEY_PATT
+    VALUE_PATT = DefFileParser.BASIC_VALUE_PATT
+    EXTENDED_VALUE_PATT = r'.*'
+    
+    def parse(self, section):
+        line_patt = DefFileParser.KEY_VALUE_PATT_TEMPLATE.format(key_patt=self.KEY_PATT,value_patt=self.VALUE_PATT)
+        line_re = re.compile(line_patt)
+        
+        extended_value_re = re.compile(self.EXTENDED_VALUE_PATT)
+        
+        #section = INISection(self.name)
+        
+        extended_key = None
+        extended_joiner = None
+        extended_data = None
+        for line in self.reader():
+            match = line_re.match(line)
+            if extended_key is not None:
+                if match:
+                    extended_data = extended_joiner.join(extended_data)
+                    section.fields[extended_key] = extended_data
+                    extended_key = None
+                else:
+                    extended_match = extended_value_re.match(line)
+                    if not extended_match:
+                        raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
+                    extended_data.append(line)
+                    continue
+            if not match:
+                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
+            key = match.group('key')
+            value = match.group('value')
+            if value == '|':
+                extended_key = key
+                extended_data = []
+                extended_joiner = '\n'
+            elif value == '>':
+                extended_key = key
+                extended_data = []
+                extended_joiner = ' '
+            else:
+                extended_key = None
+                section.fields[key] = value
+        if extended_key is not None:
+            extended_data = extended_joiner.join(extended_data)
+            section.fields[extended_key] = extended_data
+        return section
+
+def get_validated_INI_parser(key_patt,value_patt=None,format=None,super_cls=INISectionParser):
+    class ValidatedINISectionParser(super_cls):
+        if format:
+            FORMAT = format
+        KEY_PATT = key_patt
+        if value_patt is not None:
+            VALUE_PATT = value_patt
+    return ValidatedINISectionParser
+
+def get_validated_extended_INI_parser(key_patt,value_patt=None,extended_value_patt=None,format=None,super_cls=ExtendedINISectionParser):
+    class ValidatedINISectionParser(super_cls):
+        if format:
+            FORMAT = format
+        KEY_PATT = key_patt
+        if value_patt is not None:
+            VALUE_PATT = value_patt
+        if extended_value_patt is not None:
+            EXTENDED_VALUE_PATT = extended_value_patt
+    return ValidatedINISectionParser
+
+class RawSectionParser(DefFileParser.SectionParser):
+    SECTION_CLASS = RawSection
+    LINE_PATT = '.*'
+    CONTENT_PATT = '.*'
+    FOLD = False
+    
+    def parse(self, section):
+        line_re = re.compile(self.LINE_PATT)
+        
+        #section = RawSection(self.name)
+        
+        strs = ''
+        
+        for line in self.reader():
+            match = line_re.match(line)
+            if not match:
+                raise ParsingError('Parsing error: invalid section line\n{line}'.format(line=line))
+            strs.append(line)
+        joiner = ' ' if self.FOLD else '\n'
+        content = joiner.join(strs)
+        
+        if not re.match(self.CONTENT_PATT,content,flags=re.MULTILINE):
+            raise ParsingError('Parsing error: invalid raw section\n{content}'.format(content=content))
+        section.content = content
+        
+        return section
+
+def get_validated_raw_section_parser(line_patt=None,content_patt=None,format=None):
+    class ValidatedRawSectionParser(RawSectionParser):
+        if format:
+            FORMAT = format
+        if line_patt:
+            LINE_PATT = line_patt
+        if content_patt:
+            CONTENT_PATT = content_patt
+    return ValidatedRawSectionParser
+
+INIDefinitionParser = get_definition_parser_from_section_parser(INISectionParser)
+ExtendedINIDefinitionParser = get_definition_parser_from_section_parser(ExtendedINISectionParser)
 
 class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
     TYPE_PATT = r'\S+'
@@ -619,12 +744,15 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
     
     SEGMENT_NAMES = None
     
-    def parse(self):
+    def new_section(self):
+        return ROSStyleDefinition(self.dfn_type,self.name,self.SEGMENT_NAMES or [])
+    
+    def parse(self, rosdef):
         line_re = re.compile(self.line_patt())
         
-        rosdef = ROSStyleDefinition(self.dfn_type,self.name,self.SEGMENT_NAMES)
+        #rosdef = ROSStyleDefinition(self.dfn_type,self.name,self.SEGMENT_NAMES)
         
-        num_segments = len(self.SEGMENT_NAMES)
+        num_segments = len(self.SEGMENT_NAMES or [])
         segs = []
         
         segment = []
@@ -640,16 +768,20 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
             seg_line_change = False
             match = line_re.match(line)
             if not match:
-                raise ParsingError('Parsing error: invalid ROS definition line\n{line}'.format(line=line))
-            segment.append(Definition.Field(name=match.group('name'),type=match.group('type')))
+                raise ParsingError('Parsing error: invalid ROS-style definition line\n{line}'.format(line=line))
+            segment.append(ROSStyleDefinition.Field(name=match.group('name'),type=match.group('type')))
         if seg_line_change:
             if not self.ALLOW_EMPTY_SEGMENTS:
                 raise ParsingError('Parsing error: empty segment')
+            elif len(segs) == num_segments -1:
+                segs.append([])
         else:
             segs.append(segment)
         if num_segments and len(segs) != num_segments:
-            raise ParsingError('Parsing error: ROS definition needs %d segments' % num_segments)
+            raise ParsingError('Parsing error: This ROS-style definition is required to have %d segments: %s' % (num_segments, self.SEGMENT_NAMES))
         rosdef.segments = tuple(segs)
+        if not num_segments:
+            rosdef.segment_names = tuple(str(i) for i in xrange(len(segs)))
         return rosdef
 
 def get_ros_style_msg_parser(type_patt=None,name_patt=None,super_cls=ROSStyleDefinitionParser):
@@ -682,132 +814,70 @@ def get_ros_style_action_parser(type_patt=None,name_patt=None,super_cls=ROSStyle
         SEGMENT_NAMES = ['goal','result','feedback']
     return ROSStyleActionDefinitionParser
 
-class INISectionParser(DefFileParser.SectionParser):
-    KEY_PATT = DefFileParser.BASIC_KEY_PATT
-    VALUE_PATT = DefFileParser.BASIC_VALUE_PATT
+class dicti(dict):
+    """Dictionary that enables case insensitive searching while preserving case sensitivity 
+    when keys are listed, i.e., via keys() or items() methods. 
     
-    def parse(self):
-        line_patt = DefFileParser.KEY_VALUE_PATT_TEMPLATE.format(key_patt=self.KEY_PATT,value_patt=self.VALUE_PATT)
-        line_re = re.compile(line_patt)
-        
-        section = INISection(self.name)
-        
-        for line in self.reader():
-            match = line_re.match(line)
-            if not match:
-                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
-            key = match.group('key')
-            value = match.group('value')
-            section.fields[key] = value
-        return section
+    Works by storing a lowercase version of the key as the new key and stores the original key-value 
+    pair as the key's value (values become dictionaries).
+    Adjusted from https://gist.github.com/babakness/3901174"""
 
-class ExtendedINISectionParser(INISectionParser):
-    KEY_PATT = DefFileParser.BASIC_KEY_PATT
-    VALUE_PATT = DefFileParser.BASIC_VALUE_PATT
-    EXTENDED_VALUE_PATT = r'.*'
+    _kv = namedtuple('kv','key val')
+
+    def __init__(self, initval={}):
+        if isinstance(initval, dict):
+            for key, value in initval.iteritems():
+                self.__setitem__(key, value)
+        elif isinstance(initval, list):
+            for (key, value) in initval:
+                self.__setitem__(key, value)
+            
+    def __contains__(self, key):
+        return dict.__contains__(self, key.lower())
+  
+    def __getitem__(self, key):
+        return dict.__getitem__(self, key.lower()).val
+  
+    def __setitem__(self, key, value):
+        return dict.__setitem__(self, key.lower(), self._kv(key, value))
+
+    def get(self, key, default=None):
+        try:
+            v = dict.__getitem__(self, key.lower())
+        except KeyError:
+            return default
+        else:
+            return v.val
+
+    def has_key(self,key):
+        if self.get(key):
+            return True
+        else:
+            return False    
+
+    def items(self):
+        return [(v.key, v.val) for v in dict.itervalues(self)]
     
-    def parse(self):
-        line_patt = DefFileParser.KEY_VALUE_PATT_TEMPLATE.format(key_patt=self.KEY_PATT,value_patt=self.VALUE_PATT)
-        line_re = re.compile(line_patt)
-        
-        extended_value_re = re.compile(self.EXTENDED_VALUE_PATT)
-        
-        section = INISection(self.name)
-        
-        extended_key = None
-        extended_joiner = None
-        extended_data = None
-        for line in self.reader():
-            #print line, extended_data
-            match = line_re.match(line)
-            if extended_key is not None:
-                if match:
-                    extended_data = extended_joiner.join(extended_data)
-                    #print '1', extended_data
-                    section.fields[extended_key] = extended_data
-                    extended_key = None
-                else:
-                    extended_match = extended_value_re.match(line)
-                    if not extended_match:
-                        raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
-                    extended_data.append(line)
-                    continue
-            if not match:
-                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
-            key = match.group('key')
-            value = match.group('value')
-            if value == '|':
-                extended_key = key
-                extended_data = []
-                extended_joiner = '\n'
-            elif value == '>':
-                extended_key = key
-                extended_data = []
-                extended_joiner = ' '
-            else:
-                extended_key = None
-                section.fields[key] = value
-        if extended_key is not None:
-            extended_data = extended_joiner.join(extended_data)
-            #print '2', extended_data
-            section.fields[extended_key] = extended_data
-        return section
-
-def get_validated_INI_parser(key_patt,value_patt=None,format=None):
-    class ValidatedINISectionParser(INISectionParser):
-        if format:
-            FORMAT = format
-        KEY_PATT = key_patt
-        if value_patt is not None:
-            VALUE_PATT = value_patt
-    return ValidatedINISectionParser
-
-def get_validated_extended_INI_parser(key_patt,value_patt=None,extended_value_patt=None,format=None):
-    class ValidatedINISectionParser(ExtendedINISectionParser):
-        if format:
-            FORMAT = format
-        KEY_PATT = key_patt
-        if value_patt is not None:
-            VALUE_PATT = value_patt
-        if extended_value_patt is not None:
-            EXTENDED_VALUE_PATT = extended_value_patt
-    return ValidatedINISectionParser
-
-class RawSectionParser(DefFileParser.SectionParser):
-    LINE_PATT = '.*'
-    CONTENT_PATT = '.*'
-    FOLD = False
+    def keys(self):
+        return [v.key for v in dict.itervalues(self)]
     
-    def parse(self):
-        line_re = re.compile(self.LINE_PATT)
+    def values(self):
+        return [v.val for v in dict.itervalues(self)]
+    
+    def iteritems(self):
+        for v in dict.itervalues(self):
+            yield v.key, v.val
         
-        section = RawSection(self.name)
+    def iterkeys(self):
+        for v in dict.itervalues(self):
+            yield v.key
         
-        strs = ''
-        
-        for line in self.reader():
-            match = line_re.match(line)
-            if not match:
-                raise ParsingError('Parsing error: invalid section line\n{line}'.format(line=line))
-            strs.append(line)
-        joiner = ' ' if self.FOLD else '\n'
-        content = joiner.join(strs)
-        
-        if not re.match(self.CONTENT_PATT,content,flags=re.MULTILINE):
-            raise ParsingError('Parsing error: invalid raw section\n{content}'.format(content=content))
-        section.content = content
-        
-        return section
-
-def get_validated_raw_section_parser(line_patt=None,content_patt=None,format=None):
-    class ValidatedRawSectionParser(RawSectionParser):
-        if format:
-            FORMAT = format
-        if line_patt:
-            LINE_PATT = line_patt
-        if content_patt:
-            CONTENT_PATT = content_patt
-    return ValidatedRawSectionParser
+    def itervalues(self):
+        for v in dict.itervalues(self):
+            yield v.val
+    
+    def copy(self):
+        return dict(self.iteritems())
 
 if __name__ == '__main__':
     data = \

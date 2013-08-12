@@ -1,0 +1,9 @@
+*.cmake
+build/
+bin/
+lib/
+*~
+*.pyc
+*.pyo
+.*project
+doc/.zim
