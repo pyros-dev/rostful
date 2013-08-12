@@ -242,25 +242,12 @@ class INISection(Section):
         Section.__init__(self, name)
         self.fields = {}
     
-    def has_key(self, key):
-        return self.fields.has_key(key)
-    
-    def get(self, key, default=None):
-        return self.fields.get(key, default)
-    
-    def __getitem__(self, key):
-        """If the section has the key, return a (possibly empty) string.
-        Otherwise, return None."""
-        if self.fields.has_key(key):
-            return self.fields.get(key) or ''
-        else:
-            return None
-    
-    def __setitem__(self, key, value):
-        self.fields[key] = value
     
     def __iter__(self):
         return self.fields.iteritems()
+    
+    def __nonzero__(self):
+        return bool(self.fields)
     
     def tojson(self):
         return self.fields.copy()
@@ -283,12 +270,53 @@ class INISection(Section):
             for key, value in section.fields:
                 ini[section_name + '.' + key] = value
         return ini
+    
+    def __contains__(self, key):
+        return key in self.get_field_names()
+  
+    def __getitem__(self, key):
+        """If the section has the key, return a (possibly empty) string.
+        Otherwise, return None."""
+        if self.fields.has_key(key):
+            return self.fields.get(key) or ''
+        else:
+            return None
+  
+    def __setitem__(self, key, value):
+        self.fields[key] = value
+
+    def get(self, key, default=None):
+        return self.fields.get(key, default)
+
+    def has_key(self, key):
+        return self.fields.has_key(key)
+
+    def items(self):
+        return [(k, v) for k, v in self.iteritems()]
+    
+    def keys(self):
+        return [k for k in self.iterkeys()]
+    
+    def values(self):
+        return [v for v in self.itervalues()]
+    
+    def iteritems(self):
+        return self.fields.iteritems()
+        
+    def iterkeys(self):
+        return self.fields.iterkeys()
+        
+    def itervalues(self):
+        return self.fields.itervalues()
 
 class RawSection(Section):
     FORMAT = 'raw'
     def __init__(self,name):
         Section.__init__(self,name)
         self.content = ''
+    
+    def __nonzero__(self):
+        return bool(self.content)
     
     def tojson(self):
         self.content

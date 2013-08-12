@@ -72,16 +72,11 @@ class Topic:
 		if self.allow_sub:
 			self.sub = rospy.Subscriber(self.name, self.rostype, self.topic_callback)
 	
-	def publish(self,msg,use_ros=False):
-		rosmsg = self.rostype()
-		if use_ros:
-			rosmsg.deserialize(msg)
-		else:
-			msgconv.populate_instance(msg,rosmsg)
-		
-		self.pub.publish(rosmsg)
+	def publish(self,msg):
+		self.pub.publish(msg)
+		return
 	
-	def get(self,num=None,use_ros=False):
+	def get(self,num=None):
 		if not self.msg:
 			return None
 		
@@ -182,6 +177,7 @@ class RostfulServer:
 			
 	
 	def wsgifunc(self):
+		"""Returns the WSGI-compatible function for this server."""
 		return self._handle
 	
 	def _handle(self,environ,start_response):
@@ -195,23 +191,22 @@ class RostfulServer:
 	
 	def _manifest(self,services, topics, indent = ''):
 		dfile = deffile.DefFile()
-		dfile.manifest.type = 'Node'
+		dfile.manifest.def_type = 'Node'
 		
-		service_section = deffile.INISection('Services')
-		for service_name, service in services.iteritems():
-			service_section.fields[service_name] = service.rostype_name
-		dfile.add_section(service_section)
+		if services:
+			service_section = deffile.INISection('Services')
+			for service_name, service in services.iteritems():
+				service_section.fields[service_name] = service.rostype_name
+			dfile.add_section(service_section)
 		
 		topics_section = deffile.INISection('Topics')
 		publish_section = deffile.INISection('Publishes')
 		subscribe_section = deffile.INISection('Subscribes')
 		
 		for topic_name, topic in topics.iteritems():
-			if False and topic.allow_pub and topic.allow_sub:
-				topics_section.fields[topic_name] = topic.rostype_name
-			elif topic.allow_sub:
+			if topic.allow_sub:
 				publish_section.fields[topic_name] = topic.rostype_name
-			elif topic.allow_pub:
+			if topic.allow_pub:
 				subscribe_section.fields[topic_name] = topic.rostype_name
 		
 		if topics_section.fields:
@@ -332,7 +327,7 @@ class RostfulServer:
 			if mode == 'service':
 				ret_msg = service.call(input_msg)
 			else:
-				topic.publish(input_msg,use_ros=use_ros)
+				topic.publish(input_msg)
 				return response_200(start_response, [], content_type='application/json')
 			
 			if use_ros:
@@ -348,7 +343,7 @@ class RostfulServer:
 			
 			return response_200(start_response, output_data, content_type=content_type)
 		except Exception, e:
-			print 'Exception occurred!', e
+			print 'An exception occurred!', e
 			return response_500(start_response, e)
 
 import argparse
@@ -359,10 +354,10 @@ def servermain():
 	
 	parser = argparse.ArgumentParser()
 	
-	parser.add_argument('--services','--srv',nargs='+')
-	parser.add_argument('--topics',nargs='+')
-	parser.add_argument('--publishes','--pub',nargs='+')
-	parser.add_argument('--subscribes','--sub',nargs='+')
+	parser.add_argument('--services','--srv',nargs='+', help='Services to advertise')
+	parser.add_argument('--topics',nargs='+', help='Topics to both publish and subscribe')
+	parser.add_argument('--publishes','--pub',nargs='+', help='Topics to publish via web services')
+	parser.add_argument('--subscribes','--sub',nargs='+', help='Topics to allowing publishing to via web services')
 	
 	parser.add_argument('--host',default='')
 	parser.add_argument('-p','--port',type=int,default=8080)

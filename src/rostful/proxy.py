@@ -16,6 +16,8 @@ from . import deffile
 
 from .util import ROS_MSG_MIMETYPE,ROS_MSG_MIMETYPE_WITH_TYPE, get_json_bool
 
+from collections import namedtuple
+
 class IndividualServiceProxy:
 	def __init__(self,url,name,srv_module,service_type_name, binary=None):
 		self.url = url
@@ -41,7 +43,7 @@ class IndividualServiceProxy:
 			reqs = json.dumps(req)
 			content_type = 'application/json'
 		
-		wsreq = urllib2.Request(self.url,data=reqs,headers = {'Content-Type': content_type})
+		wsreq = urllib2.Request(self.url.encode('utf-8'),data=reqs,headers = {'Content-Type': content_type})
 		try:
 			wsres = urllib2.urlopen(wsreq)
 		except Exception, e:
@@ -102,17 +104,19 @@ class IndividualTopicProxy:
 			req = StringIO()
 			msg.serialize(req)
 			reqs = req.getvalue()
-			content_type = ROS_MSG_MIMETYPE_WITH_TYPE(self.rostype_req)
+			content_type = ROS_MSG_MIMETYPE_WITH_TYPE(self.rostype)
 		else:
 			req = msgconv.extract_values(msg)
 			req['_format'] = 'ros'
 			reqs = json.dumps(req)
 			content_type = 'application/json'
 		
-		wsreq = urllib2.Request(self.url,data=reqs,headers = {'Content-Type': content_type})
+		wsreq = urllib2.Request(self.url.encode('utf-8'),data=reqs,headers = {'Content-Type': content_type})
 		try:
 			wsres = urllib2.urlopen(wsreq)
 		except Exception, e:
+			print content_type
+			print reqs
 			raise e
 		
 		if wsres.getcode() != 200:
@@ -143,13 +147,13 @@ class IndividualTopicProxy:
 				#TODO: flip out
 				pass
 			
-			data_str = wsres.read().strip()
+			data_str = wsres.read()
 			
 			msg = self.rostype()
 			if wsres.info()['Content-Type'].split(';')[0].strip() == ROS_MSG_MIMETYPE:
 				msg.deserialize(data_str)
 			else:
-				data = json.loads(data_str)
+				data = json.loads(data_str.strip())
 				data.pop('_format',None)
 				msgconv.populate_instance(data,msg)
 			
@@ -212,31 +216,56 @@ class RostfulServiceProxy:
 			services = dfile.get_section('Services')
 			if services:
 				print 'Services:'
-				for service_name, service_type in services.fields.iteritems():
+				for service_name, service_type in services.iteritems():
 					ret = self.setup_service(self.url + '/' + service_name, prefix + service_name, service_type, remap=remap)
 					if ret: print '%s (%s)' % (prefix + service_name, service_type)
 			
-			topics = dfile.get_section('Topics')
+			topic_dict = {}
+			topic_info = namedtuple('topic_info','type pub sub')
+			
+			topic_section = dfile.get_section('Topics')
+			if topic_section:
+				for topic_name, topic_type in topic_section.iteritems():
+					topic_dict[topic_name] = topic_info(type=topic_type,pub=True,sub=subscribe)
+			published_section = dfile.get_section('Publishes')
+			if published_section:
+				for topic_name, topic_type in published_section.iteritems():
+					sub = topic_dict[topic_name].sub if topic_dict.has_key(topic_name) else False
+				topic_dict[topic_name] = topic_info(type=topic_type,pub=True,sub=sub)
+			subscribed_section = dfile.get_section('Subscribes')
+			if subscribed_section:
+				for topic_name, topic_type in subscribed_section.iteritems():
+					pub = topic_dict[topic_name].pub if topic_dict.has_key(topic_name) else False
+				topic_dict[topic_name] = topic_info(type=topic_type,pub=pub,sub=subscribe)
+			
+			topics = {}
+			published_topics = {}
+			subscribed_topics = {}
+			for topic_name, info in topic_dict.iteritems():
+				if info.pub and info.sub:
+					topics[topic_name] = info.type
+				elif info.pub:
+					published_topics[topic_name] = info.type
+				elif info.sub:
+					subscribed_topics[topic_name] = info.type
+			
 			if topics:
 				print 'Publishing and subscribing:'
-				for topic_name, topic_type in topics.fields.iteritems():
-					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=True, sub=subscribe, remap=remap, publish_interval=publish_interval)
+				for topic_name, topic_type in topics.iteritems():
+					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=True, sub=True, remap=remap, publish_interval=publish_interval)
 					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
 			
-			published_topics = dfile.get_section('Publishes')
 			if published_topics:
 				print 'Publishing:'
-				for topic_name, topic_type in published_topics.fields.iteritems():
+				for topic_name, topic_type in published_topics.iteritems():
 					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=True, remap=remap, publish_interval=publish_interval)
 					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
 			
-			if subscribe:
-				subscribed_topics = dfile.get_section('Subscribes')
-				if subscribed_topics:
-					print 'Subscribing:'
-					for topic_name, topic_type in subscribed_topics.fields.iteritems():
-						ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=False, sub=subscribe, remap=remap, publish_interval=publish_interval)
-						if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
+			if subscribed_topics:
+				print 'Subscribing:'
+				for topic_name, topic_type in subscribed_topics.iteritems():
+					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=False, sub=True, remap=remap, publish_interval=publish_interval)
+					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
 		elif dfile.type == 'Service':
 			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
 		elif dfile.type == 'Topic':
@@ -276,17 +305,17 @@ def proxymain():
 	
 	parser.add_argument('url')
 	
-	parser.add_argument('--publish-interval','--pub-interval',type=float)
+	parser.add_argument('--allow-subscription','--sub',dest='subscribe',action='store_true',default=False, 
+					help='This option must be given to allow the web service to subscribe to topics')
+	parser.add_argument('--publish-interval','-i',type=float, help='The rate to retrieve and publish messages from the web service')
 	
-	parser.add_argument('--allow-subscription','--sub',dest='subscribe',action='store_true',default=False)
+	parser.add_argument('--binary',action='store_true',default=False, help='Using serialized ROS messages instead of rosbridge JSON')
 	
-	parser.add_argument('--binary',action='store_true',default=False)
-	
-	parser.add_argument('--test',action='store_true',default=False)
+	parser.add_argument('--test',action='store_true',default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy services and topics will have _ws appended.')
 	
 	grp = parser.add_mutually_exclusive_group()
-	grp.add_argument('--prefix')
-	grp.add_argument('--no-prefix', action='store_const', const = '', dest='prefix')
+	grp.add_argument('--prefix', help='Specify a prefix for the services and topics. By default, this is the name given by the web service if it provides one')
+	grp.add_argument('--no-prefix', action='store_const', const = '', dest='prefix', help='Use the service and topic names as-is as relative names.')
 	
 	args = parser.parse_args(rospy.myargv()[1:])
 	
