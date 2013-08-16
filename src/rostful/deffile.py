@@ -64,10 +64,12 @@ class DefFile(object):
         for d in self.definitions:
             if d.type == dfn.type and d.name == dfn.name:
                 if quiet:
-                    return
+                    return False
                 else:
                     raise TypeError("%s:%s definition already exists" % (dfn.type, dfn.name))
         self.definitions.append(dfn)
+        if quiet:
+            return True
     
     def has_section(self,section, format=None):
         return self.sections.has_key(section)
@@ -81,6 +83,15 @@ class DefFile(object):
     
     def add_section(self,section):
         self.sections[section.name] = section
+    
+    def create_sections(self,section_type,*args):
+        if len(args) == 1 and isinstance(args[0],(list,tuple)):
+            names = args[0]
+        else:
+            names = args
+        for name in names:
+            section = section_type(name)
+            self.sections[section.name] = section
     
     def load_includes(self,path=None):
         pass
@@ -238,9 +249,9 @@ class Definition(Section):
 
 class INISection(Section):
     FORMAT = 'ini'
-    def __init__(self,name):
+    def __init__(self, name, fields=None):
         Section.__init__(self, name)
-        self.fields = {}
+        self.fields = dict(fields) if fields else {}
     
     
     def __iter__(self):
@@ -257,7 +268,7 @@ class INISection(Section):
         for key, value in self.fields.iteritems():
             if value.find('\n') != -1:
                 strs.append("%s = |" % key)
-                [strs.append(line) for line in value.split('\n')]
+                [strs.append(re.sub(r'=',r'\\=',line)) for line in value.split('\n')]
             else:
                 strs.append('%s = %s' % (key,value))
         return '\n'.join(strs)
@@ -311,9 +322,9 @@ class INISection(Section):
 
 class RawSection(Section):
     FORMAT = 'raw'
-    def __init__(self,name):
+    def __init__(self, name, content=None):
         Section.__init__(self,name)
-        self.content = ''
+        self.content = str(content) if content else ''
     
     def __nonzero__(self):
         return bool(self.content)
@@ -386,9 +397,10 @@ class DefFileParser(object):
             dfn_type=DEF_TYPE_PATT,section=SEC_NAME_PATT,format=FORMAT_PATT)
     SECTION_RE = re.compile(SECTION_PATT)
     
-    KEY_VALUE_PATT_TEMPLATE = r'^(?P<key>{key_patt})\s*=\s*(?P<value>{value_patt})$'
+    KEY_VALUE_PATT_TEMPLATE = r'^(?P<DefFileParser_key>{key_patt})\s*(?<!\\)=\s*(?P<DefFileParser_value>{value_patt})$'
     
-    BASIC_KEY_PATT = r'[^\s=](?:\s*\S)*'
+    BASIC_KEY_CHAR_PATT = r'(?:[^ \t\n\r\f\v=]|\\=)'
+    BASIC_KEY_PATT = r'{char}+(?:\s+{char}+)*'.format(char=BASIC_KEY_CHAR_PATT) #r'[^\s=](?:\s*\S)*'
     BASIC_VALUE_PATT = r'(?:\S(?:\s*\S)*)?'
     BASIC_KEY_VALUE_PATT = KEY_VALUE_PATT_TEMPLATE.format(key_patt=BASIC_KEY_PATT,value_patt=BASIC_VALUE_PATT)
     BASIC_KEY_VALUE_RE = re.compile(BASIC_KEY_VALUE_PATT)
@@ -450,7 +462,6 @@ class DefFileParser(object):
             if go_easy:
                 return None
             elif format:
-                print self.section_parsers
                 raise ParsingError('No section parser for section %s and format %s' % (name,format))
             else:
                 raise ParsingError('No section parser for section %s' % name)
@@ -474,8 +485,6 @@ class DefFileParser(object):
                 score +=1
             matches[score] = parser
         if not matches:
-            print dfn_type,name,format,def_file_format
-            print self.section_parsers
             parser = self.get_section_parser(None, format, def_file_format, go_easy=True)
             if parser:
                 return DefFileParser.DefinitionParser.from_section_parser(parser)
@@ -599,7 +608,6 @@ class DefFileParser(object):
             class DfnParser(section_parser, DefFileParser.DefinitionParser):
                 def __init__(self,dfn_type,name,format,reader):
                     DefFileParser.DefinitionParser.__init__(self, dfn_type, name, format, reader)
-                    print 'initing', section_parser
                     section_parser.__init__(self,name,format,reader)
                 
                 def new_section(self):
@@ -614,8 +622,8 @@ class DefFileParser(object):
                 match = DefFileParser.BASIC_KEY_VALUE_RE.match(line)
                 if not match:
                     raise ParsingError('Parsing error: invalid manifest line\n{line}'.format(line=line))
-                key = match.group('key')
-                value = match.group('value')
+                key = match.group('DefFileParser_key')
+                value = match.group('DefFileParser_value')
                 if key.lower() == 'def-type':
                     mf.def_type = value
                 elif key.startswith('include'):
@@ -646,9 +654,9 @@ class INISectionParser(DefFileParser.SectionParser):
         for line in self.reader():
             match = line_re.match(line)
             if not match:
-                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
-            key = match.group('key')
-            value = match.group('value')
+                raise ParsingError('Parsing error: Invalid INI section line\n{line}'.format(line=line))
+            key = re.sub(r'\\=',r'=',match.group('DefFileParser_key'))
+            value = match.group('DefFileParser_value')
             section.fields[key] = value
         return section
 
@@ -672,19 +680,19 @@ class ExtendedINISectionParser(INISectionParser):
             match = line_re.match(line)
             if extended_key is not None:
                 if match:
-                    extended_data = extended_joiner.join(extended_data)
+                    extended_data = re.sub(r'\\=',r'=',extended_joiner.join(extended_data))
                     section.fields[extended_key] = extended_data
                     extended_key = None
                 else:
                     extended_match = extended_value_re.match(line)
                     if not extended_match:
-                        raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
+                        raise ParsingError('Parsing error: Invalid Extended INI section line for key {key}:\n{line}'.format(key=extended_key,line=line))
                     extended_data.append(line)
                     continue
             if not match:
-                raise ParsingError('Parsing error: invalid INI section line\n{line}'.format(line=line))
-            key = match.group('key')
-            value = match.group('value')
+                raise ParsingError('Parsing error: Invalid Extended INI section line\n{line}'.format(line=line))
+            key = re.sub(r'\\=',r'=',match.group('DefFileParser_key'))
+            value = match.group('DefFileParser_value')
             if value == '|':
                 extended_key = key
                 extended_data = []
@@ -697,7 +705,7 @@ class ExtendedINISectionParser(INISectionParser):
                 extended_key = None
                 section.fields[key] = value
         if extended_key is not None:
-            extended_data = extended_joiner.join(extended_data)
+            extended_data = key = re.sub(r'\\=',r'=',extended_joiner.join(extended_data))
             section.fields[extended_key] = extended_data
         return section
 
@@ -768,7 +776,7 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
     
     @classmethod
     def line_patt(cls):
-        return r'^(?P<type>{type_patt})\s+(?P<name>{name_patt})$'.format(type_patt=cls.TYPE_PATT,name_patt=cls.NAME_PATT)
+        return r'^(?P<ROSStyleDefinitionParser_type>{type_patt})\s+(?P<ROSStyleDefinitionParser_name>{name_patt})$'.format(type_patt=cls.TYPE_PATT,name_patt=cls.NAME_PATT)
     
     SEGMENT_NAMES = None
     
@@ -797,7 +805,7 @@ class ROSStyleDefinitionParser(DefFileParser.DefinitionParser):
             match = line_re.match(line)
             if not match:
                 raise ParsingError('Parsing error: invalid ROS-style definition line\n{line}'.format(line=line))
-            segment.append(ROSStyleDefinition.Field(name=match.group('name'),type=match.group('type')))
+            segment.append(ROSStyleDefinition.Field(name=match.group('ROSStyleDefinitionParser_name'),type=match.group('ROSStyleDefinitionParser_type')))
         if seg_line_change:
             if not self.ALLOW_EMPTY_SEGMENTS:
                 raise ParsingError('Parsing error: empty segment')
