@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import roslib
 roslib.load_manifest('rostful')
 import rospy
+import actionlib_msgs.msg
 
 import urllib2, json, sys
 
@@ -14,24 +15,24 @@ from importlib import import_module
 from . import message_conversion as msgconv
 from . import deffile
 
-from .util import ROS_MSG_MIMETYPE,ROS_MSG_MIMETYPE_WITH_TYPE, get_json_bool
+from .util import ROS_MSG_MIMETYPE, ROS_MSG_MIMETYPE_WITH_TYPE, get_json_bool
 
 from collections import namedtuple
 
 class IndividualServiceProxy:
-	def __init__(self,url,name,srv_module,service_type_name, binary=None):
+	def __init__(self, url, name, srv_module, service_type_name, binary=None):
 		self.url = url
 		self.name = name
 		
 		self.binary = binary or False
 		
-		self.rostype = getattr(srv_module,service_type_name)
-		self.rostype_req = getattr(srv_module,service_type_name + 'Request')
-		self.rostype_resp = getattr(srv_module,service_type_name + 'Response')
+		self.rostype = getattr(srv_module, service_type_name)
+		self.rostype_req = getattr(srv_module, service_type_name + 'Request')
+		self.rostype_resp = getattr(srv_module, service_type_name + 'Response')
 		
-		self.proxy = rospy.Service(self.name,self.rostype,self.call)
+		self.proxy = rospy.Service(self.name, self.rostype, self.call)
 	
-	def call(self,rosreq):
+	def call(self, rosreq):
 		if self.binary:
 			req = StringIO()
 			rosreq.serialize(req)
@@ -43,7 +44,7 @@ class IndividualServiceProxy:
 			reqs = json.dumps(req)
 			content_type = 'application/json'
 		
-		wsreq = urllib2.Request(self.url.encode('utf-8'),data=reqs,headers = {'Content-Type': content_type})
+		wsreq = urllib2.Request(self.url.encode('utf-8'), data=reqs, headers={'Content-Type': content_type})
 		try:
 			wsres = urllib2.urlopen(wsreq)
 		except Exception, e:
@@ -60,14 +61,14 @@ class IndividualServiceProxy:
 			rosresp.deserialize(data_str)
 		else:
 			data = json.loads(data_str)
-			data.pop('_format',None)
-			msgconv.populate_instance(data,rosresp)
+			data.pop('_format', None)
+			msgconv.populate_instance(data, rosresp)
 		
 		return rosresp
 
-def create_service_proxy(url,name,service_type,binary=None):
+def create_service_proxy(url, name, service_type, binary=None):
 	try:
-		service_type_module,service_type_name = tuple(service_type.split('/'))
+		service_type_module, service_type_name = tuple(service_type.split('/'))
 		roslib.load_manifest(service_type_module)
 		srv_module = import_module(service_type_module + '.srv')
 		return IndividualServiceProxy(url, name, srv_module, service_type_name, binary=binary)
@@ -77,7 +78,14 @@ def create_service_proxy(url,name,service_type,binary=None):
 	
 
 class IndividualTopicProxy:
-	def __init__(self,url,name,msg_module,topic_type_name,pub=True,sub=True, publish_interval=None, binary=None):
+	_publisher_threads = []
+	
+	@classmethod
+	def start(cls):
+		for thread in cls._publisher_threads:
+			thread.start()
+	
+	def __init__(self, url, name, msg_module, topic_type_name, pub=True, sub=True, publish_interval=None, binary=None):
 		self.url = url
 		self.name = name
 		
@@ -86,20 +94,20 @@ class IndividualTopicProxy:
 		self.pub = pub
 		self.sub = sub
 		
-		self.rostype = getattr(msg_module,topic_type_name)
+		self.rostype = getattr(msg_module, topic_type_name)
 		
 		self.publish_interval = publish_interval or 1
 		self.publisher = None
 		if self.pub:
 			self.publisher = rospy.Publisher(name, self.rostype)
-			self.publisher_thread = threading.Thread(target=self.publish,name=name)
-			self.publisher_thread.start()
+			self.publisher_thread = threading.Thread(target=self.publish, name=name)
+			self._publisher_threads.append(self.publisher_thread)
 		
 		self.subscriber = None
 		if self.sub:
 			self.subscriber = rospy.Subscriber(name, self.rostype, self.callback)
 	
-	def callback(self,msg):
+	def callback(self, msg):
 		if self.binary:
 			req = StringIO()
 			msg.serialize(req)
@@ -111,7 +119,7 @@ class IndividualTopicProxy:
 			reqs = json.dumps(req)
 			content_type = 'application/json'
 		
-		wsreq = urllib2.Request(self.url.encode('utf-8'),data=reqs,headers = {'Content-Type': content_type})
+		wsreq = urllib2.Request(self.url.encode('utf-8'), data=reqs, headers={'Content-Type': content_type})
 		try:
 			wsres = urllib2.urlopen(wsreq)
 		except Exception, e:
@@ -135,7 +143,7 @@ class IndividualTopicProxy:
 			else:
 				content_accept = 'application/json'
 			
-			wsreq = urllib2.Request(self.url,headers = {'Accept': content_accept})
+			wsreq = urllib2.Request(self.url, headers={'Accept': content_accept})
 			try:
 				wsres = urllib2.urlopen(wsreq)
 			except Exception, e:
@@ -151,18 +159,25 @@ class IndividualTopicProxy:
 			
 			msg = self.rostype()
 			if wsres.info()['Content-Type'].split(';')[0].strip() == ROS_MSG_MIMETYPE:
-				msg.deserialize(data_str)
+				if not data_str:
+					msg = None
+				else:
+					msg.deserialize(data_str)
 			else:
 				data = json.loads(data_str.strip())
-				data.pop('_format',None)
-				msgconv.populate_instance(data,msg)
+				if not data:
+					msg = None
+				else:
+					data.pop('_format', None)
+					msgconv.populate_instance(data, msg)
 			
-			self.publisher.publish(msg)
+			if msg is not None:
+				self.publisher.publish(msg)
 			rospy.sleep(self.publish_interval)
 
-def create_topic_proxy(url,name,topic_type,pub=True,sub=True, publish_interval=None, binary=None):
+def create_topic_proxy(url, name, topic_type, pub=True, sub=True, publish_interval=None, binary=None):
 	try:
-		topic_type_module,topic_type_name = tuple(topic_type.split('/'))
+		topic_type_module, topic_type_name = tuple(topic_type.split('/'))
 		roslib.load_manifest(topic_type_module)
 		msg_module = import_module(topic_type_module + '.msg')
 		return IndividualTopicProxy(url, name, msg_module, topic_type_name, 
@@ -171,8 +186,28 @@ def create_topic_proxy(url,name,topic_type,pub=True,sub=True, publish_interval=N
 		print "Unknown msg type %s" % topic_type
 		return None
 
+def create_action_proxies(url, name, action_type, publish_interval=None, binary=None):
+	try:
+		action_type_module, action_type_name = tuple(action_type.split('/'))
+		roslib.load_manifest(action_type_module)
+		msg_module = import_module(action_type_module + '.msg')
+		
+		proxies = {}
+		
+		proxies['status'] = IndividualTopicProxy(url + '/status', name + '/status', actionlib_msgs.msg, 'GoalStatusArray', pub=True, sub=False, publish_interval=publish_interval, binary=binary)
+		proxies['result'] = IndividualTopicProxy(url + '/result', name + '/result', msg_module, action_type_name + 'ActionResult', pub=True, sub=False, publish_interval=publish_interval, binary=binary)
+		proxies['feedback'] = IndividualTopicProxy(url + '/feedback', name + '/feedback', msg_module, action_type_name + 'ActionFeedback', pub=True, sub=False, publish_interval=publish_interval, binary=binary)
+		
+		proxies['goal'] = IndividualTopicProxy(url + '/goal', name + '/goal', msg_module, action_type_name + 'ActionGoal', pub=False, sub=True, binary=binary)
+		proxies['cancel'] = IndividualTopicProxy(url + '/cancel', name + '/cancel', actionlib_msgs.msg, 'GoalID', pub=False, sub=True, binary=binary)
+
+		return proxies
+	except Exception, e:
+		print "Unknown action type %s" % action_type
+		return None
+
 class RostfulServiceProxy:
-	def __init__(self,url,remap=False, subscribe=False, publish_interval=None, binary=None, prefix=None):
+	def __init__(self, url, remap=False, subscribe=False, publish_interval=None, binary=None, prefix=None):
 		if url.endswith('/'):
 			url = url[:-1]
 		self.url = url
@@ -183,6 +218,7 @@ class RostfulServiceProxy:
 		
 		self.services = {}
 		self.topics = {}
+		self.actions = {}
 		
 		self.subscribe = subscribe
 		self.publish_interval = publish_interval
@@ -221,22 +257,22 @@ class RostfulServiceProxy:
 					if ret: print '%s (%s)' % (prefix + service_name, service_type)
 			
 			topic_dict = {}
-			topic_info = namedtuple('topic_info','type pub sub')
+			topic_info = namedtuple('topic_info', 'type pub sub')
 			
 			topic_section = dfile.get_section('Topics')
 			if topic_section:
 				for topic_name, topic_type in topic_section.iteritems():
-					topic_dict[topic_name] = topic_info(type=topic_type,pub=True,sub=subscribe)
+					topic_dict[topic_name] = topic_info(type=topic_type, pub=True, sub=subscribe)
 			published_section = dfile.get_section('Publishes')
 			if published_section:
 				for topic_name, topic_type in published_section.iteritems():
 					sub = topic_dict[topic_name].sub if topic_dict.has_key(topic_name) else False
-				topic_dict[topic_name] = topic_info(type=topic_type,pub=True,sub=sub)
+				topic_dict[topic_name] = topic_info(type=topic_type, pub=True, sub=sub)
 			subscribed_section = dfile.get_section('Subscribes')
 			if subscribed_section:
 				for topic_name, topic_type in subscribed_section.iteritems():
 					pub = topic_dict[topic_name].pub if topic_dict.has_key(topic_name) else False
-				topic_dict[topic_name] = topic_info(type=topic_type,pub=pub,sub=subscribe)
+				topic_dict[topic_name] = topic_info(type=topic_type, pub=pub, sub=subscribe)
 			
 			topics = {}
 			published_topics = {}
@@ -266,19 +302,30 @@ class RostfulServiceProxy:
 				for topic_name, topic_type in subscribed_topics.iteritems():
 					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=False, sub=True, remap=remap, publish_interval=publish_interval)
 					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
+			
+			actions = dfile.get_section('Actions')
+			if actions:
+				print 'Actions:'
+				for action_name, action_type in actions.iteritems():
+					ret = self.setup_action(self.url + '/' + action_name, prefix + action_name, action_type, remap=remap, publish_interval=publish_interval)
+					if ret: print '%s (%s)' % (prefix + action_name, action_type)
 		elif dfile.type == 'Service':
 			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
 		elif dfile.type == 'Topic':
 			pub = dfile.manifest['Subscribes'].lower() == 'true'
 			sub = dfile.manifest['Publishes'].lower() == 'true' and subscribe
 			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], pub=pub, sub=sub, remap=remap, publish_interval=publish_interval)
+		elif dfile.type == 'Action':
+			self.setup_action(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap, publish_interval=publish_interval)
+			
+		IndividualTopicProxy.start()
 		return
 	
 	def setup_service(self, service_url, service_name, service_type, remap=False):
 		if remap:
 			service_name = service_name + '_ws'
 		
-		proxy = create_service_proxy(service_url,service_name,service_type, binary=self.binary)
+		proxy = create_service_proxy(service_url, service_name, service_type, binary=self.binary)
 		if proxy is None: return False
 		self.services[service_name] = proxy
 		return True
@@ -291,27 +338,36 @@ class RostfulServiceProxy:
 			pub = True
 			sub = True
 		
-		proxy = create_topic_proxy(topic_url,topic_name,topic_type,pub=pub,sub=sub, publish_interval=publish_interval, binary=self.binary)
+		proxy = create_topic_proxy(topic_url, topic_name, topic_type, pub=pub, sub=sub, publish_interval=publish_interval, binary=self.binary)
 		if proxy is None: return False
 		self.topics[topic_name] = proxy
+		return True
+	
+	def setup_action(self, action_url, action_name, action_type, remap=False, publish_interval=None):
+		if remap:
+			action_name = action_name + '_ws'
+		
+		proxy = create_action_proxies(action_url, action_name, action_type, publish_interval=publish_interval, binary=self.binary)
+		if proxy is None: return False
+		self.actions[action_name] = proxy
 		return True
 
 import argparse
 
 def proxymain():
-	rospy.init_node('wsproxy',anonymous=True)
+	rospy.init_node('rostful_proxy', anonymous=True)
 	
 	parser = argparse.ArgumentParser()
 	
 	parser.add_argument('url')
 	
-	parser.add_argument('--allow-subscription','--sub',dest='subscribe',action='store_true',default=False, 
+	parser.add_argument('--allow-subscription', '--sub', dest='subscribe', action='store_true', default=False, 
 					help='This option must be given to allow the web service to subscribe to topics')
-	parser.add_argument('--publish-interval','-i',type=float, help='The rate to retrieve and publish messages from the web service')
+	parser.add_argument('--publish-interval', '-i', type=float, help='The rate to retrieve and publish messages from the web service')
 	
-	parser.add_argument('--binary',action='store_true',default=False, help='Using serialized ROS messages instead of rosbridge JSON')
+	parser.add_argument('--binary', action='store_true', default=False, help='Using serialized ROS messages instead of rosbridge JSON')
 	
-	parser.add_argument('--test',action='store_true',default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy services and topics will have _ws appended.')
+	parser.add_argument('--test', action='store_true', default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy services and topics will have _ws appended.')
 	
 	grp = parser.add_mutually_exclusive_group()
 	grp.add_argument('--prefix', help='Specify a prefix for the services and topics. By default, this is the name given by the web service if it provides one')

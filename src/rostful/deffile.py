@@ -2,12 +2,22 @@ import re
 from collections import namedtuple
 from io import StringIO
 import inspect
+import json
 
 def _sec_name_to_dfn(name):
     idx = name.find('Section')
     if idx == -1:
         return name + 'Definition'
     return re.sub(r'Section','Definition',name)
+
+def _clean_string(s):
+    if s is None:
+        s = ''
+    elif isinstance(s,(list, tuple, dict)):
+        s = json.dumps(s)
+    else:
+        s = str(s)
+    return s
 
 class ParsingError(Exception):
     pass
@@ -16,7 +26,7 @@ class MissingDefinitionError(Exception):
     pass
 
 class DefFile(object):
-    def __init__(self,format=None, manifest=True):
+    def __init__(self, format=None, manifest=True, definitions=None, sections=None):
         self.format = format
         if manifest is True:
             self.manifest = Manifest()
@@ -24,8 +34,8 @@ class DefFile(object):
             self.manifest = manifest
         else:
             self.manifest = None
-        self.definitions = []
-        self.sections = dicti()
+        self.definitions = [d for d in definitions or []]
+        self.sections = dicti(sections or {})
     
     @property
     def type(self):
@@ -57,10 +67,10 @@ class DefFile(object):
                 return d
         return None
     
-    def get_definitions_of_type(self,dfn_type):
+    def get_definitions_of_type(self, dfn_type):
         return [d for d in self.definitions if d.type == dfn_type]
     
-    def add_definition(self,dfn,quiet=False):
+    def add_definition(self, dfn, quiet=False):
         for d in self.definitions:
             if d.type == dfn.type and d.name == dfn.name:
                 if quiet:
@@ -71,20 +81,20 @@ class DefFile(object):
         if quiet:
             return True
     
-    def has_section(self,section, format=None):
-        return self.sections.has_key(section)
+    def has_section(self, section, format=None):
+        return self.sections.has_key(_clean_string(section))
     
-    def get_section(self,section, format=None):
-        sec = self.sections.get(section)
+    def get_section(self, section, format=None):
+        sec = self.sections.get(_clean_string(section))
         if sec and format and sec.format != format:
             return None
         else:
             return sec
     
-    def add_section(self,section):
-        self.sections[section.name] = section
+    def add_section(self, section):
+        self.sections[_clean_string(section.name)] = section
     
-    def create_sections(self,section_type,*args):
+    def create_sections(self, section_type, *args):
         if len(args) == 1 and isinstance(args[0],(list,tuple)):
             names = args[0]
         else:
@@ -93,7 +103,7 @@ class DefFile(object):
             section = section_type(name)
             self.sections[section.name] = section
     
-    def load_includes(self,path=None):
+    def load_includes(self, path=None):
         pass
     
     def tojson(self):
@@ -107,7 +117,7 @@ class DefFile(object):
         
         return d
     
-    def tostring(self,suppress_formats=False):
+    def tostring(self, suppress_formats=False):
         strs = []
         if self.manifest:
             s = ''
@@ -131,7 +141,7 @@ class DefFile(object):
         
         for sec_name, section in self.sections.iteritems():
             s = ''
-            sec_name = section.name
+            sec_name = _clean_string(section.name)
             if sec_name.find(':') != -1:
                 sec_name = ':' + sec_name
             if section.format and not suppress_formats:
@@ -145,40 +155,107 @@ class DefFile(object):
     
     def get(self, key, default=None):
         if isinstance(key, tuple):
+            if len(key) == 1:
+                key = (None,key[0])
             sec = self.get_section(key[0])
-            if not sec: return default
+            if not sec:
+                return default
             if len(key) == 2:
-                return sec[key[1]]
+                return sec.__getitem__(key[1])
             else:
                 return sec.__getitem__(key[1:])
         else:
-            if not self.manifest:
+            null_sec_val = self.get_section(None).__getitem__(key) if self.has_section(None) and hasattr(self.get_section(None),'__getitem__') else None
+            if (self.manifest and key in self.manifest 
+                and null_sec_val is not None):
+                raise RuntimeError('Manifest and null section both have key %s!' % str(key))
+            elif null_sec_val is not None:
+                return null_sec_val
+            elif not self.manifest:
                 return default
             else:
-                return self.manifest[key]
+                return self.manifest.get(key,default)
+    
+    def get_bool(self, key, default=False):
+        value = self.get(key, default=None)
+        if value is None:
+            return default
+        elif isinstance(value, basestring):
+            return value.lower() in ['true','1']
+        else:
+            return False
+    
+    def get_int(self, key, default=None):
+        value = self.get(key, default=None)
+        if value is None:
+            return default
+        try:
+            return int(value)
+        except:
+            return None
+    
+    def get_list(self, key, split_pattern=', ', default=[], strip_brackets=True, json=True):
+        val = self.get(key)
+        if val is None:
+            return default
+        
+        if json:
+            import json as jsonmod
+            try:
+                json_value = jsonmod.loads(val)
+                if isinstance(json_value, list):
+                    return json_value
+            except:
+                pass
+        
+        if strip_brackets and ((val.startswith('[') and val.endswith(']'))
+                                or (val.startswith('(') and val.endswith(')'))):
+            val = val[1:-1]
+        return [v for v in re.split(split_pattern, val) if v]
+    
+    def __contains__(self, key):
+        if isinstance(key, tuple):
+            if len(key) == 1:
+                key = (None,key[0])
+            sec = self.get_section(key[0])
+            return key in sec
+        else:
+            null_sec_val = None
+            if self.has_section(None):
+                try:
+                    null_sec_val = key in self.get_section(None)
+                except:
+                    pass
+            if (self.manifest and key in self.manifest 
+                and null_sec_val is True):
+                raise RuntimeError('Manifest and null section both have key %s!' % str(key))
+            elif null_sec_val is not None:
+                return null_sec_val
+            elif not self.manifest:
+                return False
+            else:
+                return key in self.manifest
     
     def __getitem__(self, key):
         return self.get(key)
     
     def __str__(self):
         return self.tostring()
+    
+    def __repr__(self):
+        return 'DefFile(format=%s,manifest=%s,definitions=%s,sections=%s)' % (repr(self.format),repr(self.manifest),repr(self.definitions),repr(self.sections))
                 
 
 class Manifest(object):
-    def __init__(self):
-        self.def_type = None
-        self.includes = []
-        self.fields = dicti()
-    
-    def __getitem__(self,key):
-        return self.fields.get(key)
-    
-    def __setitem__(self,key,value):
-        self.fields[key] = value
+    def __init__(self, fields=None, **kwargs):
+        self.def_type = kwargs.get('def_type')
+        self.includes = kwargs.get('includes',[])
+        self.fields = strstrdicti(fields or {})
         
     def tojson(self):
         d = dict(self.fields.iteritems())
-        d['Def-Type'] = self.def_type
+        if self.def_type is not None:
+            d['Def-Type'] = self.def_type
         return d
     
     def tostring(self):
@@ -196,6 +273,60 @@ class Manifest(object):
     
     def __str__(self):
         return self.tostring()
+    
+    def __repr__(self):
+        def_type_str = ',%s' % repr(self.def_type) if self.def_type is not None else ''
+        includes_str = ',%s' % repr(self.includes) if self.includes else ''
+        return 'Manifest(fields=%s%s%s)' % (repr(self.fields), def_type_str, includes_str)
+    
+    def __iter__(self):
+        return self.fields.iteritems()
+    
+    def __nonzero__(self):
+        return bool(self.fields or self.def_type or self.includes)
+    
+    def __contains__(self, key):
+        return self.fields.__contains__(key)
+  
+    def __getitem__(self, key):
+        """If the section has the key, return a (possibly empty) string.
+        Otherwise, return None."""
+        if self.fields.has_key(key):
+            return self.fields.get(key)
+        else:
+            return None
+  
+    def __setitem__(self, key, value):
+        self.fields[key] = value
+
+    def get(self, key, default=None):
+        return self.fields.get(key, default)
+
+    def has_key(self, key):
+        return self.fields.has_key(key)
+
+    def items(self):
+        return [(k, v) for k, v in self.iteritems()]
+    
+    def keys(self):
+        return [k for k in self.iterkeys()]
+    
+    def values(self):
+        return [v for v in self.itervalues()]
+    
+    def iteritems(self):
+        return self.fields.iteritems()
+        
+    def iterkeys(self):
+        return self.fields.iterkeys()
+        
+    def itervalues(self):
+        return self.fields.itervalues()
+    
+    def __setattr__(self, name, value):
+        if name == 'fields':
+            value = strstrdicti(value) if value is not None else strstrdicti()
+        return super(Manifest,self).__setattr__(name, value)
 
 class Section(object):
     FORMAT = None
@@ -249,16 +380,9 @@ class Definition(Section):
 
 class INISection(Section):
     FORMAT = 'ini'
-    def __init__(self, name, fields=None):
+    def __init__(self, name, fields=None, discard_none=False):
         Section.__init__(self, name)
-        self.fields = dict(fields) if fields else {}
-    
-    
-    def __iter__(self):
-        return self.fields.iteritems()
-    
-    def __nonzero__(self):
-        return bool(self.fields)
+        self.fields = strstrdict((key, value) for key, value in fields.iteritems() if not (value is None and discard_none)) if fields else strstrdict()
     
     def tojson(self):
         return self.fields.copy()
@@ -282,14 +406,23 @@ class INISection(Section):
                 ini[section_name + '.' + key] = value
         return ini
     
+    def __repr__(self):
+        return 'INISection(%s, fields=%s)' % (repr(self.name), repr(self.fields))
+    
+    def __iter__(self):
+        return self.fields.iteritems()
+    
+    def __nonzero__(self):
+        return bool(self.fields)
+    
     def __contains__(self, key):
-        return key in self.get_field_names()
+        return key in self.fields
   
     def __getitem__(self, key):
         """If the section has the key, return a (possibly empty) string.
         Otherwise, return None."""
         if self.fields.has_key(key):
-            return self.fields.get(key) or ''
+            return self.fields.get(key)
         else:
             return None
   
@@ -319,6 +452,11 @@ class INISection(Section):
         
     def itervalues(self):
         return self.fields.itervalues()
+    
+    def __setattr__(self, name, value):
+        if name == 'fields':
+            value = strstrdict(value) if value is not None else strstrdict()
+        return super(INISection,self).__setattr__(name, value)
 
 class RawSection(Section):
     FORMAT = 'raw'
@@ -334,13 +472,22 @@ class RawSection(Section):
     
     def tostring(self):
         return self.content
+    
+    def __repr__(self):
+        return 'RawSection(%s,content=%s)' % (repr(self.name), repr(self.content))
 
 def get_definition_from_section(section_class):
+    sec_class_name = section_class.__name__
+    dfn_class_name = _sec_name_to_dfn(sec_class_name)
     class DfnClass(section_class,Definition):
-        def __init__(self,type,name):
+        def __init__(self,type,name, *args, **kwargs):
             Definition.__init__(self,type,name)
-            section_class.__init__(self,name)
-    DfnClass.__name__ = _sec_name_to_dfn(section_class.__name__)
+            section_class.__init__(self,name,*args,**kwargs)
+        
+        def __repr__(self):
+            sec_repr = section_class.__repr__(self)
+            return sec_repr.replace('%s(' % sec_class_name,'%s(%s,' % (dfn_class_name,repr(self.type)))
+    DfnClass.__name__ = dfn_class_name
     return DfnClass
 
 INIDefinition = get_definition_from_section(INISection)
@@ -348,11 +495,14 @@ INIDefinition = get_definition_from_section(INISection)
 class ROSStyleDefinition(Definition):
     Field = namedtuple('Field', ['name','type'])
     FORMAT = 'ros'
-    def __init__(self,type,name,segment_names):
+    def __init__(self,type,name,segment_names,segment_values=None):
         super(ROSStyleDefinition,self).__init__(type,name)
         
-        self.segments = tuple([[] for _ in xrange(len(segment_names))])
         self.segment_names = segment_names
+        if segment_values:
+            self.segments = tuple(segment_values)
+        else:
+            self.segments = tuple([[] for _ in xrange(len(segment_names))])
     
     def segment(self,index):
         if not isinstance(index,basestring):
@@ -385,6 +535,9 @@ class ROSStyleDefinition(Definition):
                 strs.append('%s %s' % (type, name))
             segment_strs.append('\n'.join(strs))
         return '\n----\n'.join(segment_strs)
+    
+    def __repr__(self):
+        return 'ROSStyleDefinition(%s,%s,%s,segment_values=%s)' % (repr(self.type),repr(self.name),repr(self.segment_names),repr(self.segments))
 
 
 class DefFileParser(object):
@@ -395,7 +548,10 @@ class DefFileParser(object):
     
     SECTION_PATT = r'\[\s*(?:(?:{dfn_type})?\s*:\s*)?{section}(?:\s*!\s*{format})?\s*\]'.format(
             dfn_type=DEF_TYPE_PATT,section=SEC_NAME_PATT,format=FORMAT_PATT)
+    EMPTY_SECTION_PATT = r'\[\s*(?:\s*!\s*{format})?\s*\]'.format(
+            format=FORMAT_PATT)
     SECTION_RE = re.compile(SECTION_PATT)
+    EMPTY_SECTION_RE = re.compile(EMPTY_SECTION_PATT)
     
     KEY_VALUE_PATT_TEMPLATE = r'^(?P<DefFileParser_key>{key_patt})\s*(?<!\\)=\s*(?P<DefFileParser_value>{value_patt})$'
     
@@ -407,12 +563,13 @@ class DefFileParser(object):
     
     @classmethod
     def get_section_data(cls,line):
-        match = cls.SECTION_RE.match(line)
+        match = cls.SECTION_RE.match(line) or cls.EMPTY_SECTION_RE.match(line)
         if not match:
             return None
         else:
             data = match.groupdict(None)
-            data['section'] = re.sub(r'\\(?!\\)','',data['section'])
+            data['section'] = re.sub(r'\\(?!\\)','',data.get('section',''))
+            data['dfn_type'] = data.get('dfn_type',None)
         return data
     
     @classmethod
@@ -860,14 +1017,21 @@ class dicti(dict):
 
     _kv = namedtuple('kv','key val')
 
-    def __init__(self, initval={}):
-        if isinstance(initval, dict):
-            for key, value in initval.iteritems():
+    def __init__(self, arg=None, **kwargs):
+        if arg:
+            if isinstance(arg, dict):
+                for key, value in arg.iteritems():
+                    self.__setitem__(key, value)
+            elif isinstance(arg, list):
+                for (key, value) in arg:
+                    self.__setitem__(key, value)
+        elif kwargs:
+            for key, value in kwargs.iteritems():
                 self.__setitem__(key, value)
-        elif isinstance(initval, list):
-            for (key, value) in initval:
-                self.__setitem__(key, value)
-            
+    
+    def __iter__(self):
+        return self.iteritems()
+    
     def __contains__(self, key):
         return dict.__contains__(self, key.lower())
   
@@ -889,7 +1053,7 @@ class dicti(dict):
         if self.get(key):
             return True
         else:
-            return False    
+            return False
 
     def items(self):
         return [(v.key, v.val) for v in dict.itervalues(self)]
@@ -914,6 +1078,46 @@ class dicti(dict):
     
     def copy(self):
         return dict(self.iteritems())
+    
+    def __str__(self):
+        return self.copy().__str__()
+    
+    def __repr__(self):
+        return self.copy().__repr__()
+
+def _get_strstrdict(name, superclass):
+    class strstrdict(superclass):
+        def __init__(self, arg=None, **kwargs):
+            if arg:
+                if isinstance(arg, dict):
+                    for key, value in arg.iteritems():
+                        self.__setitem__(key, value)
+                else:
+                    for (key, value) in arg:
+                        self.__setitem__(key, value)
+            elif kwargs:
+                for key, value in kwargs.iteritems():
+                    self.__setitem__(key, value)
+        
+        def __contains__(self, key):
+            return superclass.__contains__(self, _clean_string(key))
+      
+        def __getitem__(self, key):
+            return superclass.__getitem__(self, _clean_string(key))
+      
+        def __setitem__(self, key, value):
+            return superclass.__setitem__(self, _clean_string(key), _clean_string(value))
+    
+        def get(self, key, default=None):
+            return superclass.get(self, _clean_string(key), default)
+    
+        def has_key(self,key):
+            return superclass.has_key(self, _clean_string(key))
+    strstrdict.__name__ = name
+    return strstrdict
+
+strstrdict = _get_strstrdict('strstrdict', dict)
+strstrdicti = _get_strstrdict('strstrdicti', dicti)
 
 if __name__ == '__main__':
     data = \
