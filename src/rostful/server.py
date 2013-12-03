@@ -368,7 +368,7 @@ class RostfulServer:
 	
 	def _describe_service(self, service_name, service, indent=''):
 		dfile = deffile.DefFile()
-		dfile.manifest.type = 'Service'
+		dfile.manifest.def_type = 'Service'
 		dfile.manifest['Name'] = service_name
 		dfile.manifest['Type'] = service.rostype_name
 		
@@ -376,17 +376,17 @@ class RostfulServer:
 	
 	def _describe_topic(self, topic_name, topic, indent=''):
 		dfile = deffile.DefFile()
-		dfile.manifest.type = 'Topic'
+		dfile.manifest.def_type = 'Topic'
 		dfile.manifest['Name'] = topic_name
 		dfile.manifest['Type'] = topic.rostype_name
-		dfile.manifest['Published'] = get_json_bool(topic.allow_sub)
-		dfile.manifest['Subscribed'] = get_json_bool(topic.allow_pub)
+		dfile.manifest['Publishes'] = get_json_bool(topic.allow_sub)
+		dfile.manifest['Subscribes'] = get_json_bool(topic.allow_pub)
 		
 		return dfile.tostring(suppress_formats=True)
 	
 	def _describe_action(self, action_name, action, indent=''):
 		dfile = deffile.DefFile()
-		dfile.manifest.type = 'Action'
+		dfile.manifest.def_type = 'Action'
 		dfile.manifest['Name'] = action_name
 		dfile.manifest['Type'] = action.rostype_name
 		

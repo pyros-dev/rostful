@@ -134,10 +134,6 @@ class IndividualTopicProxy:
 	def publish(self):
 		stop = False
 		while not (stop or rospy.is_shutdown()):
-			req = {}
-			req['_format'] = 'ros'
-			reqs = json.dumps(req)
-			
 			if self.binary:
 				content_accept = ROS_MSG_MIMETYPE
 			else:
@@ -310,13 +306,16 @@ class RostfulServiceProxy:
 					ret = self.setup_action(self.url + '/' + action_name, prefix + action_name, action_type, remap=remap, publish_interval=publish_interval)
 					if ret: print '%s (%s)' % (prefix + action_name, action_type)
 		elif dfile.type == 'Service':
-			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
+			ret = self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
+			if ret: print 'Connected to service %s (%s)' % (dfile.manifest['Name'], dfile.manifest['Type'])
 		elif dfile.type == 'Topic':
 			pub = dfile.manifest['Subscribes'].lower() == 'true'
 			sub = dfile.manifest['Publishes'].lower() == 'true' and subscribe
-			self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], pub=pub, sub=sub, remap=remap, publish_interval=publish_interval)
+			ret = self.setup_topic(self.url, dfile.manifest['Name'], dfile.manifest['Type'], pub=pub, sub=sub, remap=remap, publish_interval=publish_interval)
+			if ret: print 'Connected to topic %s (%s)' % (dfile.manifest['Name'], dfile.manifest['Type'])
 		elif dfile.type == 'Action':
-			self.setup_action(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap, publish_interval=publish_interval)
+			ret = self.setup_action(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap, publish_interval=publish_interval)
+			if ret: print 'Connected to action %s (%s)' % (dfile.manifest['Name'], dfile.manifest['Type'])
 			
 		IndividualTopicProxy.start()
 		return
@@ -359,18 +358,18 @@ def proxymain():
 	
 	parser = argparse.ArgumentParser()
 	
-	parser.add_argument('url')
+	parser.add_argument('url', help='The url of the web service or one of its individual services, topics, or actions.')
 	
 	parser.add_argument('--allow-subscription', '--sub', dest='subscribe', action='store_true', default=False, 
-					help='This option must be given to allow the web service to subscribe to topics')
-	parser.add_argument('--publish-interval', '-i', type=float, help='The rate to retrieve and publish messages from the web service')
+					help='This option must be given to allow the web service to subscribe to local topics.')
+	parser.add_argument('--publish-interval', '-i', type=float, help='The rate to retrieve and publish messages from the web service.')
 	
-	parser.add_argument('--binary', action='store_true', default=False, help='Using serialized ROS messages instead of rosbridge JSON')
+	parser.add_argument('--binary', action='store_true', default=False, help='Using serialized ROS messages instead of rosbridge JSON.')
 	
-	parser.add_argument('--test', action='store_true', default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy services and topics will have _ws appended.')
+	parser.add_argument('--test', action='store_true', default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy service and topic names will have _ws appended.')
 	
 	grp = parser.add_mutually_exclusive_group()
-	grp.add_argument('--prefix', help='Specify a prefix for the services and topics. By default, this is the name given by the web service if it provides one')
+	grp.add_argument('--prefix', help='Specify a prefix for the service and topic names. By default, this is the name given by the web service if it provides one.')
 	grp.add_argument('--no-prefix', action='store_const', const = '', dest='prefix', help='Use the service and topic names as-is as relative names.')
 	
 	args = parser.parse_args(rospy.myargv()[1:])
