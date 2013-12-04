@@ -3,9 +3,9 @@
 import roslib
 roslib.load_manifest('rostful')
 import rospy
-import rostful.proxy
+import rostful.client
 
 import argparse
 
 if __name__ == '__main__':
-	rostful.proxy.proxymain()
+	rostful.client.clientmain()

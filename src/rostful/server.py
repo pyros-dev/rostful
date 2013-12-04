@@ -130,12 +130,12 @@ class Action:
 		self.status_sub = rospy.Subscriber(self.name + '/' +self.STATUS_SUFFIX, actionlib_msgs.msg.GoalStatusArray, self.status_callback)
 		
 		self.result_msg = deque([], queue_size)
-		self.result_sub = rospy.Subscriber(self.name + '/' +self.RESULT_SUFFIX, self.rostype_action_result, self.result_callback)
+		self.result_sub = rospy.Subscriber(self.name + '/' + self.RESULT_SUFFIX, self.rostype_action_result, self.result_callback)
 		
 		self.feedback_msg = deque([], queue_size)
 		self.feedback_sub = rospy.Subscriber(self.name + '/' +self.FEEDBACK_SUFFIX, self.rostype_action_feedback, self.feedback_callback)
 		
-		self.goal_pub = rospy.Publisher(self.name + '/' +self.GOAL_SUFFIX, self.rostype_action_goal)
+		self.goal_pub = rospy.Publisher(self.name + '/' + self.GOAL_SUFFIX, self.rostype_action_goal)
 		self.cancel_pub = rospy.Publisher(self.name + '/' +self.CANCEL_SUFFIX, actionlib_msgs.msg.GoalID)
 	
 	def get_msg_type(self, suffix):
@@ -262,7 +262,7 @@ class RostfulServer:
 		print "Adding services:"
 		for service_name in service_names:
 			ret = self.add_service(service_name)
-			if ret: print service_name
+			if ret: print '  ' + service_name
 	
 	def add_topic(self, topic_name, ws_name=None, topic_type=None, allow_pub=True, allow_sub=True):
 		resolved_topic_name = rospy.resolve_name(topic_name)
@@ -292,7 +292,7 @@ class RostfulServer:
 		for topic_name in topic_names:
 			ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
 			if ret:
-				print topic_name
+				print '  ' + topic_name
 	
 	def add_action(self, action_name, ws_name=None, action_type=None):
 		if action_type is None:
@@ -317,7 +317,7 @@ class RostfulServer:
 		print "Adding actions:"
 		for action_name in action_names:
 			ret = self.add_action(action_name)
-			if ret: print action_name
+			if ret: print '  ' + action_name
 	
 	def wsgifunc(self):
 		"""Returns the WSGI-compatible function for this server."""
@@ -425,6 +425,19 @@ class RostfulServer:
 				else:
 					return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 			else:
+				for suffix in [Action.STATUS_SUFFIX,Action.RESULT_SUFFIX,Action.FEEDBACK_SUFFIX,Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX]:
+					if path.endswith('/' + suffix):
+						path = path[:-(len(suffix)+1)]
+						if self.actions.has_key(path):
+							action_name = path
+				
+							action = self.actions[action_name]
+							dfile = definitions.describe_action_topic(action_name, suffix, action, full=full)
+							
+							if jsn:
+								return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+							else:
+								return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 				return response_404(start_response)
 		else:
 			return response_404(start_response)
@@ -511,7 +524,7 @@ def servermain():
 	parser.add_argument('--actions', nargs='+', help='Actions to advertise')
 	
 	parser.add_argument('--host', default='')
-	parser.add_argument('-p', '--port', type=int, default=8080)
+	parser.add_argument('-p', '--port', type=int, default=80)
 	
 	args = parser.parse_args(rospy.myargv()[1:])
 	

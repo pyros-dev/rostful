@@ -16,6 +16,17 @@ def get_all_msg_types(msg, skip_this=False, type_set=None):
         type_set = get_all_msg_types(load_type(slot_type), type_set=type_set)
     return type_set
 
+def get_msg_definitions(msg, skip_this=False):
+    type_set = get_all_msg_types(msg, skip_this=skip_this)
+    
+    msg_dfns = []
+    for msg_type in type_set:
+        dfn = deffile.ROSStyleDefinition('msg',type_str(msg_type),['msg'])
+        for field_name, field_type in zip(msg_type.__slots__, msg_type._slot_types):
+            dfn.segment(0).append((field_name, field_type))
+        msg_dfns.append(dfn)
+    return msg_dfns
+
 def get_definitions(services=[], topics=[], actions=[]):
     service_dfns = []
     action_dfns = []
@@ -131,6 +142,29 @@ def describe_action(action_name, action, full=False):
         _, action_dfns, msg_dfns = get_definitions(actions=[action])
         [dfile.add_definition(dfn) for dfn in msg_dfns]
         [dfile.add_definition(dfn) for dfn in action_dfns]
+    
+    return dfile
+
+def describe_action_topic(action_name, suffix, action, full=False):
+    dfile = deffile.DefFile()
+    dfile.manifest.def_type = 'Topic'
+    dfile.manifest['Name'] = action_name + '/' + suffix
+    
+    msg_type = action.get_msg_type(suffix)
+    dfile.manifest['Type'] = type_str(msg_type)
+    if suffix in [action.STATUS_SUFFIX,action.RESULT_SUFFIX,action.FEEDBACK_SUFFIX]:
+        pub = True
+        sub = False
+    else:
+        pub = False
+        sub = True
+    
+    dfile.manifest['Publishes'] = get_json_bool(pub)
+    dfile.manifest['Subscribes'] = get_json_bool(sub)
+    
+    if full:
+        dfns = get_msg_definitions(msg_type)
+        [dfile.add_definition(dfn) for dfn in dfns]
     
     return dfile
 

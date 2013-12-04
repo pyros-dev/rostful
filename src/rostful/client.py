@@ -250,7 +250,7 @@ class RostfulServiceProxy:
 				print 'Services:'
 				for service_name, service_type in services.iteritems():
 					ret = self.setup_service(self.url + '/' + service_name, prefix + service_name, service_type, remap=remap)
-					if ret: print '%s (%s)' % (prefix + service_name, service_type)
+					if ret: print '  %s (%s)' % (prefix + service_name, service_type)
 			
 			topic_dict = {}
 			topic_info = namedtuple('topic_info', 'type pub sub')
@@ -285,26 +285,26 @@ class RostfulServiceProxy:
 				print 'Publishing and subscribing:'
 				for topic_name, topic_type in topics.iteritems():
 					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=True, sub=True, remap=remap, publish_interval=publish_interval)
-					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
+					if ret: print '  %s (%s)' % (prefix + topic_name, topic_type)
 			
 			if published_topics:
 				print 'Publishing:'
 				for topic_name, topic_type in published_topics.iteritems():
 					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=True, remap=remap, publish_interval=publish_interval)
-					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
+					if ret: print '  %s (%s)' % (prefix + topic_name, topic_type)
 			
 			if subscribed_topics:
 				print 'Subscribing:'
 				for topic_name, topic_type in subscribed_topics.iteritems():
 					ret = self.setup_topic(self.url + '/' + topic_name, prefix + topic_name, topic_type, pub=False, sub=True, remap=remap, publish_interval=publish_interval)
-					if ret: print '%s (%s)' % (prefix + topic_name, topic_type)
+					if ret: print '  %s (%s)' % (prefix + topic_name, topic_type)
 			
 			actions = dfile.get_section('Actions')
 			if actions:
 				print 'Actions:'
 				for action_name, action_type in actions.iteritems():
 					ret = self.setup_action(self.url + '/' + action_name, prefix + action_name, action_type, remap=remap, publish_interval=publish_interval)
-					if ret: print '%s (%s)' % (prefix + action_name, action_type)
+					if ret: print '  %s (%s)' % (prefix + action_name, action_type)
 		elif dfile.type == 'Service':
 			ret = self.setup_service(self.url, dfile.manifest['Name'], dfile.manifest['Type'], remap=remap)
 			if ret: print 'Connected to service %s (%s)' % (dfile.manifest['Name'], dfile.manifest['Type'])
@@ -353,8 +353,8 @@ class RostfulServiceProxy:
 
 import argparse
 
-def proxymain():
-	rospy.init_node('rostful_proxy', anonymous=True)
+def clientmain():
+	rospy.init_node('rostful_client', anonymous=True)
 	
 	parser = argparse.ArgumentParser()
 	
@@ -366,7 +366,7 @@ def proxymain():
 	
 	parser.add_argument('--binary', action='store_true', default=False, help='Using serialized ROS messages instead of rosbridge JSON.')
 	
-	parser.add_argument('--test', action='store_true', default=False, help='Use if server and proxy are using the same ROS master for testing. Proxy service and topic names will have _ws appended.')
+	parser.add_argument('--test', action='store_true', default=False, help='Use if server and client are using the same ROS master for testing. Client service and topic names will have _ws appended.')
 	
 	grp = parser.add_mutually_exclusive_group()
 	grp.add_argument('--prefix', help='Specify a prefix for the service and topic names. By default, this is the name given by the web service if it provides one.')
