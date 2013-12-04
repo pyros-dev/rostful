@@ -1,5 +1,5 @@
 import re
-from collections import namedtuple
+from collections import namedtuple, OrderedDict, Iterable
 from io import StringIO
 import inspect
 import json
@@ -35,7 +35,7 @@ class DefFile(object):
         else:
             self.manifest = None
         self.definitions = [d for d in definitions or []]
-        self.sections = dicti(sections or {})
+        self.sections = ordereddicti(sections or {})
     
     @property
     def type(self):
@@ -1007,87 +1007,95 @@ def get_ros_style_action_parser(type_patt=None,name_patt=None,super_cls=ROSStyle
         SEGMENT_NAMES = ['goal','result','feedback']
     return ROSStyleActionDefinitionParser
 
-class dicti(dict):
-    """Dictionary that enables case insensitive searching while preserving case sensitivity 
-    when keys are listed, i.e., via keys() or items() methods. 
-    
-    Works by storing a lowercase version of the key as the new key and stores the original key-value 
-    pair as the key's value (values become dictionaries).
-    Adjusted from https://gist.github.com/babakness/3901174"""
-
-    _kv = namedtuple('kv','key val')
-
-    def __init__(self, arg=None, **kwargs):
-        if arg:
-            if isinstance(arg, dict):
-                for key, value in arg.iteritems():
-                    self.__setitem__(key, value)
-            elif isinstance(arg, list):
-                for (key, value) in arg:
-                    self.__setitem__(key, value)
-        elif kwargs:
-            for key, value in kwargs.iteritems():
-                self.__setitem__(key, value)
-    
-    def __iter__(self):
-        return self.iteritems()
-    
-    def __contains__(self, key):
-        return dict.__contains__(self, key.lower())
-  
-    def __getitem__(self, key):
-        return dict.__getitem__(self, key.lower()).val
-  
-    def __setitem__(self, key, value):
-        return dict.__setitem__(self, key.lower(), self._kv(key, value))
-
-    def get(self, key, default=None):
-        try:
-            v = dict.__getitem__(self, key.lower())
-        except KeyError:
-            return default
-        else:
-            return v.val
-
-    def has_key(self,key):
-        if self.get(key):
-            return True
-        else:
-            return False
-
-    def items(self):
-        return [(v.key, v.val) for v in dict.itervalues(self)]
-    
-    def keys(self):
-        return [v.key for v in dict.itervalues(self)]
-    
-    def values(self):
-        return [v.val for v in dict.itervalues(self)]
-    
-    def iteritems(self):
-        for v in dict.itervalues(self):
-            yield v.key, v.val
+def _get_dicti(name, superclass): 
+    class dicti(dict):
+        """Dictionary that enables case insensitive searching while preserving case sensitivity 
+        when keys are listed, i.e., via keys() or items() methods. 
         
-    def iterkeys(self):
-        for v in dict.itervalues(self):
-            yield v.key
+        Works by storing a lowercase version of the key as the new key and stores the original key-value 
+        pair as the key's value (values become dictionaries).
+        Adjusted from https://gist.github.com/babakness/3901174"""
+    
+        _kv = namedtuple('kv','key val')
+    
+        def __init__(self, arg=None, **kwargs):
+            self._data = superclass()
+            if arg:
+                if isinstance(arg, dict):
+                    for key, value in arg.iteritems():
+                        self.__setitem__(key, value)
+                elif isinstance(arg, Iterable):
+                    for (key, value) in arg:
+                        self.__setitem__(key, value)
+            elif kwargs:
+                for key, value in kwargs.iteritems():
+                    self.__setitem__(key, value)
         
-    def itervalues(self):
-        for v in dict.itervalues(self):
-            yield v.val
+        def __iter__(self):
+            return self._data.iteritems()
+        
+        def __contains__(self, key):
+            return self._data.__contains__(key.lower())
+      
+        def __getitem__(self, key):
+            return self._data.__getitem__(key.lower()).val
+      
+        def __setitem__(self, key, value):
+            return self._data.__setitem__(key.lower(), self._kv(key, value))
     
-    def copy(self):
-        return dict(self.iteritems())
+        def get(self, key, default=None):
+            try:
+                v = self._data.__getitem__(key.lower())
+            except KeyError:
+                return default
+            else:
+                return v.val
     
-    def __str__(self):
-        return self.copy().__str__()
+        def has_key(self,key):
+            if self._data.get(key):
+                return True
+            else:
+                return False
     
-    def __repr__(self):
-        return self.copy().__repr__()
+        def items(self):
+            return [(v.key, v.val) for v in self._data.itervalues()]
+        
+        def keys(self):
+            return [v.key for v in self._data.itervalues()]
+        
+        def values(self):
+            return [v.val for v in self._data.itervalues()]
+        
+        def iteritems(self):
+            for v in self._data.itervalues():
+                yield v.key, v.val
+            
+        def iterkeys(self):
+            for v in self._data.itervalues():
+                yield v.key
+            
+        def itervalues(self):
+            for v in self._data.itervalues():
+                yield v.val
+        
+        def copy(self):
+            return dict(self.iteritems())
+        
+        def __str__(self):
+            return dict.__str__(self._data)
+        
+        def __repr__(self):
+            return dict.__repr__(self._data)
+    dicti.__name__ = name
+    return dicti
+
+dicti = _get_dicti('dicti', dict)
+ordereddicti = _get_dicti('ordereddicti', OrderedDict)
 
 def _get_strstrdict(name, superclass):
     class strstrdict(superclass):
         def __init__(self, arg=None, **kwargs):
+            superclass.__init__(self)
             if arg:
                 if isinstance(arg, dict):
                     for key, value in arg.iteritems():

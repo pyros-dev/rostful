@@ -16,9 +16,9 @@ import re
 from StringIO import StringIO
 
 from . import message_conversion as msgconv
-from . import deffile
+from . import deffile, definitions
 
-from .util import ROS_MSG_MIMETYPE, get_json_bool
+from .util import ROS_MSG_MIMETYPE, get_query_bool
 
 class Service:
 	def __init__(self, service_name, service_type):
@@ -332,97 +332,27 @@ class RostfulServer:
 			#TODO: flip out
 			pass
 	
-	def _manifest(self, services, topics, actions, indent = ''):
-		dfile = deffile.DefFile()
-		dfile.manifest.def_type = 'Node'
-		
-		if services:
-			service_section = deffile.INISection('Services')
-			for service_name, service in services.iteritems():
-				service_section.fields[service_name] = service.rostype_name
-			dfile.add_section(service_section)
-		
-		topics_section = deffile.INISection('Topics')
-		publish_section = deffile.INISection('Publishes')
-		subscribe_section = deffile.INISection('Subscribes')
-		
-		for topic_name, topic in topics.iteritems():
-			if topic.allow_sub:
-				publish_section.fields[topic_name] = topic.rostype_name
-			if topic.allow_pub:
-				subscribe_section.fields[topic_name] = topic.rostype_name
-		
-		if topics_section.fields:
-			dfile.add_section(topics_section)
-		if publish_section.fields:
-			dfile.add_section(publish_section)
-		if subscribe_section.fields:
-			dfile.add_section(subscribe_section)
-		
-		if actions:
-			action_section = deffile.INISection('Actions')
-			for action_name, action in actions.iteritems():
-				action_section.fields[action_name] = action.rostype_name
-			dfile.add_section(action_section)
-		return dfile.tostring(suppress_formats=True)
-	
-	def _describe_service(self, service_name, service, indent=''):
-		dfile = deffile.DefFile()
-		dfile.manifest.def_type = 'Service'
-		dfile.manifest['Name'] = service_name
-		dfile.manifest['Type'] = service.rostype_name
-		
-		return dfile.tostring(suppress_formats=True)
-	
-	def _describe_topic(self, topic_name, topic, indent=''):
-		dfile = deffile.DefFile()
-		dfile.manifest.def_type = 'Topic'
-		dfile.manifest['Name'] = topic_name
-		dfile.manifest['Type'] = topic.rostype_name
-		dfile.manifest['Publishes'] = get_json_bool(topic.allow_sub)
-		dfile.manifest['Subscribes'] = get_json_bool(topic.allow_pub)
-		
-		return dfile.tostring(suppress_formats=True)
-	
-	def _describe_action(self, action_name, action, indent=''):
-		dfile = deffile.DefFile()
-		dfile.manifest.def_type = 'Action'
-		dfile.manifest['Name'] = action_name
-		dfile.manifest['Type'] = action.rostype_name
-		
-		return dfile.tostring(suppress_formats=True)
-	
-	def _get_msg(self, msg):
-		return '\n'.join(['%s %s' % line for line in zip(msg._slot_types, msg.__slots__)])
-	
-	def _get_topic_msg(self, topic):
-		return self._get_msg(topic.rostype)
-	
-	def _get_service_srv(self, service):
-		return '\n'.join([self._get_msg(service.rostype_req),
-						'---',
-						self._get_msg(service.rostype_resp)
-						])
-	
-	def _get_action_action(self, action):
-		return '\n'.join([self._get_msg(action.rostype_goal),
-						'---',
-						self._get_msg(action.rostype_result),
-						'---',
-						self._get_msg(action.rostype_feedback)
-						])
-		
-	
 	def _handle_get(self, environ, start_response):
 		path = environ['PATH_INFO'][1:]
+		full = get_query_bool(environ['QUERY_STRING'], 'full')
+		
+		json_suffix = '.json'
+		if path.endswith(json_suffix):
+			path = path[:-len(json_suffix)]
+			jsn = True
+		else:
+			jsn = get_query_bool(environ['QUERY_STRING'], 'json')
 		
 		use_ros = environ.get('HTTP_ACCEPT','').find(ROS_MSG_MIMETYPE) != -1
 		
 		suffix = get_suffix(path)
 		
 		if path == CONFIG_PATH:
-			config_data = self._manifest(self.services, self.topics, self.actions)
-			return response_200(start_response, config_data, content_type='text/plain')
+			dfile = definitions.manifest(self.services, self.topics, self.actions, full=full)
+			if jsn:
+				return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+			else:
+				return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 		
 		if not suffix:
 			if not self.topics.has_key(path):
@@ -458,33 +388,42 @@ class RostfulServer:
 		path = path[:-(len(suffix)+1)]
 		
 		if suffix == MSG_PATH and self.topics.has_key(path):
-				return response_200(start_response, self._get_topic_msg(self.topics[path]), content_type='text/plain')
+				return response_200(start_response, definitions.get_topic_msg(self.topics[path]), content_type='text/plain')
 		elif suffix == SRV_PATH and self.services.has_key(path):
-				return response_200(start_response, self._get_service_srv(self.services[path]), content_type='text/plain')
+				return response_200(start_response, definitions.get_service_srv(self.services[path]), content_type='text/plain')
 		elif suffix == ACTION_PATH and self.actions.has_key(path):
-				return response_200(start_response, self._get_action_action(self.actions[path]), content_type='text/plain')
+				return response_200(start_response, definitions.get_action_action(self.actions[path]), content_type='text/plain')
 		elif suffix == CONFIG_PATH:
 			if self.services.has_key(path):
 				service_name = path
 				
 				service = self.services[service_name]
-				config_data = self._describe_service(service_name, service)
+				dfile = definitions.describe_service(service_name, service, full=full)
 				
-				return response_200(start_response, config_data, content_type='text/plain')
+				if jsn:
+					return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+				else:
+					return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 			elif self.topics.has_key(path):
 				topic_name = path
 				
 				topic = self.topics[topic_name]
-				config_data = self._describe_topic(topic_name, topic)
+				dfile = definitions.describe_topic(topic_name, topic, full=full)
 				
-				return response_200(start_response, config_data, content_type='text/plain')
+				if jsn:
+					return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+				else:
+					return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 			elif self.actions.has_key(path):
 				action_name = path
 				
 				action = self.actions[action_name]
-				config_data = self._describe_action(action_name, action)
+				dfile = definitions.describe_action(action_name, action, full=full)
 				
-				return response_200(start_response, config_data, content_type='text/plain')
+				if jsn:
+					return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+				else:
+					return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
 			else:
 				return response_404(start_response)
 		else:
