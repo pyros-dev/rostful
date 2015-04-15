@@ -4,6 +4,7 @@
   <version>0.0.0</version>
   <description>REST API for ros</description>
 
+  <maintainer>Ben Kehoe</maintainer>
   <license>BSD</license>
   <author>Ben Kehoe</author>
 
