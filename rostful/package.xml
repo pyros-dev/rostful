@@ -2,7 +2,7 @@
   <name>rostful</name>
   <version>0.0.2</version>
   <description>
-      ROStful
+      REST API for ROS
   </description>
 
   <license>BSD</license>
@@ -19,10 +19,10 @@
   <build_depend>rospy</build_depend>
 
   <run_depend>rospy</run_depend>
+  <run_depend>actionlib_msgs</run_depend>
   
   <!-- these dependencies are only for testing -->
   <run_depend>python-yaml</run_depend>
-  <run_depend>actionlib_msgs</run_depend>
   <build_depend>rostest</build_depend>
   <test_depend>rosunit</test_depend>
 
