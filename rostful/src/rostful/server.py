@@ -446,7 +446,6 @@ class RostfulServer:
 		name =  environ['PATH_INFO'][1:]
 		
 		try:
-			#print 'calling service ', service.name
 			length = int(environ['CONTENT_LENGTH'])
 			content_type = environ['CONTENT_TYPE'].split(';')[0].strip()
 			use_ros = content_type == ROS_MSG_MIMETYPE
@@ -484,12 +483,16 @@ class RostfulServer:
 				msgconv.populate_instance(input_data, input_msg)
 			
 			ret_msg = None
+			print "passing here !!!"
 			if mode == 'service':
+				rospy.logwarn('calling service %s with msg : %s', service.name, input_msg)
 				ret_msg = service.call(input_msg)
 			elif mode == 'topic':
+				rospy.logwarn('publishing %s to topic %s', input_msg, topic.name)
 				topic.publish(input_msg)
 				return response_200(start_response, [], content_type='application/json')
 			elif mode == 'action':
+				rospy.logwarn('publishing %s to action %s', input_msg, action.name)
 				action.publish(action_mode, input_msg)
 				return response_200(start_response, [], content_type='application/json')
 			
@@ -524,7 +527,7 @@ def servermain():
 	parser.add_argument('--actions', nargs='+', help='Actions to advertise')
 	
 	parser.add_argument('--host', default='')
-	parser.add_argument('-p', '--port', type=int, default=80)
+	parser.add_argument('-p', '--port', type=int, default=8080)
 	
 	args = parser.parse_args(rospy.myargv()[1:])
 	
