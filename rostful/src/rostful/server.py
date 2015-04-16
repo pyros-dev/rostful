@@ -20,6 +20,14 @@ from . import deffile, definitions
 
 from .util import ROS_MSG_MIMETYPE, get_query_bool
 
+import os
+import urlparse
+from werkzeug.wrappers import Request, Response
+from werkzeug.routing import Map, Rule
+from werkzeug.exceptions import HTTPException, NotFound
+from werkzeug.utils import redirect
+#from jinja2 import Environment, FileSystemLoader
+
 class Service:
 	def __init__(self, service_name, service_type):
 		self.name = service_name
@@ -234,11 +242,55 @@ def response_500(start_response, error, content_type='text/plain'):
 	e_str = '%s: %s' % (str(type(error)), str(error))
 	return response(start_response, '500 Internal Server Error', e_str, content_type)
 
+from pprint import pprint
+
 class RostfulServer:
-	def __init__(self):
+
+	def __init__(self, with_static=True):
 		self.services = {}
 		self.topics = {}
 		self.actions = {}
+		#self.url_map = Map([
+			#Rule('/<path:page>', endpoint='static/<page>'),
+		#	Rule('/services/<path:rosname>', endpoint='service'),
+		#	Rule('/topics/<path:rosname>', endpoint='topic'),
+		#	Rule('/actions/<path:rosname>', endpoint='action')
+		#])
+
+	
+	def dispatch_request(self, request, start_response):
+		#adapter = self.url_map.bind_to_environ(request.environ)
+		try:
+		#	endpoint, values = adapter.match()
+			#if endpoint
+		#	rospy.logwarn("endpoint : %s, rosname : %s", endpoint, values['rosname'])
+			if request.method == 'GET':
+				return self._handle_get(request.environ, start_response)
+			elif request.method == 'POST':
+				return self._handle_post(request.environ, start_response)
+			else:
+				#TODO: flip out
+				pass
+		except HTTPException, e:
+			rospy.logerr("Routing Error : %s",e)
+			return e(request.environ, start_response)
+
+			
+	def wsgi_app(self, environ, start_response):
+		request = Request(environ)
+		### with werkzeug Response
+		#response = self.dispatch_request(request)
+		#return response(environ, start_response)
+		### without
+		return self.dispatch_request(request, start_response)
+		
+	### to use with werkzeug server
+	def __call__(self, environ, start_response):
+		return self.wsgi_app(environ, start_response)
+	    
+	### to use with wsgiref server
+	def wsgifunc(self):
+		return self.wsgi_app
 	
 	def add_service(self, service_name, ws_name=None, service_type=None):
 		resolved_service_name = rospy.resolve_name(service_name)
@@ -318,19 +370,6 @@ class RostfulServer:
 		for action_name in action_names:
 			ret = self.add_action(action_name)
 			if ret: print '  ' + action_name
-	
-	def wsgifunc(self):
-		"""Returns the WSGI-compatible function for this server."""
-		return self._handle
-	
-	def _handle(self, environ, start_response):
-		if environ['REQUEST_METHOD'] == 'GET':
-			return self._handle_get(environ, start_response)
-		elif environ['REQUEST_METHOD'] == 'POST':
-			return self._handle_post(environ, start_response)
-		else:
-			#TODO: flip out
-			pass
 	
 	def _handle_get(self, environ, start_response):
 		path = environ['PATH_INFO'][1:]
@@ -512,10 +551,28 @@ class RostfulServer:
 			print 'An exception occurred!', e
 			return response_500(start_response, e)
 
-import argparse
-from wsgiref.simple_server import make_server
+# Serving static files
+class Static:
 
-def servermain():
+	def __init__(self):
+		pass
+
+	def dispatch_request(self, request):
+		return Response('Hello World!')
+
+	def wsgi_app(self, environ, start_response):
+		request = Request(environ)
+		response = self.dispatch_request(request)
+		return response(environ, start_response)
+
+	def __call__(self, environ, start_response):
+		return self.wsgi_app(environ, start_response)
+        
+import argparse
+from werkzeug.wsgi import SharedDataMiddleware, DispatcherMiddleware
+from werkzeug.serving import run_simple
+
+def servermain(with_static=True):
 	rospy.init_node('rostful_server', anonymous=True, disable_signals=True)
 	
 	parser = argparse.ArgumentParser()
@@ -532,21 +589,34 @@ def servermain():
 	args = parser.parse_args(rospy.myargv()[1:])
 	
 	try:
-		server = RostfulServer()
+	
+		staticserver = Static()
+		staticserver.wsgi_app = SharedDataMiddleware(staticserver.wsgi_app, {
+			'/static': 'static'
+		})
+	
+		rostserver = RostfulServer(True)
 		
-		server.add_services(args.services)
-		server.add_topics(args.topics)
-		server.add_topics(args.publishes, allow_pub=False)
-		server.add_topics(args.subscribes, allow_sub=False)
-		server.add_actions(args.actions)
+		rostserver.add_services(args.services)
+		rostserver.add_topics(args.topics)
+		rostserver.add_topics(args.publishes, allow_pub=False)
+		rostserver.add_topics(args.subscribes, allow_sub=False)
+		rostserver.add_actions(args.actions)
 		
-		httpd = make_server(args.host, args.port, server.wsgifunc())
+		server = DispatcherMiddleware(NotFound, {
+			'/static': staticserver,
+			'/ros': rostserver
+		})
+
+		run_simple(args.host, args.port, server, use_debugger=True, use_reloader=True)
 		print 'Started server on port %d' % args.port
-		
-		#Wait forever for incoming http requests
-		httpd.serve_forever()
 		
 	except KeyboardInterrupt:
 		print 'Shutting down the server'
-		httpd.socket.close()
+		##httpd.socket.close()
+		###
+		if not 'werkzeug.server.shutdown' in environ:
+			raise RuntimeError('Not running the development server')
+		environ['werkzeug.server.shutdown']()
+		###
 		rospy.signal_shutdown('Closing')
