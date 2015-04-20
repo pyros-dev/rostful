@@ -1,5 +1,56 @@
-ROStful
-=======
+# ROSTful
+
+## Installation
+
+### From Source
+
+First, install [ROS Indigo release](http://wiki.ros.org/indigo/Installation/Ubuntu).
+
+Then, make sure the ROS_DISTRO environment variable is set correctly:
+```
+echo $ROS_DISTRO
+```
+
+It may already be.  If not, issue this shell command:
+```
+$ export ROS_DISTRO=indigo
+```
+
+Then, clone the source repositories:
+
+```
+$ source /opt/ros/$ROS_DISTRO/setup.bash
+$ mkdir -p ~/catkin_ws/src
+$ cd ~/catkin_ws
+$ wstool init src https://github.com/asmodehn/rostful/blob/werkzeug/rosinstall/$ROS_DISTRO.rosinstall
+```
+
+Then, for now, you need to change branch
+
+```
+$ cd src/rostful
+$ git checkout werkzeug
+$ cd ../..
+```
+
+Install all dependencies:
+```
+$ rosdep install --from-paths src --ignore-src -y
+```
+
+Then, build everything:
+```
+$ catkin_make
+$ source devel/setup.bash
+```
+
+## Test :
+```
+$ roslaunch rostful turtlesim.launch --screen
+```
+WIP : NOT WORKING YET
+
+## Overview
 
 ROStful is a lightweight web server for making ROS services, topics, and actions available as RESTful web services. It also provides a client proxy to expose a web service locally over ROS.
 
@@ -10,8 +61,7 @@ The ROStful client, however, additionally provides a modicum of multi-master fun
 
 The ROStful server has no dependencies on 3rd party libraries, and is WSGI-compatible and can therefore be used with most web servers like Apache and IIS.
 
-ROStful web services
---------------------
+### ROStful web services
 
 A ROStful web service is a web service that uses ROS data structures for input and output. These include services, topics, and actions.
 
@@ -21,14 +71,14 @@ Methods denoted as topics may use any ROS message, but are limited to accepting 
 
 Methods denoted as actions consist of a set of subsidiary topic methods, the subscribing-only `goal` and `cancel` methods, and the publishing-only `status`, `result`, and `feedback` methods. These methods are located at the url `<action  method url>/<suffix>`, where the suffix is the subsidiary method name.
 
-The ROStful server
-------------------
+### The ROStful server
+
 The ROStful server can provide services, topics, and actions that are locally available over ROS as ROStful web services. Topics may be specified as publishing, subscribing, or both.
 
 ROStful uses the rosbridge JSON mapping by default, but binary serialized ROS messages can be sent with the `Content-Header` set to `application/vnd.ros.msg`. Giving this MIME type in the `Accept` header for queries without input (i.e., publishing topic methods) will cause the server to return serialized messages.
 
-The ROStful client
-------------------
+### The ROStful client
+
 The ROStful client is a node that connects to a ROStful web service and makes its services, topics, and actions locally available over ROS.
 
 The client can be given the root URL of a ROStful web service, in which case it will connect to all services, topics, and actions for that web service, or it can be given the URL of an individual service, topic, or action to connect to.
@@ -42,26 +92,26 @@ The `--binary` option directs the client to use binary serialized messages inste
 
 For debugging, the client can be used with the same ROS master as the server. Giving the `--test` option causes the client to append `_ws` to the names of the services/topics/actions it connects to, so they don't conflict with those being used by the server.
 
-Web service/component description format
-========================================
+## Web service/component description format
+
 The ROStful server functions as a ROS component, providing services and actions, and publishing and subscribing to topics. Due to the lack of a standard format for describing ROS components, ROStful uses simple INI-file-based format. The file is broken up into sections, with each section starting with a header contained in square brackets. In addition to standard INI file formatted sections, "definition" sections are allowed for defining messages, services, and actions.
 
-Manifest section
-----------------
+### Manifest section
+
 There is a single optional section titled `Manifest`. The section is in standard INI file format, a sequence of lines each containing a key-value pair separated by `=`. The special key `Def-Type` indicates the type of description being provided (e.g., `Node`, `Service`, `Topic`, `Action`).
 
 For services, topics, and actions, the keys `Type` and `Name` are given, which give the ROS type of the service/topic/action, and the service/action name or topic as appropriate.
 
 For topics, the keys `Publishes` and `Subscribes` are given with the values `true` or `false`.
 
-Other sections
---------------
+### Other sections
+
 The `Node` description includes the optional sections `Services`, `Actions`, `Publishes`, and `Subscribes`. These sections also follow the INI file format, where the keys are the names of the services, actions, or topics, and the values are their ROS types.
 
-Definitions
------------
+### Definitions
+
 Definition sections have a title in the form `<definition type>:<definition name>`. The definition type, given before the colon, can be one of `msg`, `srv`, or `action`, corresponding to ROS message, service, and action definitions. The definition name, given after the colon, is the name of the data structure being defined. The content of the section is exactly the format used in the ROS files defining messages, services, and actions, respectively.
 
-Purpose
--------
+### Purpose
+
 This description format allows the full definition for a component to be given inline. The description for a node or method is located at `<node or method url>/_rosdef`. Setting the query parameter `full=true` will include all the definitions referenced in description (recursively). Setting the query parameter `json=true` will return a JSON representation of the definition.
