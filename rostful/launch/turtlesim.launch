@@ -1,0 +1,9 @@
+<launch>
+
+  <node pkg="turtlesim" name="turtle" type="turtlesim_node">
+  </node>
+
+  <node pkg="rostful" name="rost_server" type="server" args="--pub /turtle1/pose --sub /turtle1/cmd_vel "/>
+
+
+</launch>
