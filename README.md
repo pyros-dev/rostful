@@ -1,6 +1,8 @@
 ROStful
 =======
 
+[![Join the chat at https://gitter.im/asmodehn/rostful](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/asmodehn/rostful?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
+
 ROStful is a lightweight web server for making ROS services, topics, and actions available as RESTful web services. It also provides a client proxy to expose a web service locally over ROS.
 
 ROStful web services primarily use the [rosbridge](http://wiki.ros.org/rosbridge_suite) JSON mapping for ROS messages. However, binary serialized ROS messages can be used to increase performance.
