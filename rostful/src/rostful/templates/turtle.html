@@ -1,0 +1,86 @@
+{% extends "layout.html" %}
+{% block title %}Create New Short URL{% endblock %}
+{% block body %}
+  <h2>Submit URL</h2>
+  <form action="" method=post>
+    {% if error %}
+      <p class=error><strong>Error:</strong> {{ error }}
+    {% endif %}
+    <p>URL:
+      <input type=text name=url value="{{ url }}" class=urlinput>
+      <input type=submit value="Shorten">
+  </form>
+{% endblock %}
+
+{% block page1 %}
+<div data-role="page" id="pageone">
+  <div data-role="header">
+    <h1>Welcome To ROStful</h1>
+  </div>
+
+  <div data-role="main" class="ui-content">
+    <p>Welcome! If you click on the link below, it will take you to Page Two.</p>
+    <a href="#pagetwo">Go to Page Two</a>
+  </div>
+
+        <div>
+            <p class="topic-list">
+                
+                The Topics are :
+                <ul>
+                    {% for key, value in topics.iteritems() %}
+                    <li>{{ key }}</li>
+                    {% endfor %}
+                
+                </ul>
+            </p>
+            
+            <p class="topic-list">The Services are : {{ services }} </p>
+            
+            <p class="topic-list">The Actions are : {{ actions }} </p>
+        </div>
+
+        <div>
+            <p class="greeting-id">The ID is </p>
+            <p class="greeting-content">The content is </p>
+        </div>
+
+  <div data-role="footer">
+    <h1>Footer Text</h1>
+  </div>
+</div>
+{% endblock %}
+
+{% block page2 %}
+<div data-role="page" id="pagetwo">
+  <div data-role="header">
+    <h1>Welcome To My Homepage</h1>
+  </div>
+
+  <div data-role="main" class="ui-content">
+    <p>This is Page Two. If you click on the link below, it will take you to Page One.</p>
+    <a href="#pageone" class="ui-btn">Go to Page One</a>
+  </div>
+
+  <div data-role="footer">
+    <h1>Footer Text</h1>
+  </div>
+</div>
+{% endblock %}
+
+{% block page3 %}
+<div data-role="page" data-dialog="true" id="pagethree">
+  <div data-role="header">
+    <h1>I'm A Dialog Box!</h1>
+  </div>
+
+  <div data-role="main" class="ui-content">
+    <p>The dialog box is different from a normal page, it is displayed on top of the current page and it will not span the entire width of the page. The dialog has also an icon of "X" in the header to close the box.</p>
+    <a href="#pageone">Go to Page One</a>
+  </div>
+
+  <div data-role="footer">
+    <h1>Footer Text In Dialog</h1>
+  </div>
+</div>
+{% endblock %}
