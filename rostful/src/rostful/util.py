@@ -11,6 +11,13 @@ def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
         rostype = module + '/' + name
     return 'application/vnd.ros.msg; type=%s' % rostype
 
+#req should be a flask request
+#TODO : improve package design...
+def request_wants_ros(req):
+    best = req.accept_mimetypes.best_match([ROS_MSG_MIMETYPE,'application/json'])
+    return best == ROS_MSG_MIMETYPE and req.accept_mimetypes[best] > req.accept_mimetypes['application/json']
+#implementation ref : http://flask.pocoo.org/snippets/45/
+
 def get_json_bool(b):
     if b:
         return 'true'
