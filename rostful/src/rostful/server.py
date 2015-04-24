@@ -276,6 +276,10 @@ def response_500(start_response, error, content_type='text/plain'):
     return response(start_response, '500 Internal Server Error', e_str, content_type)
 
 
+from dynamic_reconfigure.server import Server
+from rostful.cfg import RostfulConfig
+import ast
+
 """
 Interface with ROS
 """
@@ -284,6 +288,34 @@ class ROSIF():
         self.services = {}
         self.topics = {}
         self.actions = {}
+
+        self.topics_args = ast.literal_eval(rospy.get_param('~topics', "[]"))
+        self.services_args = ast.literal_eval(rospy.get_param('~services', "[]"))
+        self.actions_args = ast.literal_eval(rospy.get_param('~actions', "[]"))
+
+        rospy.logwarn('topics : %s', self.topics_args)
+        self.expose_topics(self.topics_args)
+        rospy.logwarn('services : %s', self.services_args)
+        self.expose_services(self.services_args)
+        rospy.logwarn('actions : %s', self.actions_args)
+        self.expose_actions(self.actions_args)
+
+        # Create a dynamic reconfigure server.
+        self.server = Server(RostfulConfig, self.reconfigure)
+
+    # Create a callback function for the dynamic reconfigure server.
+    def reconfigure(self, config, level):
+
+        rospy.logwarn("""Reconfigure Request: \ntopics : {topics} \nservices : {services} \nactions : {actions}""".format(**config))
+        new_topics = ast.literal_eval(config["topics"])
+        rospy.logwarn('%r',new_topics)
+        self.expose_topics(new_topics)
+        new_services = ast.literal_eval(config["services"])
+        self.expose_services(new_services)
+        new_actions = ast.literal_eval(config["actions"])
+        self.expose_actions(new_actions)
+
+        return config
 
     def add_service(self, service_name, ws_name=None, service_type=None):
         resolved_service_name = rospy.resolve_name(service_name)
@@ -301,14 +333,33 @@ class ROSIF():
         self.services[ws_name] = ServiceBack(service_name, service_type)
         return True
 
+    def del_service(self, service_name, ws_name=None):
+        if ws_name is None:
+            ws_name = service_name
+        if ws_name.startswith('/'):
+            ws_name = ws_name[1:]
 
-    def add_services(self, service_names):
+        self.services.pop(ws_name,None)
+        return True
+
+    """
+    This exposes a list of services as REST API. services not listed here will be removed from the API
+    """
+    def expose_services(self, service_names):
         if not service_names:
             return
-        rospy.loginfo( "Adding services:" )
         for service_name in service_names:
-            ret = self.add_service(service_name)
-            if ret: rospy.loginfo( '  %s', service_name )
+            if not service_name in self.services_args:
+                ret = self.add_service(service_name)
+                if ret: rospy.loginfo( 'Added Service %s', service_name )
+
+        for service_name in self.services_args:
+            if not service_name in service_names:
+                ret = self.del_service(service_name)
+                if ret: rospy.loginfo ( 'Removed Service %s', service_name )
+
+        #Updating the list of services
+        self.services_args = service_names
 
     def add_topic(self, topic_name, ws_name=None, topic_type=None, allow_pub=True, allow_sub=True):
         resolved_topic_name = rospy.resolve_name(topic_name)
@@ -326,20 +377,35 @@ class ROSIF():
         self.topics[ws_name] = TopicBack(topic_name, topic_type, allow_pub=allow_pub, allow_sub=allow_sub)
         return True
 
+    def del_topic(self, topic_name, ws_name=None):
+        if ws_name is None:
+            ws_name = topic_name
+        if ws_name.startswith('/'):
+            ws_name = ws_name[1:]
 
-    def add_topics(self, topic_names, allow_pub=True, allow_sub=True):
+        self.topics.pop(ws_name,None)
+        return True
+
+    """
+    This exposes a list of topics as REST API. topics not listed here will be removed from the API
+    """
+    def expose_topics(self, topic_names, allow_pub=True, allow_sub=True):
         if not topic_names:
             return
-        if allow_pub and allow_sub:
-            rospy.loginfo ( "Publishing and subscribing to topics:" )
-        elif allow_sub:
-            rospy.loginfo ( "Publishing topics:" )
-        elif allow_pub:
-            rospy.loginfo ( "Subscribing to topics" )
+        # Adding missing ones
         for topic_name in topic_names:
-            ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
-            if ret:
-                rospy.loginfo ( '  %s', topic_name)
+            if not topic_name in self.topics_args:
+                ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
+                if ret: rospy.loginfo ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
+
+        # Removing extra ones
+        for topic_name in self.topics_args:
+            if not topic_name in topic_names:
+                ret = self.del_topic(topic_name)
+                if ret: rospy.loginfo ( 'Removing %s', topic_name)
+
+        # Updating the list of topics
+        self.topics_args = topic_names
 
     def add_action(self, action_name, ws_name=None, action_type=None):
         if action_type is None:
@@ -358,16 +424,33 @@ class ROSIF():
         self.actions[ws_name] = ActionBack(action_name, action_type)
         return True
 
+    def del_action(self, action_name, ws_name=None):
+        if ws_name is None:
+            ws_name = action_name
+        if ws_name.startswith('/'):
+            ws_name = ws_name[1:]
 
-    def add_actions(self, action_names):
+        self.actions.pop(ws_name,None)
+        return True
+
+    """
+    This exposes a list of actions as REST API. actions not listed here will be removed from the API
+    """
+    def expose_actions(self, action_names):
         if not action_names:
             return
-        rospy.loginfo( "Adding actions:" )
         for action_name in action_names:
-            ret = self.add_action(action_name)
-            if ret: rospy.loginfo( '  %s', action_name)
+            if not action_name in self.actions_args:
+                ret = self.add_action(action_name)
+                if ret: rospy.loginfo( 'Adding action %s', action_name)
 
+        for action_name in self.actions_args:
+            if not action_name in action_names:
+                ret = self.del_action(action_name)
+                if ret: rospy.loginfo ( 'Removing %s', action_name)
 
+        # Updating the list of actions
+        self.actions_args = action_names
 
 
 from flask import Flask, request, make_response, render_template
@@ -389,6 +472,11 @@ class FrontEnd(MethodView):
             return render_template('turtle.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
         else :
             if not self.ros_if.topics.has_key(rosname):
+                rospy.logwarn('rosname not found : %s', rosname)
+                rospy.logwarn('list of topics :')
+                for k in self.ros_if.topics :
+                    rospy.logwarn('  %s',k)
+
                 for action_suffix in [ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
                     action_name = rosname[:-(len(action_suffix)+1)]
                     if rosname.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
@@ -634,11 +722,11 @@ def servermain(with_static=True):
 
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--services', '--srv', nargs='+', help='Services to advertise')
-    parser.add_argument('--topics', nargs='+', help='Topics to both publish and subscribe')
-    parser.add_argument('--publishes', '--pub', nargs='+', help='Topics to publish via web services')
-    parser.add_argument('--subscribes', '--sub', nargs='+', help='Topics to allowing publishing to via web services')
-    parser.add_argument('--actions', nargs='+', help='Actions to advertise')
+    #parser.add_argument('--services', '--srv', nargs='+', help='Services to advertise')
+    #parser.add_argument('--topics', nargs='+', help='Topics to both publish and subscribe')
+    #parser.add_argument('--publishes', '--pub', nargs='+', help='Topics to publish via web services')
+    #parser.add_argument('--subscribes', '--sub', nargs='+', help='Topics to allowing publishing to via web services')
+    #parser.add_argument('--actions', nargs='+', help='Actions to advertise')
 
     parser.add_argument('--host', default='')
     parser.add_argument('-p', '--port', type=int, default=8080)
@@ -648,11 +736,11 @@ def servermain(with_static=True):
     try:
 
         ros_if = ROSIF()
-        ros_if.add_services(args.services)
-        ros_if.add_topics(args.topics)
-        ros_if.add_topics(args.publishes, allow_pub=False)
-        ros_if.add_topics(args.subscribes, allow_sub=False)
-        ros_if.add_actions(args.actions)
+        #ros_if.add_services(args.services)
+        #ros_if.add_topics(args.topics)
+        #ros_if.add_topics(args.publishes, allow_pub=False)
+        #ros_if.add_topics(args.subscribes, allow_sub=False)
+        #ros_if.add_actions(args.actions)
 
         rostfront = FrontEnd.as_view('frontend', ros_if)
         rostback = BackEnd.as_view('backend', ros_if)

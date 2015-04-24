@@ -5,6 +5,8 @@ roslib.load_manifest('rostful')
 import rospy
 import rostful.server
 
-if __name__ == '__main__':
-	rostful.server.servermain()
+if __name__ == "__main__":
+    rostful.server.servermain()
+
+
 
