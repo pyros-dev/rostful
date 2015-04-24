@@ -7,3 +7,4 @@ lib/
 *.pyo
 .*project
 doc/.zim
+*.geany
