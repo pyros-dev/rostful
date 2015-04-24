@@ -1,0 +1,138 @@
+{% extends "layout.html" %}
+{% block title %}{{ topic.name }}{% endblock %}
+{% block header %}{{ topic.name }}{% endblock %}
+{% block GET %}
+
+  <h2>Receive message</h2>
+  <!-- Topic allow_sub : {{ topic.allow_sub }} -->
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_sub }} id="get_latest">
+    GET LATEST MSG
+  </button>
+  <pre id="get_result"></pre>
+{% endblock %}
+
+{% block GET_ajax %}
+<script type=text/javascript>
+$(document).on('pagecreate', '#mainlayout', function(){
+  $(document).on('click', '#get_latest', function(e){
+    $.ajax({
+      url: $SCRIPT_ROOT + '/ros{{ topic.name }}',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_result").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+});
+</script>
+{% endblock %}
+
+{% block POST %}
+  <h2>Send message</h2>
+
+  <!-- Topic msgtype : {{topic.msgtype}} -->
+
+  <!-- Topic allow_pub : {{ topic.allow_pub }} -->
+
+  <form action="" method=post data-ajax=false>
+      {% for f in topic.msgtype %}
+        <div class="ui-field-contain">
+          <label for="{{ f }}">{{ f }}:</label>
+        {% if topic.msgtype[f]=='float32' %}
+          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}" id="{{ f }}" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+
+        {% elif topic.msgtype[f]=='geometry_msgs/Vector3' %}
+          <div class="ui-field-contain">
+            <label for="{{ f }}.x">{{ f }}.x:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_x" id="{{ f }}_x" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+          </div>
+          <div class="ui-field-contain">
+            <label for="{{ f }}.y">{{ f }}.y:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_y" id="{{ f }}_y" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+          </div>
+          <div class="ui-field-contain">
+            <label for="{{ f }}.z">{{ f }}.z:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_z" id="{{ f }}_z" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+          </div>
+        {% else %}
+          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=text name="{{ f }}" id="{{ f }}" placeholder="{{ 'DISABLED - ' if not topic.allow_pub }} UNIMPLEMENTED MSG FIELD TYPE {{ topic.msgtype[f] }}">
+        {% endif %}
+        </div>
+      {% endfor %}
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit" id="submit" value="POST NEW MSG">
+  </form>
+  <pre id="post_request"></pre>
+  <pre id="post_result"></pre>
+
+{% endblock %}
+
+{% block POST_ajax %}
+<script type=text/javascript>
+
+$(document).on('pagecreate', '#mainlayout', function(){
+  $(document).on('click', '#submit', function() { // catch the form's submit event
+    msgdata = {}
+    {% for f in topic.msgtype %}
+
+      {% if topic.msgtype[f]=='float32' %}
+      msgdata['{{ f }}'] = parseInt($('#{{ f }}').val())
+
+      {% elif topic.msgtype[f]=='geometry_msgs/Vector3' %}
+
+      msgdata['{{ f }}'] = {}
+      msgdata['{{ f }}']['x'] = parseInt($('#{{ f }}_x').val())
+      msgdata['{{ f }}']['y'] = parseInt($('#{{ f }}_y').val())
+      msgdata['{{ f }}']['z'] = parseInt($('#{{ f }}_z').val())
+
+      {% else %}
+
+      msgdata['{{ f }}'] = $('#{{ f }}').val()
+      {% endif %}
+    {% endfor %}
+
+    //alert ( ' sending ' + JSON.stringify(msgdata) );
+    // Send data to Rostful backend through the Ajax call
+    $.ajax({
+        url: $SCRIPT_ROOT + '/ros{{ topic.name }}',
+        data: JSON.stringify(msgdata),
+        method: 'POST',
+        dataType: 'json',
+        beforeSend: function() {
+            // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+        },
+        complete: function() {
+            // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will show ajax spinner
+        },
+        success: function (result) {
+            //alert(result);
+        },
+        error: function (request,error) {
+            // This callback function will trigger on unsuccessful action
+            alert('Network error has occurred please try again!');
+        }
+    });
+    return false; // cancel original event to prevent form submitting
+  });
+});
+</script>
+{% endblock %}
+
+
+{% block footer %}{{ topic_name }}{% endblock %}
+
+

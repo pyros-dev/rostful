@@ -85,6 +85,7 @@ class TopicBack:
         self.allow_pub = allow_pub
         self.allow_sub = allow_sub
 
+        self.msgtype = definitions.get_msg_dict(self.rostype)
         self.msg = deque([], queue_size)
 
         self.pub = None
@@ -387,6 +388,21 @@ class FrontEnd(MethodView):
         if not rosname :
             return render_template('turtle.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
         else :
+            if not self.ros_if.topics.has_key(rosname):
+                for action_suffix in [ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
+                    action_name = rosname[:-(len(action_suffix)+1)]
+                    if rosname.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
+                        action = self.ros_if.actions[action_name]
+                        msg = action.get(action_suffix)
+                        break
+                    else:
+                        return make_response('',404)
+            else:
+                topic = self.ros_if.topics[rosname]
+
+                return render_template('topic.html', topic=topic )
+
+
             return render_template('turtle.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
 
 
@@ -421,7 +437,7 @@ class BackEnd(Resource):
         suffix = get_suffix(path)
 
         if path == CONFIG_PATH:
-            dfile = definitions.manifest(self.services, self.topics, self.actions, full=full)
+            dfile = definitions.manifest(self.ros_if.services, self.ros_if.topics, self.ros_if.actions, full=full)
             if jsn:
                 return make_response( str(dfile.tojson()), 200)#, content_type='application/json')
             else:
@@ -463,12 +479,12 @@ class BackEnd(Resource):
 
         path = path[:-(len(suffix)+1)]
 
-        if suffix == MSG_PATH and self.topics.has_key(path):
-                return response_200(start_response, definitions.get_topic_msg(self.topics[path]), content_type='text/plain')
-        elif suffix == SRV_PATH and self.services.has_key(path):
-                return response_200(start_response, definitions.get_service_srv(self.services[path]), content_type='text/plain')
-        elif suffix == ACTION_PATH and self.actions.has_key(path):
-                return response_200(start_response, definitions.get_action_action(self.actions[path]), content_type='text/plain')
+        if suffix == MSG_PATH and self.ros_if.topics.has_key(path):
+                return make_response(definitions.get_topic_msg(self.ros_if.topics[path]), 200) #, content_type='text/plain')
+        elif suffix == SRV_PATH and self.ros_if.services.has_key(path):
+                return make_response(definitions.get_service_srv(self.ros_if.services[path]), 200) #content_type='text/plain')
+        elif suffix == ACTION_PATH and self.ros_if.actions.has_key(path):
+                return make_response(definitions.get_action_action(self.ros_if.actions[path]), 200) #content_type='text/plain')
         elif suffix == CONFIG_PATH:
             if self.ros_if.services.has_key(path):
                 service_name = path
@@ -477,9 +493,9 @@ class BackEnd(Resource):
                 dfile = definitions.describe_service(service_name, service, full=full)
 
                 if jsn:
-                    return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+                    return make_response(str(dfile.tojson()), 200) #, content_type='application/json')
                 else:
-                    return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
+                    return make_response(dfile.tostring(suppress_formats=True), 200) # content_type='text/plain')
             elif self.ros_if.topics.has_key(path):
                 topic_name = path
 
@@ -487,9 +503,9 @@ class BackEnd(Resource):
                 dfile = definitions.describe_topic(topic_name, topic, full=full)
 
                 if jsn:
-                    return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+                    return make_response(str(dfile.tojson()), 200) #content_type='application/json')
                 else:
-                    return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
+                    return make_response(dfile.tostring(suppress_formats=True), 200) #content_type='text/plain')
             elif self.ros_if.actions.has_key(path):
                 action_name = path
 
@@ -504,16 +520,16 @@ class BackEnd(Resource):
                 for suffix in [Action.STATUS_SUFFIX,Action.RESULT_SUFFIX,Action.FEEDBACK_SUFFIX,Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX]:
                     if path.endswith('/' + suffix):
                         path = path[:-(len(suffix)+1)]
-                        if self.actions.has_key(path):
+                        if self.ros_if.actions.has_key(path):
                             action_name = path
 
-                            action = self.actions[action_name]
+                            action = self.ros_if.actions[action_name]
                             dfile = definitions.describe_action_topic(action_name, suffix, action, full=full)
 
                             if jsn:
-                                return response_200(start_response, str(dfile.tojson()), content_type='application/json')
+                                return make_response(str(dfile.tojson()), 200) #content_type='application/json')
                             else:
-                                return response_200(start_response, dfile.tostring(suppress_formats=True), content_type='text/plain')
+                                return make_response(dfile.tostring(suppress_formats=True), 200) #content_type='text/plain')
                 return make_response('',404)
         else:
             return make_response('',404)
@@ -521,33 +537,27 @@ class BackEnd(Resource):
     def post(self, rosname):
 
         try:
-
-            parser = reqparse.RequestParser()
-            parser.add_argument('full', type=bool)
-            parser.add_argument('json', type=bool)
-            args = parser.parse_args()
-
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
 
-            if self.services.has_key(rosname):
+            if self.ros_if.services.has_key(rosname):
                 mode = 'service'
-                service = self.services[rosname]
+                service = self.ros_if.services[rosname]
                 input_msg_type = service.rostype_req
-            elif self.topics.has_key(rosname):
+            elif self.ros_if.topics.has_key(rosname):
                 mode = 'topic'
-                topic = self.topics[rosname]
+                topic = self.ros_if.topics[rosname]
                 if not topic.allow_pub:
                     return make_response('',405)
                 input_msg_type = topic.rostype
             else:
                 for suffix in [Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix)+1)]
-                    if rosname.endswith('/' + suffix) and self.actions.has_key(action_name):
+                    if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
                         mode = 'action'
                         action_mode = suffix
-                        action = self.actions[action_name]
+                        action = self.ros_if.actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
                         break
                 else:
@@ -568,13 +578,13 @@ class BackEnd(Resource):
                 rospy.logwarn('calling service %s with msg : %s', service.name, input_msg)
                 ret_msg = service.call(input_msg)
             elif mode == 'topic':
-                rospy.logwarn('publishing %s to topic %s', input_msg, topic.name)
+                rospy.logwarn('publishing \n%s to topic %s', input_msg, topic.name)
                 topic.publish(input_msg)
-                return make_response([], 200)# content_type='application/json')
+                return make_response('{}', 200)# content_type='application/json')
             elif mode == 'action':
                 rospy.logwarn('publishing %s to action %s', input_msg, action.name)
                 action.publish(action_mode, input_msg)
-                return make_response([], 200)# content_type='application/json')
+                return make_response('{}', 200)# content_type='application/json')
 
             if use_ros:
                 content_type = ROS_MSG_MIMETYPE

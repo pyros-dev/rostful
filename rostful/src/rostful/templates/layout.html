@@ -2,16 +2,42 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<link rel="stylesheet" href="static/js/jquery-mobile/jquery.mobile-1.4.5.min.css">
-<script src="static/js/jquery/jquery-1.11.2.min.js"></script>
-<script src="static/js/jquery-mobile/jquery.mobile-1.4.5.min.js"></script>
+<title>{% block title %}{% endblock %} |  ROSTful</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='js/jquery-mobile/jquery.mobile-1.4.5.min.css') }}">
+
+<script src="{{ url_for('static', filename='js/jquery/jquery-1.11.2.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/jquery-mobile/jquery.mobile-1.4.5.min.js') }}"></script>
+
+<script type=text/javascript>
+  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+
+{% block GET_ajax %}{% endblock %}
+
+{% block POST_ajax %}{% endblock %}
+
 </head>
 <body>
 
-{% block page1 %}{% endblock %}
-{% block page2 %}{% endblock %}
-{% block page3 %}{% endblock %}
+<div data-role="page" id="mainlayout">
+  <div data-role="header">
+    <h1>{% block header %}{% endblock %}</h1>
+  </div>
 
+  <div class="ui-content">
+    {% block GET %}{% endblock %}
+  </div>
+
+
+  <div class="ui-content">
+    {% block POST %}{% endblock %}
+  </div>
+
+  <div data-role="footer">
+    <h1>{% block footer %}{% endblock %}</h1>
+  </div>
+
+</div>
 
 </body>
 </html>
