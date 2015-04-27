@@ -474,7 +474,7 @@ class FrontEnd(MethodView):
                 topic = self.ros_if.topics[rosname]
                 input_msg_type = topic.rostype
             else:
-                for suffix in [Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX,ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
+                for suffix in [ActionBack.GOAL_SUFFIX,ActionBack.CANCEL_SUFFIX,ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
                     action_name = rosname[:-(len(suffix)+1)]
                     if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
                         mode = 'action'
@@ -720,30 +720,12 @@ class BackEnd(Resource):
 
 import argparse
 
-def servermain(with_static=True):
+def servermain(debug=False):
+
     rospy.init_node('rostful_server', anonymous=True, disable_signals=True)
 
-    parser = argparse.ArgumentParser()
-
-    #parser.add_argument('--services', '--srv', nargs='+', help='Services to advertise')
-    #parser.add_argument('--topics', nargs='+', help='Topics to both publish and subscribe')
-    #parser.add_argument('--publishes', '--pub', nargs='+', help='Topics to publish via web services')
-    #parser.add_argument('--subscribes', '--sub', nargs='+', help='Topics to allowing publishing to via web services')
-    #parser.add_argument('--actions', nargs='+', help='Actions to advertise')
-
-    parser.add_argument('--host', default='')
-    parser.add_argument('-p', '--port', type=int, default=8080)
-
-    args = parser.parse_args(rospy.myargv()[1:])
-
     try:
-
         ros_if = ROSIF()
-        #ros_if.add_services(args.services)
-        #ros_if.add_topics(args.topics)
-        #ros_if.add_topics(args.publishes, allow_pub=False)
-        #ros_if.add_topics(args.subscribes, allow_sub=False)
-        #ros_if.add_actions(args.actions)
 
         rostfront = FrontEnd.as_view('frontend', ros_if)
         rostback = BackEnd.as_view('backend', ros_if)
@@ -767,9 +749,22 @@ def servermain(with_static=True):
         app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET','POST'])
         api = Api(app)
 
-        rospy.loginfo('Starting server on port %d', args.port)
-        app.run(port=8080,debug=True)
+        if debug:
+        #command line argument to start flask debug server (only needed if no other server is running this wsgi app)
+            parser = argparse.ArgumentParser()
+
+            parser.add_argument('--host', default='')
+            parser.add_argument('-p', '--port', type=int, default=8080)
+
+            args = parser.parse_args(rospy.myargv()[1:])
+
+            rospy.loginfo('Starting server on port %d', args.port)
+            app.run(port=8080,debug=True)
+
+        #we need to return app to work with gunicorn
+        return app
 
     except KeyboardInterrupt:
         rospy.loginfo('Shutting down the server')
         rospy.signal_shutdown('Closing')
+
