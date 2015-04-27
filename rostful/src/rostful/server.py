@@ -22,11 +22,6 @@ from .util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
 
 import os
 import urlparse
-from werkzeug.wrappers import Request, Response
-from werkzeug.routing import Map, Rule
-from werkzeug.exceptions import HTTPException, NotFound
-from werkzeug.utils import redirect
-from jinja2 import Environment, FileSystemLoader
 
 """
 ServiceBack is the class handling conversion from REST API to ROS Service
@@ -43,6 +38,9 @@ class ServiceBack:
         self.rostype = getattr(srv_module, service_type_name)
         self.rostype_req = getattr(srv_module, service_type_name + 'Request')
         self.rostype_resp = getattr(srv_module, service_type_name + 'Response')
+
+        self.srvtype = definitions.get_service_srv_dict(self)
+        rospy.logwarn('srvtype : %r', self.srvtype)
 
         self.proxy = rospy.ServiceProxy(self.name, self.rostype)
 
@@ -61,14 +59,6 @@ class ServiceBack:
         return self.proxy(*fields)
 
 """
-ServiceFront is the class handling the template generation
-for the frontend code, so that a web user can easily generate a request
-"""
-class ServiceFront:
-    def __init__(self, service_name, service_type):
-        raise NotImplemented #TODO
-
-"""
 TopicBack is the class handling conversion from REST API to ROS Topic
 """
 class TopicBack:
@@ -85,7 +75,7 @@ class TopicBack:
         self.allow_pub = allow_pub
         self.allow_sub = allow_sub
 
-        self.msgtype = definitions.get_msg_dict(self.rostype)
+        self.msgtype = definitions.get_topic_msg_dict(self)
         self.msg = deque([], queue_size)
 
         self.pub = None
@@ -108,15 +98,6 @@ class TopicBack:
 
     def topic_callback(self, msg):
         self.msg.appendleft(msg)
-
-"""
-TopicFront is the class handling the template generation
-for the frontend code, so that a web user can easily generate a request
-"""
-class TopicFront:
-    def __init__(self, topic_name, topic_type, allow_pub=True, allow_sub=True, queue_size=1):
-        raise NotImplemented #TODO
-
 
 """
 ActionBack is the class handling conversion from REST API to ROS Topic
@@ -355,6 +336,7 @@ class ROSIF():
     This exposes a list of services as REST API. services not listed here will be removed from the API
     """
     def expose_services(self, service_names):
+        rospy.logwarn('Exposing services : %r', service_names)
         if not service_names:
             return
         for service_name in service_names:
@@ -481,24 +463,35 @@ class FrontEnd(MethodView):
         if not rosname :
             return render_template('turtle.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
         else :
-            if not self.ros_if.topics.has_key(rosname):
-                rospy.logwarn('rosname not found : %s', rosname)
-                rospy.logwarn('list of topics :')
-                for k in self.ros_if.topics :
-                    rospy.logwarn('  %s',k)
 
-                for action_suffix in [ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
-                    action_name = rosname[:-(len(action_suffix)+1)]
-                    if rosname.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
-                        action = self.ros_if.actions[action_name]
-                        msg = action.get(action_suffix)
-                        break
-                    else:
-                        return make_response('',404)
-            else:
+            #determining if it s  service, topic or action
+            if self.ros_if.services.has_key(rosname):
+                mode = 'service'
+                service = self.ros_if.services[rosname]
+                input_msg_type = service.rostype_req
+            elif self.ros_if.topics.has_key(rosname):
+                mode = 'topic'
                 topic = self.ros_if.topics[rosname]
+                input_msg_type = topic.rostype
+            else:
+                for suffix in [Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX,ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
+                    action_name = rosname[:-(len(suffix)+1)]
+                    if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
+                        mode = 'action'
+                        action_mode = suffix
+                        action = self.ros_if.actions[action_name]
+                        input_msg_type = action.get_msg_type(suffix)
+                        break
+                else:
+                    return make_response('',404)
 
+            #making the proper call
+            if mode == 'service':
+                return render_template('service.html', service=service )
+            elif mode == 'topic':
                 return render_template('topic.html', topic=topic )
+            elif mode == 'action':
+                return render_template('action.html', action=action )
 
 
             return render_template('turtle.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )

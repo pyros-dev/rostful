@@ -4,8 +4,8 @@
 
   <!-- DEVELOPMENT -->
   <node pkg="rostful" name="rost_server" type="devserver" args="">
-    <param name="topics" value="['/turtle1/pose']" type="str" />
-    <param name="services" value="[]" type="str" />
+    <param name="topics" value="['/turtle1/pose','/turtle1/cmd_vel']" type="str" />
+    <param name="services" value="['/clear','/reset','/kill','/spawn','/turtle1/set_pen', '/turtle1/teleport_absolute','/turtle1/teleport_relative']" type="str" />
     <param name="actions" value="[]" type="str" />
   </node>
 

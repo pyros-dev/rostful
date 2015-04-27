@@ -1,0 +1,114 @@
+{% extends "layout.html" %}
+{% block title %}Service {{ service.name }}{% endblock %}
+{% block header %}Service {{ service.name }}{% endblock %}
+
+{% block GET %}
+<!-- Cannot GET on a Service ?? -->
+{% endblock %}
+
+{% block GET_ajax %}
+<!-- Cannot GET on a Service ?? -->
+{% endblock %}
+
+{% block POST %}
+  <h2>Send message</h2>
+
+  <!-- Service rostype_name : {{service.rostype_name}} -->
+
+  <form action="" method=post data-ajax=false>
+      {% for name, type in service.srvtype[0].iteritems() %}
+        <div class="ui-field-contain">
+          <label for="{{ name }}">{{ name }}:</label>
+        {% if type=='float32' %}
+          <input type=number name="{{ name }}" id="{{ name }}">
+
+        {% elif type=='string' %}
+          <input type=text name="{{ name }}" id="{{ name }}">
+
+        {% elif type=='geometry_msgs/Vector3' %}
+          <div class="ui-field-contain">
+            <label for="{{ name }}.x">{{ name }}.x:</label>
+            <input type=number name="{{ name }}_x" id="{{ name }}_x">
+          </div>
+          <div class="ui-field-contain">
+            <label for="{{ name }}.y">{{ name }}.y:</label>
+            <input type=number name="{{ name }}_y" id="{{ name }}_y">
+          </div>
+          <div class="ui-field-contain">
+            <label for="{{ name }}.z">{{ f }}.z:</label>
+            <input type=number name="{{ name }}_z" id="{{ name }}_z">
+          </div>
+
+        {% else %}
+          <input type=text name="{{ name }}" id="{{ name }}" placeholder="UNIMPLEMENTED SRV FIELD TYPE {{ type }}">
+
+        {% endif %}
+        </div>
+      {% endfor %}
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit" id="submit" value="POST NEW MSG">
+  </form>
+  <pre id="post_request"></pre>
+  <pre id="post_result"></pre>
+
+{% endblock %}
+
+{% block POST_ajax %}
+<script type=text/javascript>
+
+$(document).on('pagecreate', '#mainlayout', function(){
+  $(document).on('click', '#submit', function() { // catch the form's submit event
+    msgdata = {}
+    {% for name, type in service.srvtype[0].iteritems() %}
+
+       {% if type=='float32' %}
+      msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
+
+      {% elif type=='string' %}
+      msgdata['{{ name }}'] = $('#{{ name }}').val()
+
+      {% elif type=='geometry_msgs/Vector3' %}
+      msgdata['{{ name }}'] = {}
+      msgdata['{{ name }}']['x'] = parseInt($('#{{ name }}_x').val())
+      msgdata['{{ name }}']['y'] = parseInt($('#{{ name }}_y').val())
+      msgdata['{{ name }}']['z'] = parseInt($('#{{ name }}_z').val())
+
+      {% else %}
+      msgdata['{{ name }}'] = $('#{{ name }}').val()
+
+      {% endif %}
+
+    {% endfor %}
+
+    //alert ( ' sending ' + JSON.stringify(msgdata) );
+    // Send data to Rostful backend through the Ajax call
+    $.ajax({
+        url: $SCRIPT_ROOT + '/ros{{ service.name }}',
+        data: JSON.stringify(msgdata),
+        method: 'POST',
+        dataType: 'json',
+        beforeSend: function() {
+            // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+        },
+        complete: function() {
+            // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will show ajax spinner
+        },
+        success: function (result) {
+            //alert(result);
+        },
+        error: function (request,error) {
+            // This callback function will trigger on unsuccessful action
+            alert('Network error has occurred please try again!');
+        }
+    });
+    return false; // cancel original event to prevent form submitting
+  });
+});
+</script>
+{% endblock %}
+
+
+{% block footer %}Service {{ service.name }}{% endblock %}
+
+

@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
-{% block title %}{{ topic.name }}{% endblock %}
-{% block header %}{{ topic.name }}{% endblock %}
+{% block title %}Topic {{ topic.name }}{% endblock %}
+{% block header %}Topic {{ topic.name }}{% endblock %}
 {% block GET %}
 
   <h2>Receive message</h2>
@@ -48,27 +48,27 @@ $(document).on('pagecreate', '#mainlayout', function(){
   <!-- Topic allow_pub : {{ topic.allow_pub }} -->
 
   <form action="" method=post data-ajax=false>
-      {% for f in topic.msgtype %}
+      {% for name, type in topic.msgtype.iteritems() %}
         <div class="ui-field-contain">
-          <label for="{{ f }}">{{ f }}:</label>
-        {% if topic.msgtype[f]=='float32' %}
-          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}" id="{{ f }}" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+          <label for="{{ name }}">{{ name }}:</label>
+        {% if type=='float32' %}
+          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}" id="{{ name }}" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
 
-        {% elif topic.msgtype[f]=='geometry_msgs/Vector3' %}
+        {% elif type=='geometry_msgs/Vector3' %}
           <div class="ui-field-contain">
-            <label for="{{ f }}.x">{{ f }}.x:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_x" id="{{ f }}_x" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+            <label for="{{ name }}.x">{{ name }}.x:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_x" id="{{ name }}_x" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
           </div>
           <div class="ui-field-contain">
-            <label for="{{ f }}.y">{{ f }}.y:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_y" id="{{ f }}_y" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+            <label for="{{ name }}.y">{{ name }}.y:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_y" id="{{ name }}_y" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
           </div>
           <div class="ui-field-contain">
-            <label for="{{ f }}.z">{{ f }}.z:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ f }}_z" id="{{ f }}_z" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
+            <label for="{{ name }}.z">{{ name }}.z:</label>
+            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_z" id="{{ name }}_z" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
           </div>
         {% else %}
-          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=text name="{{ f }}" id="{{ f }}" placeholder="{{ 'DISABLED - ' if not topic.allow_pub }} UNIMPLEMENTED MSG FIELD TYPE {{ topic.msgtype[f] }}">
+          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=text name="{{ name }}" id="{{ name }}" placeholder="{{ 'DISABLED - ' if not topic.allow_pub }} UNIMPLEMENTED MSG FIELD TYPE {{ type }}">
         {% endif %}
         </div>
       {% endfor %}
@@ -85,21 +85,21 @@ $(document).on('pagecreate', '#mainlayout', function(){
 $(document).on('pagecreate', '#mainlayout', function(){
   $(document).on('click', '#submit', function() { // catch the form's submit event
     msgdata = {}
-    {% for f in topic.msgtype %}
+    {% for name, type in topic.msgtype.iteritems() %}
 
-      {% if topic.msgtype[f]=='float32' %}
-      msgdata['{{ f }}'] = parseInt($('#{{ f }}').val())
+      {% if type=='float32' %}
+      msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
 
-      {% elif topic.msgtype[f]=='geometry_msgs/Vector3' %}
+      {% elif type=='geometry_msgs/Vector3' %}
 
-      msgdata['{{ f }}'] = {}
-      msgdata['{{ f }}']['x'] = parseInt($('#{{ f }}_x').val())
-      msgdata['{{ f }}']['y'] = parseInt($('#{{ f }}_y').val())
-      msgdata['{{ f }}']['z'] = parseInt($('#{{ f }}_z').val())
+      msgdata['{{ name }}'] = {}
+      msgdata['{{ name }}']['x'] = parseInt($('#{{ name }}_x').val())
+      msgdata['{{ name }}']['y'] = parseInt($('#{{ name }}_y').val())
+      msgdata['{{ name }}']['z'] = parseInt($('#{{ name }}_z').val())
 
       {% else %}
 
-      msgdata['{{ f }}'] = $('#{{ f }}').val()
+      msgdata['{{ name }}'] = $('#{{ name }}').val()
       {% endif %}
     {% endfor %}
 
@@ -133,6 +133,6 @@ $(document).on('pagecreate', '#mainlayout', function(){
 {% endblock %}
 
 
-{% block footer %}{{ topic_name }}{% endblock %}
+{% block footer %}Topic {{ topic.name }}{% endblock %}
 
 

@@ -168,24 +168,31 @@ def describe_action_topic(action_name, suffix, action, full=False):
 
     return dfile
 
+#outputs message structure as string (useful ?)
 def get_msg(msg):
     return '\n'.join(['%s %s' % line for line in zip(msg._slot_types, msg.__slots__)])
 
+#outputs message structure as dict
 def get_msg_dict(msg):
     return dict(zip(msg.__slots__,msg._slot_types))
 
-#TODO : DEL
+#we should pass only the topic interface as parameters. the internals will be handled here.
 def get_topic_msg(topic):
     return get_msg(topic.rostype)
-#TODO : DEL
+
 def get_topic_msg_dict(topic):
     return get_msg_dict(topic.rostype)
 
+#outputs message structure as string (useful ?)
 def get_service_srv(service):
     return '\n'.join([get_msg(service.rostype_req),
-                    '---',
-                    get_msg(service.rostype_resp)
-                    ])
+                '---',
+                get_msg(service.rostype_resp)
+    ])
+
+#outputs message structure as dict
+def get_service_srv_dict(service):
+    return (get_msg_dict(service.rostype_req),get_msg_dict(service.rostype_resp))
 
 def get_action_action(action):
     return '\n'.join([get_msg(action.rostype_goal),
