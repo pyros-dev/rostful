@@ -285,20 +285,29 @@ Interface with ROS
 """
 class ROSIF():
     def __init__(self):
+        #current services topics and actions exposed
         self.services = {}
         self.topics = {}
         self.actions = {}
+        #last requested services topics and actions to be exposed
+        self.services_args = {}
+        self.topics_args = {}
+        self.actions_args = {}
 
-        self.topics_args = ast.literal_eval(rospy.get_param('~topics', "[]"))
-        self.services_args = ast.literal_eval(rospy.get_param('~services', "[]"))
-        self.actions_args = ast.literal_eval(rospy.get_param('~actions', "[]"))
+        topics_args = ast.literal_eval(rospy.get_param('~topics', "[]"))
+        services_args = ast.literal_eval(rospy.get_param('~services', "[]"))
+        actions_args = ast.literal_eval(rospy.get_param('~actions', "[]"))
 
-        rospy.logwarn('topics : %s', self.topics_args)
-        self.expose_topics(self.topics_args)
-        rospy.logwarn('services : %s', self.services_args)
-        self.expose_services(self.services_args)
-        rospy.logwarn('actions : %s', self.actions_args)
-        self.expose_actions(self.actions_args)
+        rospy.logwarn('Init topics : %s', topics_args)
+        self.expose_topics(topics_args)
+        rospy.logwarn('Init services : %s', services_args)
+        self.expose_services(services_args)
+        rospy.logwarn('Init actions : %s', actions_args)
+        self.expose_actions(actions_args)
+
+        self.topics_args = topics_args
+        self.services_args = services_args
+        self.actions_args = actions_args
 
         # Create a dynamic reconfigure server.
         self.server = Server(RostfulConfig, self.reconfigure)
@@ -390,19 +399,20 @@ class ROSIF():
     This exposes a list of topics as REST API. topics not listed here will be removed from the API
     """
     def expose_topics(self, topic_names, allow_pub=True, allow_sub=True):
+        rospy.logwarn('Exposing topics : %r', topic_names)
         if not topic_names:
             return
         # Adding missing ones
         for topic_name in topic_names:
             if not topic_name in self.topics_args:
                 ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
-                if ret: rospy.loginfo ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
+                if ret: rospy.logwarn ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
 
         # Removing extra ones
         for topic_name in self.topics_args:
             if not topic_name in topic_names:
                 ret = self.del_topic(topic_name)
-                if ret: rospy.loginfo ( 'Removing %s', topic_name)
+                if ret: rospy.logwarn ( 'Removing %s', topic_name)
 
         # Updating the list of topics
         self.topics_args = topic_names
