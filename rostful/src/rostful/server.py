@@ -759,7 +759,7 @@ def servermain(debug=False):
             args = parser.parse_args(rospy.myargv()[1:])
 
             rospy.loginfo('Starting server on port %d', args.port)
-            app.run(port=8080,debug=True)
+            app.run(port=args.port,debug=True)
 
         #we need to return app to work with gunicorn
         return app

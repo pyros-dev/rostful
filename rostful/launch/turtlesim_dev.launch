@@ -1,9 +1,26 @@
 <launch>
+  <arg name="rosbridge_address" default="localhost"/>
+  <arg name="rosbridge_port" default="8080"/>
+
+  <param name="name" value="Rostful Interactions"/>
+  <param name="description" value="A REST interface to ROS using interactions/remocons."/>
+  <param name="icon" value="rocon_icons/cybernetic_pirate.png"/>
+  <node pkg="rocon_master_info" type="master.py" name="master"/>
+
+  <node pkg="rocon_interactions" type="interactions_manager.py" name="interactions">
+    <rosparam param="interactions">[rostful/rostful]</rosparam>
+    <param name="rosbridge_address" value="$(arg rosbridge_address)"/>
+    <param name="rosbridge_port" value="$(arg rosbridge_port)"/>
+  </node>
+
+  <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
+     <arg name="port" value="$(arg rosbridge_port)"/>
+  </include>
 
   <node pkg="turtlesim" name="rost_turtle" type="turtlesim_node"/>
 
   <!-- DEVELOPMENT -->
-  <node pkg="rostful" name="rost_server" type="devserver" args="">
+  <node pkg="rostful" name="rostful_server" type="devserver" args="-p 8081">
     <param name="topics" value="['/turtle1/pose','/turtle1/cmd_vel']" type="str" />
     <param name="services" value="['/clear','/reset','/kill','/spawn','/turtle1/set_pen', '/turtle1/teleport_absolute','/turtle1/teleport_relative']" type="str" />
     <param name="actions" value="[]" type="str" />
