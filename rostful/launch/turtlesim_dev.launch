@@ -1,12 +1,15 @@
 <launch>
 
-  <node pkg="turtlesim" name="rost_turtle" type="turtlesim_node"/>
+  <node pkg="turtlesim" name="turtlesim" type="turtlesim_node"/>
+  <node pkg="turtle_actionlib" name="turtlesim_actionserver" type="shape_server"/>
+  <node pkg="turtle_actionlib" name="turtlesim_actionclient" type="shape_client"/>
+
 
   <!-- DEVELOPMENT -->
   <node pkg="rostful" name="rost_server" type="devserver" args="">
     <param name="topics" value="['/turtle1/pose','/turtle1/cmd_vel']" type="str" />
     <param name="services" value="['/clear','/reset','/kill','/spawn','/turtle1/set_pen', '/turtle1/teleport_absolute','/turtle1/teleport_relative']" type="str" />
-    <param name="actions" value="[]" type="str" />
+    <param name="actions" value="['/turtle_shape']" type="str" />
   </node>
 
 

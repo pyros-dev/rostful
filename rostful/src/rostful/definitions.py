@@ -194,6 +194,7 @@ def get_service_srv(service):
 def get_service_srv_dict(service):
     return (get_msg_dict(service.rostype_req),get_msg_dict(service.rostype_resp))
 
+#outputs message structure as string (useful ?)
 def get_action_action(action):
     return '\n'.join([get_msg(action.rostype_goal),
                     '---',
@@ -201,3 +202,7 @@ def get_action_action(action):
                     '---',
                     get_msg(action.rostype_feedback)
                     ])
+
+#outputs message structure as dict
+def get_action_action_dict(action):
+    return (get_msg_dict(action.rostype_goal), get_msg_dict(action.rostype_result), get_msg_dict(action.rostype_feedback))

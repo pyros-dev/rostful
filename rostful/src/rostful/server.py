@@ -1,5 +1,5 @@
 from __future__ import absolute_import
-from .ros_interface import ROSIF, ActionBack, get_suffix
+from .ros_interface import ROSIF, ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
 
 #TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import roslib
@@ -44,39 +44,20 @@ class FrontEnd(MethodView):
         if not rosname :
             return render_template('index.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
         else :
-
-            #determining if it s  service, topic or action
             if self.ros_if.services.has_key(rosname):
                 mode = 'service'
                 service = self.ros_if.services[rosname]
-                input_msg_type = service.rostype_req
+                return render_template('service.html', service=service )
             elif self.ros_if.topics.has_key(rosname):
                 mode = 'topic'
                 topic = self.ros_if.topics[rosname]
-                input_msg_type = topic.rostype
-            else:
-                for suffix in [ActionBack.GOAL_SUFFIX,ActionBack.CANCEL_SUFFIX,ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX]:
-                    action_name = rosname[:-(len(suffix)+1)]
-                    if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
-                        mode = 'action'
-                        action_mode = suffix
-                        action = self.ros_if.actions[action_name]
-                        input_msg_type = action.get_msg_type(suffix)
-                        break
-                else:
-                    return make_response('',404)
-
-            #making the proper call
-            if mode == 'service':
-                rospy.logwarn('Rendering service template')
-                return render_template('service.html', service=service )
-            elif mode == 'topic':
                 return render_template('topic.html', topic=topic )
-            elif mode == 'action':
+            elif self.ros_if.actions.has_key(rosname):
+                mode = 'topic'
+                action = self.ros_if.actions[rosname]
                 return render_template('action.html', action=action )
-
-
-            return render_template('error.html', error='404' )
+            else :
+                return '', 404
 
 
 """
@@ -190,7 +171,7 @@ class BackEnd(Resource):
                 else:
                     return make_response( dfile.tostring(suppress_formats=True), 200) #, content_type='text/plain')
             else:
-                for suffix in [Action.STATUS_SUFFIX,Action.RESULT_SUFFIX,Action.FEEDBACK_SUFFIX,Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX]:
+                for suffix in [ActionBack.STATUS_SUFFIX,ActionBack.RESULT_SUFFIX,ActionBack.FEEDBACK_SUFFIX,ActionBack.GOAL_SUFFIX,ActionBack.CANCEL_SUFFIX]:
                     if path.endswith('/' + suffix):
                         path = path[:-(len(suffix)+1)]
                         if self.ros_if.actions.has_key(path):
@@ -210,6 +191,7 @@ class BackEnd(Resource):
     def post(self, rosname):
 
         try:
+            rospy.logwarn('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
@@ -225,13 +207,16 @@ class BackEnd(Resource):
                     return make_response('',405)
                 input_msg_type = topic.rostype
             else:
-                for suffix in [Action.GOAL_SUFFIX,Action.CANCEL_SUFFIX]:
+                rospy.logwarn('ACTION')
+                for suffix in [ActionBack.GOAL_SUFFIX,ActionBack.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix)+1)]
                     if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
                         mode = 'action'
                         action_mode = suffix
+                        rospy.logwarn('MODE:%r', action_mode)
                         action = self.ros_if.actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
+                        rospy.logwarn('input_msg_type:%r', input_msg_type)
                         break
                 else:
                     return make_response('',404)
@@ -239,6 +224,7 @@ class BackEnd(Resource):
             input_data = request.environ['wsgi.input'].read(length)
 
             input_msg = input_msg_type()
+            rospy.logwarn('input_msg:%r',input_msg)
             if use_ros:
                 input_msg.deserialize(input_data)
             else:

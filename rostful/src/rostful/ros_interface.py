@@ -100,7 +100,7 @@ class TopicBack:
         self.msg.appendleft(msg)
 
 """
-ActionBack is the class handling conversion from REST API to ROS Topic
+ActionBack is the class handling conversion from REST API to ROS Action
 
 Publications:
  * /averaging/status [actionlib_msgs/GoalStatusArray]
@@ -139,6 +139,7 @@ class ActionBack:
         self.rostype_result = getattr(msg_module, action_type_name + 'Result')
         self.rostype_feedback = getattr(msg_module, action_type_name + 'Feedback')
 
+        self.actiontype = definitions.get_action_action_dict(self)
         self.status_msg = deque([], queue_size)
         self.status_sub = rospy.Subscriber(self.name + '/' +self.STATUS_SUFFIX, actionlib_msgs.msg.GoalStatusArray, self.status_callback)
 
@@ -148,8 +149,8 @@ class ActionBack:
         self.feedback_msg = deque([], queue_size)
         self.feedback_sub = rospy.Subscriber(self.name + '/' +self.FEEDBACK_SUFFIX, self.rostype_action_feedback, self.feedback_callback)
 
-        self.goal_pub = rospy.Publisher(self.name + '/' + self.GOAL_SUFFIX, self.rostype_action_goal)
-        self.cancel_pub = rospy.Publisher(self.name + '/' +self.CANCEL_SUFFIX, actionlib_msgs.msg.GoalID)
+        self.goal_pub = rospy.Publisher(self.name + '/' + self.GOAL_SUFFIX, self.rostype_action_goal, queue_size=1)
+        self.cancel_pub = rospy.Publisher(self.name + '/' +self.CANCEL_SUFFIX, actionlib_msgs.msg.GoalID, queue_size=1)
 
     def get_msg_type(self, suffix):
         if suffix == self.STATUS_SUFFIX:
@@ -166,6 +167,7 @@ class ActionBack:
             return None
 
     def publish_goal(self, msg):
+        rospy.logwarn('PUBLISH_GOAL')
         self.goal_pub.publish(msg)
         return
 
@@ -174,6 +176,7 @@ class ActionBack:
         return
 
     def publish(self, suffix, msg):
+        rospy.logwarn('publish %r %r', suffix, msg)
         if suffix == self.GOAL_SUFFIX:
             self.publish_goal(msg)
         elif suffix == self.CANCEL_SUFFIX:
@@ -215,14 +218,6 @@ class ActionBack:
 
     def feedback_callback(self, msg):
         self.feedback_msg.appendleft(msg)
-
-"""
-ActionFront is the class handling the template generation
-for the frontend code, so that a web user can easily generate a request
-"""
-class ActionFront:
-    def __init__(self, action_name, action_type, queue_size=1):
-        raise NotImplemented #TODO
 
 
 CONFIG_PATH = '_rosdef'
@@ -391,13 +386,13 @@ class ROSIF():
         for topic_name in topic_names:
             if not topic_name in self.topics_args:
                 ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
-                if ret: rospy.logwarn ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
+                if ret: rospy.loginfo ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
 
         # Removing extra ones
         for topic_name in self.topics_args:
             if not topic_name in topic_names:
                 ret = self.del_topic(topic_name)
-                if ret: rospy.logwarn ( 'Removing %s', topic_name)
+                if ret: rospy.loginfo ( 'Removing %s', topic_name)
 
         # Updating the list of topics
         self.topics_args = topic_names
@@ -432,6 +427,7 @@ class ROSIF():
     This exposes a list of actions as REST API. actions not listed here will be removed from the API
     """
     def expose_actions(self, action_names):
+        rospy.logwarn('Exposing actions : %r', action_names)
         if not action_names:
             return
         for action_name in action_names:
