@@ -109,6 +109,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 {% endblock %}
 
 
-{% block footer %}Service {{ service.name }}{% endblock %}
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
 
 

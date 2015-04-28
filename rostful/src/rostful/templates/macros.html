@@ -1,0 +1,18 @@
+{% macro navbar(active='rapps') %}
+    <div data-role="navbar">
+      <ul>
+        <li><a href="#rapps" {{ 'class=ui-btn-active ui-state-persist' if 'rapps'==active }} >Rapps</a></li>
+        <li><a href="#actions" {{ 'class=ui-btn-active ui-state-persist' if 'actions'==active }}>Actions</a></li>
+        <li><a href="#services" {{ 'class=ui-btn-active ui-state-persist' if 'services'==active }}>Services</a></li>
+        <li><a href="#topics" {{ 'class=ui-btn-active ui-state-persist' if 'topics'==topics }}>Topics</a></li>
+      </ul>
+    </div>
+{% endmacro %}
+
+{% macro content_navbar() %}
+    <div data-role="navbar">
+      <ul>
+        <li><a href="#" data-rel="back" data-icon="back">Back</a></li>
+      </ul>
+    </div>
+{% endmacro %}

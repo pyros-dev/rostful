@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ROSTful - ROS REST interface</title>
+<link rel="stylesheet" href="{{ url_for('static', filename='js/jquery-mobile/jquery.mobile-1.4.5.min.css') }}">
+
+<script src="{{ url_for('static', filename='js/jquery/jquery-1.11.2.min.js') }}"></script>
+<script src="{{ url_for('static', filename='js/jquery-mobile/jquery.mobile-1.4.5.min.js') }}"></script>
+
+<script type=text/javascript>
+  $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+</script>
+
+</head>
+<body>
+
+{% from 'macros.html' import navbar %}
+
+<div data-role="page" id="rapps">
+  <div data-role="header">
+    <h1>RApps</h1>
+  </div>
+  {% if rapps %}
+    {% for name, rapp in rapps.iteritems() %}
+      <a href="{{ rapp.name }}" class="ui-btn">{{ rapp.name }}</a>
+    {% endfor%}
+  {% else %}
+    There is not RApps available on this ROSTful Server
+  {% endif%}
+  <div data-role="footer">
+  {{ navbar('rapps') }}
+  </div>
+</div>
+
+<div data-role="page" id="actions">
+  <div data-role="header">
+    <h1>Actions</h1>
+  </div>
+  {% if actions %}
+    {% for name, action in actions.iteritems() %}
+      <a href="{{ action.name }}" class="ui-btn">{{ action.name }}</a>
+    {% endfor%}
+  {% else %}
+    There is not RApps available on this ROSTful Server
+  {% endif%}
+  <div data-role="footer">
+  {{ navbar('actions') }}
+  </div>
+</div>
+
+<div data-role="page" id="services">
+  <div data-role="header">
+    <h1>Services</h1>
+  </div>
+  {% if services %}
+    {% for name, service in services.iteritems() %}
+      <a href="{{ service.name }}" class="ui-btn">{{ service.name }}</a>
+    {% endfor%}
+  {% else %}
+    There is not RApps available on this ROSTful Server
+  {% endif%}
+  <div data-role="footer">
+  {{ navbar('services') }}
+  </div>
+</div>
+
+<div data-role="page" id="topics">
+  <div data-role="header">
+    <h1>Topics</h1>
+  </div>
+  {% if topics %}
+    {% for name, topic  in topics.iteritems() %}
+      <a href="{{ topic.name }}" class="ui-btn">{{ topic.name }}</a>
+    {% endfor%}
+  {% else %}
+    There is not RApps available on this ROSTful Server
+  {% endif%}
+  <div data-role="footer">
+  {{ navbar('topics') }}
+  </div>
+</div>
+
+</body>
+</html>
