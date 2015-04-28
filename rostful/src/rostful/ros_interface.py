@@ -392,7 +392,7 @@ class ROSIF():
         for topic_name in self.topics_args:
             if not topic_name in topic_names:
                 ret = self.del_topic(topic_name)
-                if ret: rospy.loginfo ( 'Removing %s', topic_name)
+                if ret: rospy.loginfo ( 'Removing Topic %s', topic_name)
 
         # Updating the list of topics
         self.topics_args = topic_names
@@ -433,12 +433,12 @@ class ROSIF():
         for action_name in action_names:
             if not action_name in self.actions_args:
                 ret = self.add_action(action_name)
-                if ret: rospy.loginfo( 'Adding action %s', action_name)
+                if ret: rospy.loginfo( 'Adding Action %s', action_name)
 
         for action_name in self.actions_args:
             if not action_name in action_names:
                 ret = self.del_action(action_name)
-                if ret: rospy.loginfo ( 'Removing %s', action_name)
+                if ret: rospy.loginfo ( 'Removing Action %s', action_name)
 
         # Updating the list of actions
         self.actions_args = action_names

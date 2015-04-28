@@ -53,7 +53,7 @@ class FrontEnd(MethodView):
                 topic = self.ros_if.topics[rosname]
                 return render_template('topic.html', topic=topic )
             elif self.ros_if.actions.has_key(rosname):
-                mode = 'topic'
+                mode = 'action'
                 action = self.ros_if.actions[rosname]
                 return render_template('action.html', action=action )
             else :
