@@ -28,6 +28,9 @@
     {% elif type=='int32' %}
       <input type=number name="{{ name }}" id="{{ name }}"/>
 
+    {% elif type=='uint8' %}
+      <input type=number name="{{ name }}" id="{{ name }}"/>
+
     {% elif type=='geometry_msgs/Vector3' %}
       <div class="ui-field-contain">
         <label for="{{ name }}.x">{{ name }}.x:</label>
@@ -41,8 +44,13 @@
         <label for="{{ name }}.z">{{ name }}.z:</label>
         <input type=number name="{{ name }}_z" id="{{ name }}_z"/>
       </div>
+
+    {% elif type=='string' %}
+      <input type=text name="{{ name }}" id="{{ name }}"/>
+
     {% else %}
       <input type=text name="{{ name }}" id="{{ name }}" placeholder="UNIMPLEMENTED MSG FIELD TYPE {{ type }}">
+
     {% endif %}
     </div>
   {% endfor %}
@@ -58,11 +66,17 @@
     {% elif type=='int32' %}
     msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
 
+    {% elif type=='uint8' %}
+    msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
+
     {% elif type=='geometry_msgs/Vector3' %}
     msgdata['{{ name }}'] = {}
     msgdata['{{ name }}']['x'] = parseInt($('#{{ name }}_x').val())
     msgdata['{{ name }}']['y'] = parseInt($('#{{ name }}_y').val())
     msgdata['{{ name }}']['z'] = parseInt($('#{{ name }}_z').val())
+
+    {% elif type=='string' %}
+    msgdata['{{ name }}'] = $('#{{ name }}').val()
 
     {% else %}
     msgdata['{{ name }}'] = $('#{{ name }}').val()

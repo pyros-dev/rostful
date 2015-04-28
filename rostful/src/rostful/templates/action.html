@@ -16,9 +16,6 @@
   <pre id="get_response"></pre>
 {% endblock %}
 
-
-{% from 'macros.html' import generate_inputs, generate_msgdata %}
-
 {% block GET_ajax %}
 <script type=text/javascript>
 $(document).on('pagecreate', '#mainlayout', function(){
@@ -95,6 +92,8 @@ $(document).on('pagecreate', '#mainlayout', function(){
 </script>
 {% endblock %}
 
+{% from 'macros.html' import generate_inputs, generate_msgdata %}
+
 {% block POST %}
   <h2>POST</h2>
   <form action="" method=post data-ajax=false>
@@ -105,7 +104,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
   <form action="" method=post data-ajax=false>
     <div class="ui-field-contain">
         <label for="GoalID">GoalID:</label>
-        <input type=number name="GoalID" id="GoalID"/>
+        <input type=text name="GoalID" id="GoalID"/>
     </div>
     <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_cancel" id="submit_cancel" value="CANCEL">
   </form>
@@ -157,7 +156,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will show ajax spinner
         },
         success: function (result) {
-            alert(result);
+            //alert(result);
         },
         error: function (request,error) {
             // This callback function will trigger on unsuccessful action
@@ -169,7 +168,16 @@ $(document).on('pagecreate', '#mainlayout', function(){
 
   $(document).on('click', '#submit_cancel', function() { // catch the form's submit event
     msgdata = {}
-    msgdata['GoalID'] = parseInt($('#GoalID').val())
+    msgdata['goal_id'] =
+
+  // Fill in the goal message
+  msgdata = {
+      stamp : {
+        secs : 0,
+        nsecs : 0
+      },
+      id : $('#GoalID').val()
+  };
 
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
