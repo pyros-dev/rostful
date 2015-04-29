@@ -40,6 +40,9 @@ $(document).on('pagecreate', '#mainlayout', function(){
 </script>
 {% endblock %}
 
+
+{% from 'macros.html' import generate_inputs, generate_msgdata %}
+
 {% block POST %}
   <h2>Send message</h2>
 
@@ -48,30 +51,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
   <!-- Topic allow_pub : {{ topic.allow_pub }} -->
 
   <form action="" method=post data-ajax=false>
-      {% for name, type in topic.msgtype.iteritems() %}
-        <div class="ui-field-contain">
-          <label for="{{ name }}">{{ name }}:</label>
-        {% if type=='float32' %}
-          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}" id="{{ name }}" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
-
-        {% elif type=='geometry_msgs/Vector3' %}
-          <div class="ui-field-contain">
-            <label for="{{ name }}.x">{{ name }}.x:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_x" id="{{ name }}_x" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
-          </div>
-          <div class="ui-field-contain">
-            <label for="{{ name }}.y">{{ name }}.y:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_y" id="{{ name }}_y" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
-          </div>
-          <div class="ui-field-contain">
-            <label for="{{ name }}.z">{{ name }}.z:</label>
-            <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=number name="{{ name }}_z" id="{{ name }}_z" {{ 'placeholder=DISABLED' if not topic.allow_pub }} >
-          </div>
-        {% else %}
-          <input {{ 'disabled="disabled"' if not topic.allow_pub }} type=text name="{{ name }}" id="{{ name }}" placeholder="{{ 'DISABLED - ' if not topic.allow_pub }} UNIMPLEMENTED MSG FIELD TYPE {{ type }}">
-        {% endif %}
-        </div>
-      {% endfor %}
+      {{ generate_inputs(topic.msgtype) }}
       <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit" id="submit" value="POST NEW MSG">
   </form>
   <pre id="post_request"></pre>
@@ -84,24 +64,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 
 $(document).on('pagecreate', '#mainlayout', function(){
   $(document).on('click', '#submit', function() { // catch the form's submit event
-    msgdata = {}
-    {% for name, type in topic.msgtype.iteritems() %}
-
-      {% if type=='float32' %}
-      msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
-
-      {% elif type=='geometry_msgs/Vector3' %}
-
-      msgdata['{{ name }}'] = {}
-      msgdata['{{ name }}']['x'] = parseInt($('#{{ name }}_x').val())
-      msgdata['{{ name }}']['y'] = parseInt($('#{{ name }}_y').val())
-      msgdata['{{ name }}']['z'] = parseInt($('#{{ name }}_z').val())
-
-      {% else %}
-
-      msgdata['{{ name }}'] = $('#{{ name }}').val()
-      {% endif %}
-    {% endfor %}
+    {{ generate_msgdata(topic.msgtype) }}
 
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
@@ -133,6 +96,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 {% endblock %}
 
 
-{% block footer %}Topic {{ topic.name }}{% endblock %}
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
 
 

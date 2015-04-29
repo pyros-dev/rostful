@@ -6,7 +6,7 @@ import rospy
 import rostful.server
 
 if __name__ == "__main__":
-    rostful.server.servermain(True)
+    rostful.server.server_debug()
 
 
 

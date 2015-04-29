@@ -10,41 +10,15 @@
 <!-- Cannot GET on a Service ?? -->
 {% endblock %}
 
+{% from 'macros.html' import generate_inputs, generate_msgdata %}
+
 {% block POST %}
   <h2>Send message</h2>
 
   <!-- Service rostype_name : {{service.rostype_name}} -->
 
   <form action="" method=post data-ajax=false>
-      {% for name, type in service.srvtype[0].iteritems() %}
-        <div class="ui-field-contain">
-          <label for="{{ name }}">{{ name }}:</label>
-        {% if type=='float32' %}
-          <input type=number name="{{ name }}" id="{{ name }}">
-
-        {% elif type=='string' %}
-          <input type=text name="{{ name }}" id="{{ name }}">
-
-        {% elif type=='geometry_msgs/Vector3' %}
-          <div class="ui-field-contain">
-            <label for="{{ name }}.x">{{ name }}.x:</label>
-            <input type=number name="{{ name }}_x" id="{{ name }}_x">
-          </div>
-          <div class="ui-field-contain">
-            <label for="{{ name }}.y">{{ name }}.y:</label>
-            <input type=number name="{{ name }}_y" id="{{ name }}_y">
-          </div>
-          <div class="ui-field-contain">
-            <label for="{{ name }}.z">{{ f }}.z:</label>
-            <input type=number name="{{ name }}_z" id="{{ name }}_z">
-          </div>
-
-        {% else %}
-          <input type=text name="{{ name }}" id="{{ name }}" placeholder="UNIMPLEMENTED SRV FIELD TYPE {{ type }}">
-
-        {% endif %}
-        </div>
-      {% endfor %}
+      {{ generate_inputs(service.srvtype[0]) }}
       <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit" id="submit" value="POST NEW MSG">
   </form>
   <pre id="post_request"></pre>
@@ -57,27 +31,7 @@
 
 $(document).on('pagecreate', '#mainlayout', function(){
   $(document).on('click', '#submit', function() { // catch the form's submit event
-    msgdata = {}
-    {% for name, type in service.srvtype[0].iteritems() %}
-
-       {% if type=='float32' %}
-      msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
-
-      {% elif type=='string' %}
-      msgdata['{{ name }}'] = $('#{{ name }}').val()
-
-      {% elif type=='geometry_msgs/Vector3' %}
-      msgdata['{{ name }}'] = {}
-      msgdata['{{ name }}']['x'] = parseInt($('#{{ name }}_x').val())
-      msgdata['{{ name }}']['y'] = parseInt($('#{{ name }}_y').val())
-      msgdata['{{ name }}']['z'] = parseInt($('#{{ name }}_z').val())
-
-      {% else %}
-      msgdata['{{ name }}'] = $('#{{ name }}').val()
-
-      {% endif %}
-
-    {% endfor %}
+    {{ generate_msgdata(service.srvtype[0]) }}
 
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
@@ -109,6 +63,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 {% endblock %}
 
 
-{% block footer %}Service {{ service.name }}{% endblock %}
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
 
 

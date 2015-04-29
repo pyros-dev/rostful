@@ -1,0 +1,216 @@
+{% extends "layout.html" %}
+{% block title %}Action {{ action.name }}{% endblock %}
+{% block header %}Action {{ action.name }}{% endblock %}
+{% block GET %}
+
+  <h2>GET</h2>
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_status">
+    STATUS
+  </button>
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_feedback">
+    FEEDBACK
+  </button>
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_result">
+    RESULT
+  </button>
+  <pre id="get_response"></pre>
+{% endblock %}
+
+{% block GET_ajax %}
+<script type=text/javascript>
+$(document).on('pagecreate', '#mainlayout', function(){
+  $(document).on('click', '#get_status', function(e){
+    $.ajax({
+      url: $SCRIPT_ROOT + '/ros{{ action.name }}/status',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_response").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+
+  $(document).on('click', '#get_feedback', function(e){
+    $.ajax({
+      url: $SCRIPT_ROOT + '/ros{{ action.name }}/feedback',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_response").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+
+  $(document).on('click', '#get_result', function(e){
+    $.ajax({
+      url: $SCRIPT_ROOT + '/ros{{ action.name }}/result',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_response").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+
+});
+</script>
+{% endblock %}
+
+{% from 'macros.html' import generate_inputs, generate_msgdata %}
+
+{% block POST %}
+  <h2>POST</h2>
+  <form action="" method=post data-ajax=false>
+      {{ generate_inputs(action.actiontype[0]) }}
+
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_goal" id="submit_goal" value="POST GOAL">
+  </form>
+  <form action="" method=post data-ajax=false>
+    <div class="ui-field-contain">
+        <label for="GoalID">GoalID:</label>
+        <input type=text name="GoalID" id="GoalID"/>
+    </div>
+    <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_cancel" id="submit_cancel" value="CANCEL">
+  </form>
+  <pre id="post_request"></pre>
+  <pre id="post_result"></pre>
+
+{% endblock %}
+
+{% block POST_ajax %}
+<script type=text/javascript>
+
+$(document).on('pagecreate', '#mainlayout', function(){
+  $(document).on('click', '#submit_goal', function() { // catch the form's submit event
+
+    {{ generate_msgdata(action.actiontype[0]) }}
+
+////snippet from roslib.js BEGIN
+  // Used to create random IDs
+  var date = new Date();
+
+  // Create a random ID
+  var goalID = 'goal_' + Math.random() + '_' + date.getTime();
+  // Fill in the goal message
+  msgdata = {
+    goal_id : {
+      stamp : {
+        secs : 0,
+        nsecs : 0
+      },
+      id : goalID
+    },
+    goal : msgdata
+  };
+////snippet from roslib.js END
+
+    //alert ( ' sending ' + JSON.stringify(msgdata) );
+    // Send data to Rostful backend through the Ajax call
+    $.ajax({
+        url: $SCRIPT_ROOT + '/ros{{ action.name }}/goal',
+        data: JSON.stringify(msgdata),
+        method: 'POST',
+        dataType: 'json',
+        beforeSend: function() {
+            // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+        },
+        complete: function() {
+            // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will show ajax spinner
+        },
+        success: function (result) {
+            //alert(result);
+        },
+        error: function (request,error) {
+            // This callback function will trigger on unsuccessful action
+            alert('Network error has occurred please try again!');
+        }
+    });
+    return false; // cancel original event to prevent form submitting
+  });
+
+  $(document).on('click', '#submit_cancel', function() { // catch the form's submit event
+    msgdata = {}
+    msgdata['goal_id'] =
+
+  // Fill in the goal message
+  msgdata = {
+      stamp : {
+        secs : 0,
+        nsecs : 0
+      },
+      id : $('#GoalID').val()
+  };
+
+    //alert ( ' sending ' + JSON.stringify(msgdata) );
+    // Send data to Rostful backend through the Ajax call
+    $.ajax({
+        url: $SCRIPT_ROOT + '/ros{{ action.name }}/cancel',
+        data: JSON.stringify(msgdata),
+        method: 'POST',
+        dataType: 'json',
+        beforeSend: function() {
+            // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+        },
+        complete: function() {
+            // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will show ajax spinner
+        },
+        success: function (result) {
+            //alert(result);
+        },
+        error: function (request,error) {
+            // This callback function will trigger on unsuccessful action
+            alert('Network error has occurred please try again!');
+        }
+    });
+    return false; // cancel original event to prevent form submitting
+  });
+
+});
+</script>
+{% endblock %}
+
+
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
+
+
