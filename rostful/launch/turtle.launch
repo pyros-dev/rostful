@@ -1,0 +1,23 @@
+<!--
+  Launches the infrastructure running on a robot (turtle).
+ -->
+<launch>
+    <arg name="turtle_name"              default="turtle"/>
+    <arg name="turtle_rapp_whitelist"    default="[]"/>
+    <arg name="turtle_concert_whitelist" default="[]"/>
+    <arg name="disable_zeroconf" default="true"/>
+
+    <include file="$(find rocon_app_manager)/launch/concert_client.launch">
+        <arg name="robot_name" value="$(arg turtle_name)"/>
+        <arg name="concert_whitelist" value="$(arg turtle_concert_whitelist)"/>
+        <arg name="concert_uri"  value="http://localhost:6380"/>
+        <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+        <arg name="robot_type" value="pc"/>
+        <arg name="rapp_package_whitelist" value="$(arg turtle_rapp_whitelist)" />
+        <arg name="concert_watch_period" value="1"/> <!-- flip faster, convenient -->
+        <arg name="firewall" value="false"/>
+        <arg name="robot_unique_name" value="false"/>  <!-- do not change this to true! the turtlesim service sets its own unique names for the robots -->
+        <arg name="local_machine_only" value="true"/>
+        <arg name="screen" value="true" />
+    </include>
+</launch>

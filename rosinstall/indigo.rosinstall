@@ -1,1 +1,2 @@
 - git: {local-name: rostful, uri: 'git@github.com:asmodehn/rostful.git'}
+- git: {local-name: tutorials, uri: 'git@github.com:ros/common_tutorials.git'}
