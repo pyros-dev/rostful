@@ -9,6 +9,6 @@
 # We override this service to be able to disable zeroconf
 - resource_name: rostful/turtlesim
 
-#- resource_name: turtle_concert/turtle_pond
-#- resource_name: concert_service_admin/admin
-#- resource_name: concert_service_teleop/teleop
+- resource_name: turtle_concert/turtle_pond
+- resource_name: concert_service_admin/admin
+- resource_name: concert_service_teleop/teleop
