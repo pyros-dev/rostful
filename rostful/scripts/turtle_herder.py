@@ -53,6 +53,7 @@ def prepare_launch_configurations(turtles):
         launch_text += '    <arg name="turtle_name" value="%s"/>\n' % turtle.unique_name
         launch_text += '    <arg name="turtle_concert_whitelist" value="%s"/>\n' % str(turtle.concert_whitelist)  # e.g. [Turtle Concert, Turtle Teleop Concert, Concert Tutorial]
         launch_text += '    <arg name="turtle_rapp_whitelist" value="%s"/>\n' % str(turtle.rapp_whitelist)  # e.g. [rocon_apps, turtle_concert]
+        launch_text += '    <arg name="disable_zeroconf" value="%s"/>\n' % str(turtle.disable_zeroconf)  # e.g. [True, False]
         launch_text += '  </launch>\n'
         port = port + 1
     launch_text += '</concert>\n'
@@ -81,14 +82,16 @@ class Turtle(object):
                  'name',
                  'unique_name',
                  'rapp_whitelist',
-                 'concert_whitelist'
+                 'concert_whitelist',
+                 'disable_zeroconf'
                 ]
 
-    def __init__(self, name, rapp_whitelist, concert_whitelist):
+    def __init__(self, name, rapp_whitelist, concert_whitelist, disable_zeroconf):
         self.name = name
         self.unique_name = name  # this gets manipulated later
         self.rapp_whitelist = rapp_whitelist
         self.concert_whitelist = concert_whitelist
+        self.disable_zeroconf = disable_zeroconf
 
 ##############################################################################
 # Turtle Herder
@@ -285,7 +288,7 @@ if __name__ == '__main__':
     # should check that turtle_parameters is a dict here
     for name, parameters in turtle_parameters.items():
         try:
-            turtles.append(Turtle(name, parameters['rapp_whitelist'], parameters['concert_whitelist']))
+            turtles.append(Turtle(name, parameters['rapp_whitelist'], parameters['concert_whitelist'], parameters['disable_zeroconf']))
         except KeyError as e:
             rospy.logerr("TurtleHerder : not all turtle parameters found for %s (req'd even if empty)[%s]" % (name, str(e)))
     rospy.loginfo("TurtleHerder : spawning turtles: %s" % [turtle.name for turtle in turtles])

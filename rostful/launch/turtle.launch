@@ -5,7 +5,7 @@
     <arg name="turtle_name"              default="turtle"/>
     <arg name="turtle_rapp_whitelist"    default="[]"/>
     <arg name="turtle_concert_whitelist" default="[]"/>
-    <arg name="disable_zeroconf" default="true"/>
+    <arg name="disable_zeroconf"         default="true"/>
 
     <include file="$(find rocon_app_manager)/launch/concert_client.launch">
         <arg name="robot_name" value="$(arg turtle_name)"/>

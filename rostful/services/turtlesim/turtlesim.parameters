@@ -2,7 +2,9 @@
 turtles:
   kobuki:
     rapp_whitelist: [rocon_apps, turtle_concert]
-    concert_whitelist: [Turtle Concert, Turtle Teleop Concert, Concert Tutorial]
+    concert_whitelist: [Rostful Turtle Concert]
+    disable_zeroconf: True
   guimul:
     rapp_whitelist: [rocon_apps, turtle_concert]
-    concert_whitelist: [Turtle Concert, Turtle Teleop Concert, Concert Tutorial] 
+    concert_whitelist: [Rostful Turtle Concert]
+    disable_zeroconf: True
