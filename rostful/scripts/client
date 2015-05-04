@@ -1,11 +1,8 @@
 #!/usr/bin/env python
-
-import roslib
-roslib.load_manifest('rostful')
 import rospy
 import rostful.client
 
 import argparse
 
 if __name__ == '__main__':
-	rostful.client.clientmain()
+    rostful.client.clientmain()

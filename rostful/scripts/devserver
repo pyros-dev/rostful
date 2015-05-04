@@ -1,12 +1,5 @@
-#!/usr/bin/env python
+#!/bin/bash
 
-import roslib
-roslib.load_manifest('rostful')
-import rospy
-import rostful.server
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-if __name__ == "__main__":
-    rostful.server.server_debug()
-
-
-
+python -m rostful flask --port=8181 --ros_args="$*"
