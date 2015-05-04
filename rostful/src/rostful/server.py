@@ -293,13 +293,13 @@ class Server():
         security = Security(self.app, user_datastore)
 
     def launch(self,ros_args):
-        with RosInterface(ros_args) as ros_if:
-            rostfront = FrontEnd.as_view('frontend', ros_if)
-            rostback = BackEnd.as_view('backend', ros_if)
+        self.ros_if = RosInterface(ros_args)
+        rostfront = FrontEnd.as_view('frontend', self.ros_if)
+        rostback = BackEnd.as_view('backend', self.ros_if)
 
-            self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
-            self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
-            self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET','POST'])
-            self.api = Api(self.app)
+        self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+        self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
+        self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET','POST'])
+        self.api = Api(self.app)
 
 
