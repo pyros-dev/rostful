@@ -82,7 +82,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will show ajax spinner
         },
         success: function (result) {
-            //alert(result);
+            $("#post_result").text(JSON.stringify(result,null,2));
         },
         error: function (request,error) {
             // This callback function will trigger on unsuccessful action

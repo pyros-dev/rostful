@@ -1,5 +1,6 @@
 <!--
-  Launches the infrastructure running on a robot (turtle).
+  Launches the infrastructure running on a robot (turtle) with rostful,
+  as part of concert, using interactions.
  -->
 <launch>
     <arg name="turtle_name"              default="turtle"/>
@@ -20,4 +21,30 @@
         <arg name="local_machine_only" value="true"/>
         <arg name="screen" value="true" />
     </include>
+
+    <param name="name" value="Rostful Interactions"/>
+    <param name="description" value="A REST interface to ROS using interactions/remocons."/>
+    <param name="icon" value="rocon_icons/cybernetic_pirate.png"/>
+
+    <arg name="rosbridge_port"           default="8880"/>
+    <arg name="rosbridge_address"        default="localhost"/>
+
+    <node pkg="rocon_interactions" type="interactions_manager.py" name="interactions">
+        <rosparam param="interactions">[rostful/rostful]</rosparam>
+        <param name="rosbridge_address" value="$(arg rosbridge_address)"/>
+        <param name="rosbridge_port" value="$(arg rosbridge_port)"/>
+    </node>
+
+    <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
+        <arg name="port" value="$(arg rosbridge_port)"/>
+    </include>
+
+    <arg name="rostful_port"             default="8080"/>
+
+    <node pkg="rostful" name="rostful_server" type="devserver" args="-p $(arg rostful_port)">
+        <param name="topics" value="['']" type="str" />
+        <param name="services" value="['interactions/get_interactions','interactions/get_roles', 'rosapi/services', 'rosapi/topics']" type="str" />
+        <param name="actions" value="['']" type="str" />
+    </node>
+
 </launch>

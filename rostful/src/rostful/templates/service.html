@@ -10,7 +10,13 @@
 <!-- Cannot GET on a Service ?? -->
 {% endblock %}
 
-{% from 'macros.html' import generate_inputs, generate_msgdata %}
+{% from 'macros.html' import generate_inputs, generate_msgdata, dynamic_array_input %}
+
+{% block UTIL_js %}
+$(document).ready(function() {
+  {{ dynamic_array_input(service.srvtype[0]) }}
+});
+{% endblock %}
 
 {% block POST %}
   <h2>Send message</h2>
@@ -36,7 +42,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
     $.ajax({
-        url: $SCRIPT_ROOT + '/ros{{ service.name }}',
+        url: $SCRIPT_ROOT + '/ros/{{ service.name }}',
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',
@@ -49,7 +55,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will show ajax spinner
         },
         success: function (result) {
-            //alert(result);
+            $("#post_result").text(JSON.stringify(result,null,2));
         },
         error: function (request,error) {
             // This callback function will trigger on unsuccessful action

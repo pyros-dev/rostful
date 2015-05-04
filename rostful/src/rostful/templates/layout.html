@@ -10,6 +10,7 @@
 
 <script type=text/javascript>
   $SCRIPT_ROOT = {{ request.script_root|tojson|safe }};
+  {% block UTIL_js %}{% endblock %}
 </script>
 
 {% block GET_ajax %}{% endblock %}
