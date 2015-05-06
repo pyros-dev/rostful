@@ -2,4 +2,42 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
-python -m rostful flask --port=8181 --ros_args="$*"
+echo $*
+
+#necessary to handle Flask Script arguments ( since ros doesnt pass it s argument in a standard/readline way )
+while [[ $# > 0 ]]
+do
+set -x
+key="$1"
+set +x
+case $key in
+    -h|--host)
+    HOST="$2"
+    shift 2
+    ;;
+    -p|--port)
+    PORT="$2"
+    shift 2
+    ;;
+    __*)
+    ROSARGS="${ROSARGS:+$ROSARGS }$key"
+    #ros option
+    shift 1
+    ;;
+    *)
+            # unknown option
+    echo "Unknown Option"
+    shift 1
+    ;;
+esac
+done
+
+set -x
+HOST=${HOST:+"-h $HOST"}
+PORT=${PORT:+"-p $PORT"}
+ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
+
+
+python -m rostful flask ${HOST} ${PORT} "${ROSARGS}"
+
+set +x
