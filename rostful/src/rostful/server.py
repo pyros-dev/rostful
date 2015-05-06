@@ -31,19 +31,89 @@ from flask.ext.security import Security, SQLAlchemyUserDatastore
 from flask_restful import Resource, Api, reqparse
 from flask.ext.login import LoginManager, login_required
 
+from rosinterface.service import ServiceBack
+from .interaction import Interaction
+from .interaction_table import InteractionsTable
+
+import rocon_interactions
+import rocon_interaction_msgs.msg as rocon_interaction_msgs
+import rocon_interaction_msgs.srv as rocon_interaction_srvs
+import rocon_interactions.web_interactions as web_interactions
+import rocon_python_comms
+import rocon_std_msgs.msg as rocon_std_msgs
+import rocon_uri
+
 """
 View for frontend pages
 """
 class FrontEnd(MethodView):
 
+    def _set_remocon_services(self, interactions_namespace):
+        """
+            setting up remocon-interaction manager apis. and check if the services are available
+
+            :param str interactions_namespace : namespace to contact interaction manager
+
+            :returns: remocon service apis
+            :rtype: dict
+        """
+        remocon_services = {}
+        remocon_services['get_interactions'] = interactions_namespace + '/' + 'get_interactions'
+        remocon_services['get_roles'] = interactions_namespace + '/' + 'get_roles'
+        remocon_services['request_interaction'] = interactions_namespace + '/' + 'request_interaction'
+
+        for service_name in remocon_services.keys():
+            if not rocon_python_comms.service_is_available(remocon_services[service_name]):
+                raise rocon_python_comms.NotFoundException("'%s' service is not validated" % service_name)
+
+        return remocon_services
+
+
     def __init__(self, ros_if):
         super(FrontEnd, self).__init__()
         self.ros_if = ros_if
+        self.rocon_uri = rocon_uri.parse(
+            "rocon:/" + rocon_std_msgs.Strings.URI_WILDCARD
+            + "/" + rocon_std_msgs.Strings.URI_WILDCARD
+            + "/" + rocon_std_msgs.Strings.URI_WILDCARD
+            + "/" + rocon_std_msgs.Strings.URI_WILDCARD
+            + "|" + rocon_std_msgs.Strings.OS_CHROME
+        )
+        self.platform_info = rocon_std_msgs.PlatformInfo(version=rocon_std_msgs.Strings.ROCON_VERSION,
+                                                         uri=str(self.rocon_uri),
+                                                         icon=rocon_std_msgs.Icon()
+                                                         )
+
+        self.interactions_table = InteractionsTable()
+        try:
+            rospy.logdebug("Interactive Client : Get interactions service Handle")
+            interactions_namespace = rocon_python_comms.find_service_namespace('get_interactions', 'rocon_interaction_msgs/GetInteractions', unique=True)
+            remocon_services = self._set_remocon_services(interactions_namespace)
+        except rocon_python_comms.MultipleFoundException as e:
+            message = "multiple interactions' publications and services [%s] are found. Please check services" % str(e)
+            rospy.logerror("InteractiveClientInterface : %s" % message)
+            return (False, message)
+        except rocon_python_comms.NotFoundException as e:
+            message = "failed to find all of the interactions' publications and services for [%s]" % str(e)
+            rospy.logerror("InteractiveClientInterface : %s" % message)
+            return (False, message)
+
+        self.get_interactions_service_proxy = rospy.ServiceProxy(remocon_services['get_interactions'], rocon_interaction_srvs.GetInteractions)
+        self.get_roles_service_proxy = rospy.ServiceProxy(remocon_services['get_roles'], rocon_interaction_srvs.GetRoles)
+        self.request_interaction_service_proxy = rospy.ServiceProxy(remocon_services['request_interaction'], rocon_interaction_srvs.RequestInteraction)
+
+        call_result = self.get_interactions_service_proxy([], self.platform_info.uri)
+        for msg in call_result.interactions:
+            self.interactions_table.append(Interaction(msg))
+
+        rospy.logwarn ('Loaded %r Interactions', len(self.interactions_table))
+        self.interactions= { i.name: i for i in self.interactions_table}
+
 
     def get(self, rosname = None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname :
-            return render_template('index.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions )
+            return render_template('index.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions, interactions=self.interactions )
         else :
             if self.ros_if.services.has_key(rosname):
                 mode = 'service'

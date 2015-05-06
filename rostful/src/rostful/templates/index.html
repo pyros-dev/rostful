@@ -21,9 +21,9 @@
   <div data-role="header">
     <h1>Interactions</h1>
   </div>
-  {% if rapps %}
+  {% if interactions %}
     {% for name, interact in interactions.iteritems() %}
-      <a href="{{ interact.name }}" class="ui-btn">{{ interact.name }}</a>
+      <a href=# class="ui-btn">{{ interact.display_name }}</a>
     {% endfor%}
   {% else %}
     There is no Interactions available on this ROSTful Server
