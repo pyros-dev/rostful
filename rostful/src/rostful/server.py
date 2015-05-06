@@ -1,9 +1,7 @@
 from __future__ import absolute_import
-from .ros_interface import ROSIF, ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+from .ros_interface import RosInterface, ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
 
 #TODO : remove ROS usage here, keep this a pure Flask App as much as possible
-import roslib
-roslib.load_manifest('rostful')
 import rospy
 from rospy.service import ServiceManager
 import rosservice, rostopic
@@ -17,10 +15,10 @@ import sys
 import re
 from StringIO import StringIO
 
-from . import message_conversion as msgconv
-from . import deffile, definitions
+from rosinterface import message_conversion as msgconv
+from rosinterface import definitions
 
-from .util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
+from rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
 
 import os
 import urlparse
@@ -28,7 +26,10 @@ import urlparse
 
 from flask import Flask, request, make_response, render_template
 from flask.views import MethodView
+from flask.ext.sqlalchemy import SQLAlchemy
+from flask.ext.security import Security, SQLAlchemyUserDatastore
 from flask_restful import Resource, Api, reqparse
+from flask.ext.login import LoginManager, login_required
 
 """
 View for frontend pages
@@ -262,91 +263,43 @@ class BackEnd(Resource):
             return make_response( e, 500)
 
 
+from . import db_models
+from .db_models import db
 
 
-#~ @app.route('/login', methods=['GET', 'POST'])
-#~ def login():
-    #~ error = None
-    #~ if request.method == 'POST':
-        #~ if request.form['username'] != app.config['USERNAME']:
-            #~ error = 'Invalid username'
-        #~ elif request.form['password'] != app.config['PASSWORD']:
-            #~ error = 'Invalid password'
-        #~ else:
-            #~ session['logged_in'] = True
-            #~ flash('You were logged in')
-            #~ return redirect(url_for('show_entries'))
-    #~ return render_template('login.html', error=error)
-#~
-#~
-#~ @app.route('/logout')
-#~ def logout():
-    #~ session.pop('logged_in', None)
-    #~ flash('You were logged out')
-    #~ return redirect(url_for('hello_world'))
+class Server():
+    #TODO : pass config file from command line here
+    def __init__(self):
 
+        #TODO : change into application factory (https://github.com/miguelgrinberg/Flask-Migrate/issues/45)
+        #because apparently ROS start python node from ~user/.ros, and it obviously cant find templates there
+        self.app = Flask('rostful',
+            static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
+            template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
+            instance_relative_config=True
+        )
 
-#because apparently ROS start python node from ~user/.ros, and it obviously cant find templates there
-app = Flask('rostful',
-    static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
-    template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates')
-)
+        self.app.config.from_object('config.default')
+        self.app.config.from_object('config.development')
+        #TODO : flexible config by chosing file
+        #TODO : flexible config by getting file from instance folder
+        #TODO : flexible config by getting env var
 
-# Load default config and override config from an environment variable
-app.config.update(dict(
-    DEBUG=True,
-    USERNAME='admin',
-    PASSWORD='p@ssw0rd'
-))
-app.config.from_envvar('ROSTFUL_SETTINGS', silent=True)
+        #initializes DB
+        self.db = db.init_app(self.app)
 
-#default index route. will be overridden when server is started with ros_interface data
-#DOESNT WORK
-#@app.route('/')
-#def index():
-#    return render_template('index.html'), 200
+        # Setup Flask-Security
+        user_datastore = SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
+        security = Security(self.app, user_datastore)
 
-@app.errorhandler(404)
-def page_not_found(error):
-    return render_template('error.html'), 404
+    def launch(self,ros_args):
+        self.ros_if = RosInterface(ros_args)
+        rostfront = FrontEnd.as_view('frontend', self.ros_if)
+        rostback = BackEnd.as_view('backend', self.ros_if)
 
+        self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+        self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
+        self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET','POST'])
+        self.api = Api(self.app)
 
-#This needs to be run after all imports and after ros has been initialized
-#Before this call Rostful is just an empty web app
-def app_post_rosinit():
-
-    ros_if = ROSIF()
-    rostfront = FrontEnd.as_view('frontend', ros_if)
-    rostback = BackEnd.as_view('backend', ros_if)
-
-    app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
-    app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
-    app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET','POST'])
-    api = Api(app)
-
-#helper to launch the flask app in a debug server.
-import argparse
-def server_debug():
-    try:
-
-        #Disable this line to debug the webapp without ROS
-        app_post_rosinit()
-
-        #command line argument to start flask debug server (only needed if no other server is running this wsgi app)
-        parser = argparse.ArgumentParser()
-
-        parser.add_argument('--host', default='')
-        parser.add_argument('-p', '--port', type=int, default=8080)
-
-        args = parser.parse_args(rospy.myargv()[1:])
-
-        rospy.loginfo('Starting server on port %d', args.port)
-        app.run(port=args.port,debug=True)
-
-        #we need to return app to work with gunicorn
-        return app
-
-    except KeyboardInterrupt:
-        rospy.loginfo('Shutting down the server')
-        rospy.signal_shutdown('Closing')
 

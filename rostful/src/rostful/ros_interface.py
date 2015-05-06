@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 
 import roslib
-roslib.load_manifest('rostful')
 import rospy
 from rospy.service import ServiceManager
 import rosservice, rostopic
@@ -15,210 +14,16 @@ import sys
 import re
 from StringIO import StringIO
 
-from . import message_conversion as msgconv
-from . import deffile, definitions
-
-from .util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
+from rosinterface import message_conversion as msgconv
+from rosinterface import definitions, util
+from rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
 
 import os
 import urlparse
 
-"""
-ServiceBack is the class handling conversion from REST API to ROS Service
-"""
-class ServiceBack:
-    def __init__(self, service_name, service_type):
-        self.name = service_name
-
-        service_type_module, service_type_name = tuple(service_type.split('/'))
-        roslib.load_manifest(service_type_module)
-        srv_module = import_module(service_type_module + '.srv')
-
-        self.rostype_name = service_type
-        self.rostype = getattr(srv_module, service_type_name)
-        self.rostype_req = getattr(srv_module, service_type_name + 'Request')
-        self.rostype_resp = getattr(srv_module, service_type_name + 'Response')
-
-        self.srvtype = definitions.get_service_srv_dict(self)
-        rospy.logwarn('srvtype : %r', self.srvtype)
-
-        self.proxy = rospy.ServiceProxy(self.name, self.rostype)
-
-    def call(self, rosreq):
-#       rosreq = self.rostype_req()
-#       if use_ros:
-#           rosreq.deserialize(req)
-#       else:
-#           msgconv.populate_instance(req, rosreq)
-
-        fields = []
-        for slot in rosreq.__slots__:
-            fields.append(getattr(rosreq, slot))
-        fields = tuple(fields)
-
-        return self.proxy(*fields)
-
-"""
-TopicBack is the class handling conversion from REST API to ROS Topic
-"""
-class TopicBack:
-    def __init__(self, topic_name, topic_type, allow_pub=True, allow_sub=True, queue_size=1):
-        self.name = topic_name
-
-        topic_type_module, topic_type_name = tuple(topic_type.split('/'))
-        roslib.load_manifest(topic_type_module)
-        msg_module = import_module(topic_type_module + '.msg')
-
-        self.rostype_name = topic_type
-        self.rostype = getattr(msg_module, topic_type_name)
-
-        self.allow_pub = allow_pub
-        self.allow_sub = allow_sub
-
-        self.msgtype = definitions.get_topic_msg_dict(self)
-        self.msg = deque([], queue_size)
-
-        self.pub = None
-        if self.allow_pub:
-            self.pub = rospy.Publisher(self.name, self.rostype, queue_size=1 )
-
-        self.sub = None
-        if self.allow_sub:
-            self.sub = rospy.Subscriber(self.name, self.rostype, self.topic_callback)
-
-    def publish(self, msg):
-        self.pub.publish(msg)
-        return
-
-    def get(self, num=None):
-        if not self.msg:
-            return None
-
-        return self.msg[0]
-
-    def topic_callback(self, msg):
-        self.msg.appendleft(msg)
-
-"""
-ActionBack is the class handling conversion from REST API to ROS Action
-
-Publications:
- * /averaging/status [actionlib_msgs/GoalStatusArray]
- * /averaging/result [actionlib_tutorials/AveragingActionResult]
- * /rosout [rosgraph_msgs/Log]
- * /averaging/feedback [actionlib_tutorials/AveragingActionFeedback]
-
-Subscriptions:
- * /random_number [unknown type]
- * /averaging/goal [actionlib_tutorials/AveragingActionGoal]
- * /averaging/cancel [actionlib_msgs/GoalID]
- """
-class ActionBack:
-    STATUS_SUFFIX = 'status'
-    RESULT_SUFFIX = 'result'
-    FEEDBACK_SUFFIX = 'feedback'
-    GOAL_SUFFIX = 'goal'
-    CANCEL_SUFFIX = 'cancel'
-
-    def __init__(self, action_name, action_type, queue_size=1):
-        self.name = action_name
-
-        action_type_module, action_type_name = tuple(action_type.split('/'))
-        roslib.load_manifest(action_type_module)
-        msg_module = import_module(action_type_module + '.msg')
-
-        self.rostype_name = action_type
-
-        self.rostype_action = getattr(msg_module, action_type_name + 'Action')
-
-        self.rostype_action_goal = getattr(msg_module, action_type_name + 'ActionGoal')
-        self.rostype_action_result = getattr(msg_module, action_type_name + 'ActionResult')
-        self.rostype_action_feedback = getattr(msg_module, action_type_name + 'ActionFeedback')
-
-        self.rostype_goal = getattr(msg_module, action_type_name + 'Goal')
-        self.rostype_result = getattr(msg_module, action_type_name + 'Result')
-        self.rostype_feedback = getattr(msg_module, action_type_name + 'Feedback')
-
-        self.actiontype = definitions.get_action_action_dict(self)
-        self.status_msg = deque([], queue_size)
-        self.status_sub = rospy.Subscriber(self.name + '/' +self.STATUS_SUFFIX, actionlib_msgs.msg.GoalStatusArray, self.status_callback)
-
-        self.result_msg = deque([], queue_size)
-        self.result_sub = rospy.Subscriber(self.name + '/' + self.RESULT_SUFFIX, self.rostype_action_result, self.result_callback)
-
-        self.feedback_msg = deque([], queue_size)
-        self.feedback_sub = rospy.Subscriber(self.name + '/' +self.FEEDBACK_SUFFIX, self.rostype_action_feedback, self.feedback_callback)
-
-        self.goal_pub = rospy.Publisher(self.name + '/' + self.GOAL_SUFFIX, self.rostype_action_goal, queue_size=1)
-        self.cancel_pub = rospy.Publisher(self.name + '/' +self.CANCEL_SUFFIX, actionlib_msgs.msg.GoalID, queue_size=1)
-
-    def get_msg_type(self, suffix):
-        if suffix == self.STATUS_SUFFIX:
-            return actionlib_msgs.msg.GoalStatusArray
-        elif suffix == self.RESULT_SUFFIX:
-            return self.rostype_action_result
-        elif suffix == self.FEEDBACK_SUFFIX:
-            return self.rostype_action_feedback
-        elif suffix == self.GOAL_SUFFIX:
-            return self.rostype_action_goal
-        elif suffix == self.CANCEL_SUFFIX:
-            return actionlib_msgs.msg.GoalID
-        else:
-            return None
-
-    def publish_goal(self, msg):
-        rospy.logwarn('PUBLISH_GOAL')
-        self.goal_pub.publish(msg)
-        return
-
-    def publish_cancel(self, msg):
-        self.cancel_pub.publish(msg)
-        return
-
-    def publish(self, suffix, msg):
-        rospy.logwarn('publish %r %r', suffix, msg)
-        if suffix == self.GOAL_SUFFIX:
-            self.publish_goal(msg)
-        elif suffix == self.CANCEL_SUFFIX:
-            self.publish_cancel(msg)
-
-    def get_status(self, num=None):
-        if not self.status_msg:
-            return None
-
-        return self.status_msg[0]
-
-    def get_result(self, num=None):
-        if not self.result_msg:
-            return None
-
-        return self.result_msg[0]
-
-    def get_feedback(self, num=None):
-        if not self.feedback_msg:
-            return None
-
-        return self.feedback_msg[0]
-
-    def get(self, suffix, num=None):
-        if suffix == self.STATUS_SUFFIX:
-            return self.get_status(num=num)
-        elif suffix == self.RESULT_SUFFIX:
-            return self.get_result(num=num)
-        elif suffix == self.FEEDBACK_SUFFIX:
-            return self.get_feedback(num=num)
-        else:
-            return None
-
-    def status_callback(self, msg):
-        self.status_msg.appendleft(msg)
-
-    def result_callback(self, msg):
-        self.result_msg.appendleft(msg)
-
-    def feedback_callback(self, msg):
-        self.feedback_msg.appendleft(msg)
-
+from rosinterface.action import ActionBack
+from rosinterface.service import ServiceBack
+from rosinterface.topic import TopicBack
 
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
@@ -257,12 +62,14 @@ from rostful.cfg import RostfulConfig
 import ast
 
 """
-Interface with ROS
+Interface with ROS.
+No inheritance to make sure destructor is called properly.
 """
-class ROSIF():
-    def __init__(self):
-        #we initialize the node here
-        rospy.init_node('rostful_server', anonymous=True, disable_signals=True)
+class RosInterface():
+    def __init__(self, ros_args):
+        #we initialize the node here, passing ros parameters
+        rospy.init_node('rostful_server', argv=ros_args, anonymous=True, disable_signals=True)
+        rospy.logwarn('rostful_server node started with args : %r', ros_args)
 
         #current services topics and actions exposed
         self.services = {}
@@ -273,9 +80,16 @@ class ROSIF():
         self.topics_args = {}
         self.actions_args = {}
 
+        full_param_name = rospy.search_param('topics')
+        param_value = rospy.get_param(full_param_name)
+        rospy.logwarn('Parameter %s is %s', rospy.resolve_name('topics'), full_param_name)
+
         topics_args = ast.literal_eval(rospy.get_param('~topics', "[]"))
+        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~topics'), rospy.get_param('~topics', "[]"))
         services_args = ast.literal_eval(rospy.get_param('~services', "[]"))
+        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~services'), rospy.get_param('~services', "[]"))
         actions_args = ast.literal_eval(rospy.get_param('~actions', "[]"))
+        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~actions'), rospy.get_param('~actions', "[]"))
 
         rospy.logwarn('Init topics : %s', topics_args)
         self.expose_topics(topics_args)
@@ -442,3 +256,12 @@ class ROSIF():
 
         # Updating the list of actions
         self.actions_args = action_names
+
+    """
+    Does all necessary cleanup to bring down RosInterface
+    """
+    def __del__(self):
+        rospy.logwarn('rostful_server node stopped')
+        rospy.signal_shutdown('Closing')
+
+
