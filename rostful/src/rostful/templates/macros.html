@@ -1,7 +1,7 @@
-{% macro navbar(active='rapps') %}
+{% macro navbar(active='interactions') %}
     <div data-role="navbar">
       <ul>
-        <li><a href="#rapps" {% if 'rapps'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Rapps</a></li>
+        <li><a href="#interactions" {% if 'interactions'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Interactions</a></li>
         <li><a href="#actions" {% if 'actions'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Actions</a></li>
         <li><a href="#services" {% if 'services'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Services</a></li>
         <li><a href="#topics" {% if 'topics'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Topics</a></li>
@@ -143,7 +143,10 @@
     {% elif type=='string[]' %}
     msgdata['{{ name }}']=[]
     for (idx=1; idx <= $( '.{{ name }}_clonedInput' ).length; idx++) {
-      msgdata['{{ name }}'].push( $('#{{ name }}-' + idx).val() )
+      var val=$('#{{ name }}-' + idx).val()
+      if (val!='') {
+        msgdata['{{ name }}'].push( val )
+      }
     }
 
     {% else %}

@@ -17,19 +17,19 @@
 
 {% from 'macros.html' import navbar %}
 
-<div data-role="page" id="rapps">
+<div data-role="page" id="interactions">
   <div data-role="header">
-    <h1>RApps</h1>
+    <h1>Interactions</h1>
   </div>
   {% if rapps %}
-    {% for name, rapp in rapps.iteritems() %}
-      <a href="{{ rapp.name }}" class="ui-btn">{{ rapp.name }}</a>
+    {% for name, interact in interactions.iteritems() %}
+      <a href="{{ interact.name }}" class="ui-btn">{{ interact.name }}</a>
     {% endfor%}
   {% else %}
-    There is not RApps available on this ROSTful Server
+    There is no Interactions available on this ROSTful Server
   {% endif%}
   <div data-role="footer">
-  {{ navbar('rapps') }}
+  {{ navbar('interact') }}
   </div>
 </div>
 
@@ -42,7 +42,7 @@
       <a href="{{ action.name }}" class="ui-btn">{{ action.name }}</a>
     {% endfor%}
   {% else %}
-    There is not RApps available on this ROSTful Server
+    There is no Actions available on this ROSTful Server
   {% endif%}
   <div data-role="footer">
   {{ navbar('actions') }}
@@ -58,7 +58,7 @@
       <a href="{{ service.name }}" class="ui-btn">{{ service.name }}</a>
     {% endfor%}
   {% else %}
-    There is not RApps available on this ROSTful Server
+    There is no Services available on this ROSTful Server
   {% endif%}
   <div data-role="footer">
   {{ navbar('services') }}
@@ -74,7 +74,7 @@
       <a href="{{ topic.name }}" class="ui-btn">{{ topic.name }}</a>
     {% endfor%}
   {% else %}
-    There is not RApps available on this ROSTful Server
+    There is no Topics available on this ROSTful Server
   {% endif%}
   <div data-role="footer">
   {{ navbar('topics') }}
