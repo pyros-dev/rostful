@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
-{% block title %}Action {{ action.name }}{% endblock %}
-{% block header %}Action {{ action.name }}{% endblock %}
+{% block title %}Action {{ action.fullname }}{% endblock %}
+{% block header %}Action {{ action.fullname }}{% endblock %}
 {% block GET %}
 
   <h2>GET</h2>
@@ -21,7 +21,7 @@
 $(document).on('pagecreate', '#mainlayout', function(){
   $(document).on('click', '#get_status', function(e){
     $.ajax({
-      url: $SCRIPT_ROOT + '/ros{{ action.name }}/status',
+      url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/status',
       dataType: 'json',
       beforeSend: function(xhr, opts) {
           // This callback function will trigger before data is sent
@@ -44,7 +44,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 
   $(document).on('click', '#get_feedback', function(e){
     $.ajax({
-      url: $SCRIPT_ROOT + '/ros{{ action.name }}/feedback',
+      url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/feedback',
       dataType: 'json',
       beforeSend: function(xhr, opts) {
           // This callback function will trigger before data is sent
@@ -67,7 +67,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 
   $(document).on('click', '#get_result', function(e){
     $.ajax({
-      url: $SCRIPT_ROOT + '/ros{{ action.name }}/result',
+      url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/result',
       dataType: 'json',
       beforeSend: function(xhr, opts) {
           // This callback function will trigger before data is sent
@@ -143,7 +143,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
     $.ajax({
-        url: $SCRIPT_ROOT + '/ros{{ action.name }}/goal',
+        url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/goal',
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',
@@ -182,7 +182,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
     $.ajax({
-        url: $SCRIPT_ROOT + '/ros{{ action.name }}/cancel',
+        url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/cancel',
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',

@@ -39,7 +39,7 @@
   </div>
   {% if actions %}
     {% for name, action in actions.iteritems() %}
-      <a href="{{ action.name }}" class="ui-btn">{{ action.name }}</a>
+      <a href="{{ action.fullname }}" class="ui-btn">{{ action.fullname }}</a>
     {% endfor%}
   {% else %}
     There is no Actions available on this ROSTful Server
@@ -55,7 +55,7 @@
   </div>
   {% if services %}
     {% for name, service in services.iteritems() %}
-      <a href="{{ service.name }}" class="ui-btn">{{ service.name }}</a>
+      <a href="{{ service.fullname }}" class="ui-btn">{{ service.fullname }}</a>
     {% endfor%}
   {% else %}
     There is no Services available on this ROSTful Server
@@ -71,7 +71,7 @@
   </div>
   {% if topics %}
     {% for name, topic  in topics.iteritems() %}
-      <a href="{{ topic.name }}" class="ui-btn">{{ topic.name }}</a>
+      <a href="{{ topic.fullname }}" class="ui-btn">{{ topic.fullname }}</a>
     {% endfor%}
   {% else %}
     There is no Topics available on this ROSTful Server

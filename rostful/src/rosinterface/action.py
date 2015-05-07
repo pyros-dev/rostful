@@ -45,6 +45,8 @@ class ActionBack:
 
     def __init__(self, action_name, action_type, queue_size=1):
         self.name = action_name
+        # getting the fullname to make sure we start with /
+        self.fullname = self.name if self.name.startswith('/') else '/' + self.name
 
         action_type_module, action_type_name = tuple(action_type.split('/'))
         roslib.load_manifest(action_type_module)

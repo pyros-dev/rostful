@@ -1,6 +1,6 @@
 {% extends "layout.html" %}
-{% block title %}Service {{ service.name }}{% endblock %}
-{% block header %}Service {{ service.name }}{% endblock %}
+{% block title %}Service {{ service.fullname }}{% endblock %}
+{% block header %}Service {{ service.fullname }}{% endblock %}
 
 {% block GET %}
 <!-- Cannot GET on a Service ?? -->
@@ -42,7 +42,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
     $.ajax({
-        url: $SCRIPT_ROOT + '/ros/{{ service.name }}',
+        url: $SCRIPT_ROOT + '/ros{{ service.fullname }}',
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',

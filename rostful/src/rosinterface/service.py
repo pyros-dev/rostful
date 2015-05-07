@@ -28,6 +28,8 @@ ServiceBack is the class handling conversion from REST API to ROS Service
 class ServiceBack:
     def __init__(self, service_name, service_type):
         self.name = service_name
+        # getting the fullname to make sure we start with /
+        self.fullname = self.name if self.name.startswith('/') else '/' + self.name
 
         service_type_module, service_type_name = tuple(service_type.split('/'))
         roslib.load_manifest(service_type_module)

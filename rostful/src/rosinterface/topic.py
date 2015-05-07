@@ -28,6 +28,8 @@ TopicBack is the class handling conversion from REST API to ROS Topic
 class TopicBack:
     def __init__(self, topic_name, topic_type, allow_pub=True, allow_sub=True, queue_size=1):
         self.name = topic_name
+        # getting the fullname to make sure we start with /
+        self.fullname = self.name if self.name.startswith('/') else '/' + self.name
 
         topic_type_module, topic_type_name = tuple(topic_type.split('/'))
         roslib.load_manifest(topic_type_module)
