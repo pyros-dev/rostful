@@ -20,6 +20,10 @@
         <arg name="robot_unique_name" value="false"/>  <!-- do not change this to true! the turtlesim service sets its own unique names for the robots -->
         <arg name="local_machine_only" value="true"/>
         <arg name="screen" value="true" />
+        <!-- TODO : when we can pass custom rosbridge adress
+        <arg name="interactions" value="true"/>
+        <arg name="interactions_list" value="[rostful/rostful, rostful/stroll, rostful/teleop]"/>
+        -->
     </include>
 
     <param name="name" value="Rostful Interactions"/>
@@ -30,9 +34,10 @@
     <arg name="rosbridge_address"        default="localhost"/>
 
     <node pkg="rocon_interactions" type="interactions_manager.py" name="interactions">
-        <rosparam param="interactions">[rostful/rostful]</rosparam>
+        <rosparam param="interactions">[rostful/rostful, rostful/stroll, rostful/teleop]</rosparam>
         <param name="rosbridge_address" value="$(arg rosbridge_address)"/>
         <param name="rosbridge_port" value="$(arg rosbridge_port)"/>
+        <param name="rapp_manager" value="true"/>
     </node>
 
     <include file="$(find rosbridge_server)/launch/rosbridge_websocket.launch" >
@@ -42,9 +47,13 @@
     <arg name="rostful_port"             default="8080"/>
 
     <node pkg="rostful" name="rostful_server" type="devserver" args="-p $(arg rostful_port)">
-        <param name="topics" value="['']" type="str" />
-        <param name="services" value="['interactions/get_interactions','interactions/get_roles', 'rosapi/services', 'rosapi/topics']" type="str" />
-        <param name="actions" value="['']" type="str" />
+        <param name="topics" value="['$(arg turtle_name)/rapp_list', '$(arg turtle_name)/incompatible_rapp_list', '$(arg turtle_name)/status']" type="str" />
+        <param name="services" value="['interactions/get_interactions','interactions/get_roles', 'interactions/get_interaction',  'interactions/set_interaction',  'interactions/request_interaction',
+                            '$(arg turtle_name)/invite', '$(arg turtle_name)/list_rapps', '$(arg turtle_name)/platform_info', '$(arg turtle_name)/start_rapp', '$(arg turtle_name)/stop_rapp',
+                            'rosapi/services', 'rosapi/topics']" type="str" />
+        <param name="actions" value="[]" type="str" />
+        <param name="rapps_namespaces" value="['$(arg turtle_name)']" type="str" />
+        <param name="interactions" value="[]" type="str" />
     </node>
 
 </launch>

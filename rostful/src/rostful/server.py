@@ -1,5 +1,6 @@
 from __future__ import absolute_import
-from .ros_interface import RosInterface, ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+from .ros_interface import ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+from .ros_node import RosNode
 
 #TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy
@@ -69,9 +70,11 @@ class FrontEnd(MethodView):
         return remocon_services
 
 
-    def __init__(self, ros_if):
+    def __init__(self, ros_node):
         super(FrontEnd, self).__init__()
-        self.ros_if = ros_if
+        self.ros_if = ros_node.ros_if # getting ros interface
+        self.rocon_if = ros_node.rocon_if # getting rocon interface
+
         self.rocon_uri = rocon_uri.parse(
             "rocon:/" + rocon_std_msgs.Strings.URI_WILDCARD
             + "/" + rocon_std_msgs.Strings.URI_WILDCARD
@@ -84,38 +87,68 @@ class FrontEnd(MethodView):
                                                          icon=rocon_std_msgs.Icon()
                                                          )
 
+        self.rapps_namespaces={}
         self.interactions_table = InteractionsTable()
+        self.interactions={}
         try:
-            rospy.logdebug("Interactive Client : Get interactions service Handle")
-            interactions_namespace = rocon_python_comms.find_service_namespace('get_interactions', 'rocon_interaction_msgs/GetInteractions', unique=True)
-            remocon_services = self._set_remocon_services(interactions_namespace)
+            #rospy.logdebug("Server Client : Get Rapps service handle")
+
+            #list_rapps_service_name = rocon_python_comms.find_service('rocon_app_manager_msgs/GetRappList', timeout=rospy.rostime.Duration(60.0), unique=True)
+            #self.list_rapps = rospy.ServiceProxy(list_rapps_service_name, rocon_app_manager_srvs.GetRappList)
+
+            #self._current_namespace = list_rapps_service_name[0]
+            #self._current_subscriber = rospy.Subscriber(self._current_namespace + 'rapp_list', rocon_app_manager_msgs.RappList, self._process_rapp_list_msg)
+
+            #rapps_namespace = rocon_python_comms.find_service_namespace('list_rapps','rocon_app_manager_msgs/GetRappList', unique=True)
+            #self.get_rapps_list_roxy = rospyServiceProxy(rapps_namespace + '/' + 'get_rapps_list', rocon_app_manager_srvs.GetRappsList)
+
+            #rospy.logdebug("Server Client : Get interactions service Handle")
+            #interactions_namespace = rocon_python_comms.find_service_namespace('get_interactions', 'rocon_interaction_msgs/GetInteractions', unique=True)
+            #remocon_services = self._set_remocon_services(interactions_namespace)
+
+            #self.get_interactions_service_proxy = rospy.ServiceProxy(remocon_services['get_interactions'], rocon_interaction_srvs.GetInteractions)
+            #self.get_roles_service_proxy = rospy.ServiceProxy(remocon_services['get_roles'], rocon_interaction_srvs.GetRoles)
+            #self.request_interaction_service_proxy = rospy.ServiceProxy(remocon_services['request_interaction'], rocon_interaction_srvs.RequestInteraction)
+
+            #TMP
+            #call_result = self.get_interactions_service_proxy([], self.platform_info.uri)
+            #for msg in call_result.interactions:
+            #    self.interactions_table.append(Interaction(msg))
+
+            #rospy.logwarn ('Loaded %r Interactions', len(self.interactions_table))
+            #self.interactions= { i.name: i for i in self.interactions_table}
+            pass
+
         except rocon_python_comms.MultipleFoundException as e:
             message = "multiple interactions' publications and services [%s] are found. Please check services" % str(e)
-            rospy.logerror("InteractiveClientInterface : %s" % message)
-            return (False, message)
+            rospy.logerr("InteractiveClientInterface : %s" % message)
+            #return (False, message)
+            # we just keep going with no interactions
         except rocon_python_comms.NotFoundException as e:
             message = "failed to find all of the interactions' publications and services for [%s]" % str(e)
-            rospy.logerror("InteractiveClientInterface : %s" % message)
-            return (False, message)
+            rospy.logerr("InteractiveClientInterface : %s" % message)
+            #return (False, message)
+            # we just keep going with no interactions
 
-        self.get_interactions_service_proxy = rospy.ServiceProxy(remocon_services['get_interactions'], rocon_interaction_srvs.GetInteractions)
-        self.get_roles_service_proxy = rospy.ServiceProxy(remocon_services['get_roles'], rocon_interaction_srvs.GetRoles)
-        self.request_interaction_service_proxy = rospy.ServiceProxy(remocon_services['request_interaction'], rocon_interaction_srvs.RequestInteraction)
 
-        call_result = self.get_interactions_service_proxy([], self.platform_info.uri)
-        for msg in call_result.interactions:
-            self.interactions_table.append(Interaction(msg))
-
-        rospy.logwarn ('Loaded %r Interactions', len(self.interactions_table))
-        self.interactions= { i.name: i for i in self.interactions_table}
 
 
     def get(self, rosname = None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname :
-            return render_template('index.html', topics=self.ros_if.topics, services=self.ros_if.services, actions=self.ros_if.actions, interactions=self.interactions )
+            return render_template( 'index.html',
+                                    topics=self.ros_if.topics,
+                                    services=self.ros_if.services,
+                                    actions=self.ros_if.actions,
+                                    rapp_namespaces=self.rocon_if.rapps_namespaces,
+                                    interactions=self.interactions
+            )
         else :
-            if self.ros_if.services.has_key(rosname):
+            if self.rocon_if.rapps_namespaces.has_key(rosname):
+                mode = 'rapp_namespace'
+                rapp_ns = self.rocon_if.rapps_namespaces[rosname]
+                return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
+            elif self.ros_if.services.has_key(rosname):
                 mode = 'service'
                 service = self.ros_if.services[rosname]
                 return render_template('service.html', service=service )
@@ -136,9 +169,9 @@ View for backend pages
 """
 class BackEnd(Resource):
 
-    def __init__(self, ros_if):
+    def __init__(self, ros_node):
         super(BackEnd, self).__init__()
-        self.ros_if = ros_if
+        self.ros_if = ros_node.ros_if #getting only ros_if for now in backend (TMP).
 
     def get(self, rosname):
 
@@ -363,9 +396,9 @@ class Server():
         security = Security(self.app, user_datastore)
 
     def launch(self,ros_args):
-        self.ros_if = RosInterface(ros_args)
-        rostfront = FrontEnd.as_view('frontend', self.ros_if)
-        rostback = BackEnd.as_view('backend', self.ros_if)
+        self.ros_node = RosNode(ros_args)
+        rostfront = FrontEnd.as_view('frontend', self.ros_node)
+        rostback = BackEnd.as_view('backend', self.ros_node)
 
         self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])

@@ -1,0 +1,31 @@
+# A true interaction pair
+- name: web_app(http://127.0.0.1:9011/)
+  role: Pairing
+  compatibility: rocon:/*/*/indigo/chrome|firefox
+  display_name: Stroll
+  description: strolling...
+  icon:
+    resource_name: rocon_bubble_icons/chimek.png
+  max: -1
+  remappings:
+    - remap_from: stroll
+      remap_to: /turtle/stroll
+  required:
+     rapp: rocon_apps/stroll
+  #pairing:
+  #  rapp: rocon_apps/stroll
+  #  remappings:
+  #    - remap_from: stroll
+  #      remap_to: /turtle/stroll
+
+# An interaction which is only triggered by the remocon side.
+- name: web_app(http://127.0.0.1:9011/)
+  role: Pairing
+  compatibility: rocon:/*/*/indigo/chrome|firefox
+  display_name: Stroll
+  description: strolling...
+  icon:
+    resource_name: rocon_bubble_icons/chimek.png
+  max: -1
+  #pairing:
+  #  rapp: rocon_apps/stroll

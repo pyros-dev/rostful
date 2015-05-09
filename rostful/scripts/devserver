@@ -7,9 +7,7 @@ echo $*
 #necessary to handle Flask Script arguments ( since ros doesnt pass it s argument in a standard/readline way )
 while [[ $# > 0 ]]
 do
-set -x
 key="$1"
-set +x
 case $key in
     -h|--host)
     HOST="$2"
@@ -32,12 +30,9 @@ case $key in
 esac
 done
 
-set -x
 HOST=${HOST:+"-h $HOST"}
 PORT=${PORT:+"-p $PORT"}
 ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
+python -tt -m rostful flask ${HOST} ${PORT} "${ROSARGS}"
 
-python -m rostful flask ${HOST} ${PORT} "${ROSARGS}"
-
-set +x

@@ -41,7 +41,7 @@ class ServiceBack:
         self.rostype_resp = getattr(srv_module, service_type_name + 'Response')
 
         self.srvtype = definitions.get_service_srv_dict(self)
-        rospy.logwarn('srvtype : %r', self.srvtype)
+        #rospy.logwarn('srvtype : %r', self.srvtype)
 
         self.proxy = rospy.ServiceProxy(self.name, self.rostype)
 

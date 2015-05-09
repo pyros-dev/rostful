@@ -20,6 +20,7 @@ from rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_boo
 
 import os
 import urlparse
+import ast
 
 from rosinterface.action import ActionBack
 from rosinterface.service import ServiceBack
@@ -56,61 +57,36 @@ def response_500(start_response, error, content_type='text/plain'):
     e_str = '%s: %s' % (str(type(error)), str(error))
     return response(start_response, '500 Internal Server Error', e_str, content_type)
 
-
-from dynamic_reconfigure.server import Server
-from rostful.cfg import RostfulConfig
-import ast
-
 """
 Interface with ROS.
 No inheritance to make sure destructor is called properly.
 """
 class RosInterface():
-    def __init__(self, ros_args):
-        #we initialize the node here, passing ros parameters
-        rospy.init_node('rostful_server', argv=ros_args, anonymous=True, disable_signals=True)
-        rospy.logwarn('rostful_server node started with args : %r', ros_args)
-
+    def __init__(self):
         #current services topics and actions exposed
         self.services = {}
         self.topics = {}
         self.actions = {}
+        #current services topics and actions we are waiting for
+        self.services_waiting = []
+        self.topics_waiting = []
+        self.actions_waiting = []
         #last requested services topics and actions to be exposed
-        self.services_args = {}
-        self.topics_args = {}
-        self.actions_args = {}
-
-        full_param_name = rospy.search_param('topics')
-        param_value = rospy.get_param(full_param_name)
-        rospy.logwarn('Parameter %s is %s', rospy.resolve_name('topics'), full_param_name)
+        self.services_args = []
+        self.topics_args = []
+        self.actions_args = []
 
         topics_args = ast.literal_eval(rospy.get_param('~topics', "[]"))
-        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~topics'), rospy.get_param('~topics', "[]"))
         services_args = ast.literal_eval(rospy.get_param('~services', "[]"))
-        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~services'), rospy.get_param('~services', "[]"))
         actions_args = ast.literal_eval(rospy.get_param('~actions', "[]"))
-        rospy.logwarn('Parameter %s has value %s', rospy.resolve_name('~actions'), rospy.get_param('~actions', "[]"))
 
-        rospy.logwarn('Init topics : %s', topics_args)
         self.expose_topics(topics_args)
-        rospy.logwarn('Init services : %s', services_args)
         self.expose_services(services_args)
-        rospy.logwarn('Init actions : %s', actions_args)
         self.expose_actions(actions_args)
 
-        self.topics_args = topics_args
-        self.services_args = services_args
-        self.actions_args = actions_args
-
-        # Create a dynamic reconfigure server.
-        self.server = Server(RostfulConfig, self.reconfigure)
-
-    # Create a callback function for the dynamic reconfigure server.
     def reconfigure(self, config, level):
-
-        rospy.logwarn("""Reconfigure Request: \ntopics : {topics} \nservices : {services} \nactions : {actions}""".format(**config))
+        rospy.logwarn("""ROSInterface Reconfigure Request: \ntopics : {topics} \nservices : {services} \nactions : {actions}""".format(**config))
         new_topics = ast.literal_eval(config["topics"])
-        rospy.logwarn('%r',new_topics)
         self.expose_topics(new_topics)
         new_services = ast.literal_eval(config["services"])
         self.expose_services(new_services)
@@ -124,7 +100,8 @@ class RosInterface():
         if service_type is None:
             service_type = rosservice.get_service_type(resolved_service_name)
             if not service_type:
-                rospy.logwarn('Unknown service %s' % service_name)
+                rospy.logwarn('Cannot Expose unknown service %s' % service_name)
+                self.services_waiting.append(service_name)
                 return False
 
         if ws_name is None:
@@ -141,25 +118,26 @@ class RosInterface():
         if ws_name.startswith('/'):
             ws_name = ws_name[1:]
 
-        self.services.pop(ws_name,None)
+        if not self.services.pop(ws_name,None) :
+            self.services_waiting.remove(service_name)
         return True
 
     """
     This exposes a list of services as REST API. services not listed here will be removed from the API
     """
     def expose_services(self, service_names):
-        rospy.logwarn('Exposing services : %r', service_names)
+        #rospy.loginfo('Exposing services : %r', service_names)
         if not service_names:
             return
         for service_name in service_names:
             if not service_name in self.services_args:
                 ret = self.add_service(service_name)
-                if ret: rospy.loginfo( 'Added Service %s', service_name )
+                #if ret: rospy.loginfo( 'Exposed Service %s', service_name )
 
         for service_name in self.services_args:
             if not service_name in service_names:
                 ret = self.del_service(service_name)
-                if ret: rospy.loginfo ( 'Removed Service %s', service_name )
+                #if ret: rospy.loginfo ( 'Removed Service %s', service_name )
 
         #Updating the list of services
         self.services_args = service_names
@@ -169,7 +147,8 @@ class RosInterface():
         if topic_type is None:
             topic_type, _, _ = rostopic.get_topic_type(resolved_topic_name)
             if not topic_type:
-                rospy.loginfo( 'Unknown topic %s' % topic_name )
+                rospy.logwarn( 'Cannot Expose unknown topic %s' % topic_name )
+                self.topics_waiting.append(topic_name)
                 return False
 
         if ws_name is None:
@@ -186,27 +165,28 @@ class RosInterface():
         if ws_name.startswith('/'):
             ws_name = ws_name[1:]
 
-        self.topics.pop(ws_name,None)
+        if not self.topics.pop(ws_name,None) :
+            self.topics_waiting.remove(topic_name)
         return True
 
     """
     This exposes a list of topics as REST API. topics not listed here will be removed from the API
     """
     def expose_topics(self, topic_names, allow_pub=True, allow_sub=True):
-        rospy.logwarn('Exposing topics : %r', topic_names)
+        #rospy.loginfo('Exposing topics : %r', topic_names)
         if not topic_names:
             return
         # Adding missing ones
         for topic_name in topic_names:
             if not topic_name in self.topics_args:
                 ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
-                if ret: rospy.loginfo ( 'Exposing Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
+                #if ret: rospy.loginfo ( 'Exposed Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
 
         # Removing extra ones
         for topic_name in self.topics_args:
             if not topic_name in topic_names:
                 ret = self.del_topic(topic_name)
-                if ret: rospy.loginfo ( 'Removing Topic %s', topic_name)
+                #if ret: rospy.loginfo ( 'Removed Topic %s', topic_name)
 
         # Updating the list of topics
         self.topics_args = topic_names
@@ -216,7 +196,8 @@ class RosInterface():
             resolved_topic_name = rospy.resolve_name(action_name + '/result')
             topic_type, _, _ = rostopic.get_topic_type(resolved_topic_name)
             if not topic_type:
-                rospy.logwarn( 'Unknown action %s', action_name )
+                rospy.logwarn( 'Cannot Expose unknown action %s', action_name )
+                self.actions_waiting.append(action_name)
                 return False
             action_type = topic_type[:-len('ActionResult')]
 
@@ -234,34 +215,28 @@ class RosInterface():
         if ws_name.startswith('/'):
             ws_name = ws_name[1:]
 
-        self.actions.pop(ws_name,None)
+        if not self.actions.pop(ws_name,None) :
+            self.actions_waiting.remove(action_name)
         return True
 
     """
     This exposes a list of actions as REST API. actions not listed here will be removed from the API
     """
     def expose_actions(self, action_names):
-        rospy.logwarn('Exposing actions : %r', action_names)
+        #rospy.loginfo('Exposing actions : %r', action_names)
         if not action_names:
             return
         for action_name in action_names:
             if not action_name in self.actions_args:
                 ret = self.add_action(action_name)
-                if ret: rospy.loginfo( 'Adding Action %s', action_name)
+                #if ret: rospy.loginfo( 'Exposed Action %s', action_name)
 
         for action_name in self.actions_args:
             if not action_name in action_names:
                 ret = self.del_action(action_name)
-                if ret: rospy.loginfo ( 'Removing Action %s', action_name)
+                #if ret: rospy.loginfo ( 'Removed Action %s', action_name)
 
         # Updating the list of actions
         self.actions_args = action_names
-
-    """
-    Does all necessary cleanup to bring down RosInterface
-    """
-    def __del__(self):
-        rospy.logwarn('rostful_server node stopped')
-        rospy.signal_shutdown('Closing')
 
 
