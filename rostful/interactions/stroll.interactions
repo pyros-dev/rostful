@@ -11,7 +11,7 @@
     - remap_from: stroll
       remap_to: /turtle/stroll
   required:
-     rapp: rocon_apps/stroll
+     rapp: turtle_concert/turtle_stroll
   #pairing:
   #  rapp: rocon_apps/stroll
   #  remappings:

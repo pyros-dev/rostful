@@ -45,20 +45,20 @@ class RosNode():
         return config
 
     @property
-    def ros_if():
+    def ros_if(self):
         return self.ros_if
 
     @property
-    def rocon_if():
+    def rocon_if(self):
         return self.rocon_if
 
 
     def spin(self):
-        rate = rospy.Rate(10) # 10hz
+        rate = rospy.Rate(10)  # 10hz
         while not rospy.is_shutdown():
-            #TODO : detect new stuff coming up and expose it if needed
-            #TOCHECK : Cant we just listen to some topics for this, instead of looping ?
-            rate.sleep()# loop timer only here
+            # TODO : detect new stuff coming up and expose it if needed
+            # FIXME : Cant we just listen to some topics for this, instead of looping ?
+            rate.sleep()  # loop timer only here
         rospy.spin()
 
     """

@@ -1,0 +1,38 @@
+{% extends "layout.html" %}
+{% block title %}Interaction {{ interaction.name }}{% endblock %}
+{% block header %}Interaction {{ interaction.name }}{% endblock %}
+
+{% block GET %}
+<!-- Cannot GET on a Namespace ?? -->
+    <ul>
+    {% for n,e in interaction.iteritems() %}
+        {% if not n.startswith('icon') %}
+            <li> {{ n }} : {{ e }}</li>
+        {% endif %}
+    {% endfor %}
+    </ul>
+
+{% endblock %}
+
+{% block GET_ajax %}
+<!-- Cannot GET on a Interaction ?? -->
+{% endblock %}
+
+{% from 'macros.html' import generate_inputs, generate_msgdata, dynamic_array_input %}
+
+{% block UTIL_js %}
+{% endblock %}
+
+{% block POST %}
+
+{% endblock %}
+
+{% block POST_ajax %}
+
+{% endblock %}
+
+
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
+
+

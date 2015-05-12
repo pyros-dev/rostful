@@ -125,3 +125,29 @@ class InteractionsTable(object):
         interaction = next((interaction for interaction in self.interactions
                             if interaction.hash == interaction_hash), None)
         return interaction
+
+    def exists(self, interaction):
+        """
+        Checks if an interaction exists in the table.
+
+        :param :class:`.Interaction` interaction:
+        """
+        matches = [i for i in self.interactions if i.hash == interaction.hash]
+        if not matches:
+            return False
+        else:
+            return True
+
+    def remove(self, interaction):
+        """
+        Checks if an interaction exists in the table and removes it
+
+        :param :class:`.Interaction` interaction:
+        """
+        matches = [i for i in self.interactions if i.hash == interaction.hash]
+        if not matches:
+            return False
+        else:
+            for i in matches :
+                self.interactions.remove(i)
+            return True
