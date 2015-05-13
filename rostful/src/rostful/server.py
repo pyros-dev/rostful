@@ -25,10 +25,10 @@ import os
 import urlparse
 ####
 
-from flask import Flask, request, make_response, render_template, jsonify
+from flask import Flask, request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
-from flask.ext.sqlalchemy import SQLAlchemy
 from flask.ext.security import Security, SQLAlchemyUserDatastore
+from flask.ext.cors import CORS
 from flask_restful import Resource, Api, reqparse
 from flask.ext.login import LoginManager, login_required
 
@@ -43,6 +43,8 @@ import rocon_interactions.web_interactions as web_interactions
 import rocon_python_comms
 import rocon_std_msgs.msg as rocon_std_msgs
 import rocon_uri
+
+import urllib
 
 """
 View for frontend pages
@@ -59,6 +61,7 @@ class FrontEnd(MethodView):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
             return render_template('index.html',
+                                   pathname2url=urllib.pathname2url,
                                    topics=self.ros_if.topics,
                                    services=self.ros_if.services,
                                    actions=self.ros_if.actions,
@@ -68,7 +71,13 @@ class FrontEnd(MethodView):
             if self.rocon_if.interactions.has_key(rosname):
                 mode = 'interaction'
                 interaction = self.rocon_if.interactions[rosname]
-                return render_template('interaction.html', interaction=interaction)
+                result = self.rocon_if.interaction_watcher.request_interaction(remocon='rostful', hash=interaction.hash)
+                if result.result :
+                    iname = interaction.name[7:].strip("()") if interaction.name.startswith('web_app') else interaction.name
+                    return redirect(iname, code=302)
+                else:
+                    return jsonify(result), 401
+                #return render_template('interaction.html', interaction=interaction)
             elif self.rocon_if.rapps_namespaces.has_key(rosname):
                 mode = 'rapp_namespace'
                 rapp_ns = self.rocon_if.rapps_namespaces[rosname]
@@ -376,6 +385,12 @@ class Server():
         # Setup Flask-Security
         user_datastore = SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
         security = Security(self.app, user_datastore)
+
+
+        # One of the simplest configurations. Exposes all resources matching /* to
+        # CORS and allows the Content-Type header, which is necessary to POST JSON
+        # cross origin.
+        self.cors = CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
     def launch(self, ros_args):
         self.ros_node = RosNode(ros_args)

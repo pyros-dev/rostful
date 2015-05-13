@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-
+from concurrent import futures
 import threading
 
 import roslib
@@ -25,11 +25,10 @@ import rocon_interactions.web_interactions as web_interactions
 import rocon_python_comms
 import rocon_std_msgs.msg as rocon_std_msgs
 import rocon_uri
-import ast
 
-class InteractionWatcher(threading.Thread):
+class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread. instead use the executor for watching.
 
-    def __init__(self, interactions_change_cb):
+    def __init__(self, interactions_change_cb):  # TODO : use Queue for callbacks to be executed in main thread.
         """
         @param namespaces_change_cb : callback for a change of namespaces
         @param ns_status_change_cb : callback for a change of namespace status
@@ -37,8 +36,11 @@ class InteractionWatcher(threading.Thread):
         """
         super(InteractionWatcher, self).__init__()
 
+        self.executor = futures.ThreadPoolExecutor(max_workers=1)
+
+        #TODO : acessing members hould be done via property that copy the object to avoid accidnetal modification during use
         self.interactions_table = InteractionsTable()
-        self.interactions={}
+        self.interactions = {}
         self.interactions_change_cb = interactions_change_cb
 
         self.get_interactions_service_proxy = None
@@ -134,11 +136,30 @@ class InteractionWatcher(threading.Thread):
     def get_roles(self):
         pass
 
-    def request_interaction(self):
+    def request_interaction(self, *args, **kvargs):
+        """
+        Synchronous call on request interaction
+        :param args:
+        :param kvargs:
+        :return:
+        """
         if self.request_interaction_service_proxy :
-            call_result = self.request_interaction_service_proxy([], self.platform_info.uri)
+            call_result = self.request_interaction_service_proxy(rocon_interaction_srvs.RequestInteractionRequest(*args, **kvargs))
             rospy.logerr('Request_InterAction response : %r', call_result)
+            return call_result
+        return None
 
-        return self.interactions
+    def request_interaction_async(self, *args, **kvargs):
+        """
+        Asynchronous call on request interaction
+        :param args:
+        :param kvargs:
+        :return: future
+        """
+        return self.executor.submit(self._request_interaction, *args, **kvargs)
+
+    def __del__(self):
+        if self.executor:
+            self.executor.shutdown()
 
 # class InteractionWatcher(threading.Thread)

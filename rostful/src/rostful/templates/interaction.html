@@ -4,13 +4,7 @@
 
 {% block GET %}
 <!-- Cannot GET on a Namespace ?? -->
-    <ul>
-    {% for n,e in interaction.iteritems() %}
-        {% if not n.startswith('icon') %}
-            <li> {{ n }} : {{ e }}</li>
-        {% endif %}
-    {% endfor %}
-    </ul>
+{{ interaction }}
 
 {% endblock %}
 

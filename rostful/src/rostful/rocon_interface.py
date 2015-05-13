@@ -35,6 +35,7 @@ import ast
 
 """
 Interface with ROCON.
+Gather rocon information and store them ( as dict to be serialized to json easily by the rostful server ) TODO
 No inheritance to make sure destructor is called properly.
 """
 class RoconInterface():

@@ -23,7 +23,7 @@
   </div>
   {% if interactions %}
     {% for name, interact in interactions.iteritems() %}
-      <a href=# class="ui-btn">{{ interact.display_name }}</a>
+      <a href="{{ pathname2url(name) }}" class="ui-btn">{{ interact.display_name }}</a>
     {% endfor%}
   {% else %}
     There is no Interactions available on this ROSTful Server
