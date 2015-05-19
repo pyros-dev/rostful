@@ -7,12 +7,12 @@
 #
 #       http://ros.org/wiki/rocon_concert/Installation - Indigo
 - 'git': {'local-name': 'rocon', 'version': 'indigo', 'uri':'https://github.com/robotics-in-concert/rocon.git'}
-- 'git': {'local-name': 'rocon_concert', 'version': 'indigo', 'uri': 'https://github.com/asmodehn/rocon_concert.git'}
+- 'git': {'local-name': 'rocon_concert', 'version': 'gocart', 'uri': 'https://github.com/asmodehn/rocon_concert.git'}
 - 'git': {'local-name': 'rocon_multimaster', 'version': 'indigo', 'uri':'https://github.com/robotics-in-concert/rocon_multimaster.git'}
-- 'git': {'local-name': 'rocon_msgs', 'version': 'indigo', 'uri': 'https://github.com/asmodehn/rocon_msgs.git'}
-- 'git': {'local-name': 'rocon_tools', 'version': 'indigo', 'uri':'https://github.com/asmodehn/rocon_tools.git'}
-- 'git': {'local-name': 'rocon_app_platform', 'version': 'indigo', 'uri': 'https://github.com/asmodehn/rocon_app_platform.git'}
-- 'git': {'local-name': 'rocon_tutorials', 'version': 'indigo', 'uri': 'https://github.com/robotics-in-concert/rocon_tutorials.git'}
+- 'git': {'local-name': 'rocon_msgs', 'version': 'gocart', 'uri': 'https://github.com/asmodehn/rocon_msgs.git'}
+- 'git': {'local-name': 'rocon_tools', 'version': 'gocart', 'uri':'https://github.com/asmodehn/rocon_tools.git'}
+- 'git': {'local-name': 'rocon_app_platform', 'version': 'gocart', 'uri': 'https://github.com/asmodehn/rocon_app_platform.git'}
+- 'git': {'local-name': 'rocon_tutorials', 'version': 'rostful_concert_example', 'uri': 'https://github.com/asmodehn/rocon_tutorials.git'}
 - 'git': {'local-name': 'concert_services', 'version': 'indigo', 'uri': 'https://github.com/robotics-in-concert/concert_services.git'}
 - 'git': {'local-name': 'concert_software_farm', 'version': 'indigo', 'uri': 'https://github.com/robotics-in-concert/concert_software_farm.git'}
 - 'git': {'local-name': 'rocon_qt_gui', 'version': 'indigo', 'uri': 'https://github.com/robotics-in-concert/rocon_qt_gui.git'}
