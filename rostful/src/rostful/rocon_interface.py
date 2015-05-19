@@ -38,12 +38,12 @@ Interface with ROCON.
 Gather rocon information and store them ( as dict to be serialized to json easily by the rostful server ) TODO
 No inheritance to make sure destructor is called properly.
 """
-class RoconInterface():
+class RoconInterface(object):
 
-    def __init__(self):
+    def __init__(self, ros_interface):
         #current rapps namespaces and interactions exposed
         self.rapps_namespaces = {}
-        self.running_rapps_namespaces = {}
+        self.running_rapp_namespaces = {}
         self.interactions = {}
         #current rapps namespaces and interactions we are waiting for
         self.rapps_namespaces_waiting = []
@@ -52,10 +52,13 @@ class RoconInterface():
         self.rapps_namespaces_args = []
         self.interactions_args = []
 
+        # We need to use of ROS interface to expose Topics/services/actions when needed.
+        self.ros_interface = ros_interface
+
         rapps_ns_args = ast.literal_eval(rospy.get_param('~rapps_namespaces', "[]"))
         interactions_args = ast.literal_eval(rospy.get_param('~interactions', "[]"))
 
-        self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._rapp_status_changed )
+        self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._available_rapps_list_changed, self._running_rapp_status_changed)
         self.rapp_watcher.start()
 
         self.expose_rapps(rapps_ns_args)
@@ -83,19 +86,19 @@ class RoconInterface():
         for ns, ns_ori in [ (n.strip("/"),n) for n in added_namespaces ]: # careful with enclosing /
             if ns in self.rapps_namespaces_waiting:
                 self.rapps_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
-                self.running_rapps_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
+                self.running_rapp_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
                 self.rapps_namespaces_waiting.remove(ns)
                 ns_to_watch.append(ns_ori)
         for ns in [ n.strip("/") for n in removed_namespaces ]:
-            if ns in self.running_rapps_namespaces.keys():
-                del self.running_rapps_namespaces[ns]
+            if ns in self.running_rapp_namespaces.keys():
+                del self.running_rapp_namespaces[ns]
             if ns in self.rapps_namespaces.keys():
                 del self.rapps_namespaces[ns]
                 self.rapps_namespaces_waiting.append(ns)
 
         return ns_to_watch
 
-    def _rapp_status_changed(self, namespace, added_available_rapps, removed_available_rapps, added_running_rapps, removed_running_rapps):
+    def _available_rapps_list_changed(self, namespace, added_available_rapps, removed_available_rapps):
         namespace = namespace.strip("/") # remove potential parasits characters #TODO : check absolute/relative naming
         if namespace in self.rapps_namespaces.keys() :
             for k, v in added_available_rapps.iteritems():
@@ -107,14 +110,16 @@ class RoconInterface():
                     del self.rapps_namespaces[namespace][k]
                     rospy.loginfo('removed rapp in %r : %r', namespace, k)
 
-            for k, v in added_running_rapps.iteritems():
-                self.running_rapps_namespaces[namespace][k] = v
-                rospy.loginfo('started rapp in %r : %r', namespace, k)
-
-            for k, v in removed_running_rapps.iteritems():
-                if k in self.running_rapps_namespaces[namespace].keys():
-                    del self.running_rapps_namespaces[namespace][k]
-                    rospy.loginfo('stopped rapp in %r : %r', namespace, k)
+    def _running_rapp_status_changed(self, namespace, rapp_status, rapp):
+        namespace = namespace.strip("/")  # remove potential parasites characters #TODO : check absolute/relative naming
+        if namespace in self.rapps_namespaces.keys():
+            if rapp_status == rocon_app_manager_msgs.Status.RAPP_RUNNING:
+                self.running_rapp_namespaces[namespace] = rapp
+                rospy.loginfo('started rapp in %r : %r', namespace, rapp['display_name'])
+            elif rapp_status == rocon_app_manager_msgs.Status.RAPP_STOPPED and namespace in self.running_rapp_namespaces:
+                del self.running_rapp_namespaces[namespace]
+                if 'display_name' in rapp.keys():
+                    rospy.loginfo('stopped rapp in %r : %r', namespace, rapp['display_name'])
 
     def _interaction_status_changed(self, added_interactions, removed_interactions):
         for i in added_interactions:
@@ -160,6 +165,39 @@ class RoconInterface():
         #Updating the list of Rapps Namespaces
         self.rapps_namespaces_args = [ n.strip("/") for n in rapp_namespaces ]  # normalizing ns names #TODO : check absolute/relative naming
 
+    def get_interactions(self):
+        return self.interactions
+
+    def request_interaction(self, name):
+        if name in self.interactions.keys():
+            # FIXME : pass actual remocon id.
+            req_res = self.interaction_watcher.request_interaction(remocon='rostful', hash=self.interactions[name].hash)
+
+            if not req_res.result:
+                rospy.logerr('ERROR %r requesting interaction : %r', req_res.error_code, req_res.message)
+            else:
+                if self.interactions[name].required and self.interactions[name].required.rapp:
+                    # exposing public interface via ROS interface
+                    for ns, rapp in self.running_rapp_namespaces.iteritems():
+                        if rapp['name'] == self.interactions[name].required.rapp:
+                            rospy.loginfo('exposing interface : %r', rapp['public_interface'])
+                            for ielem in rapp['public_interface']:
+                                if ielem.key == 'services':
+                                    for e in ast.literal_eval(ielem.value):
+                                        rospy.loginfo('exposing service %r', e)
+                                        if 'name' in e.keys() : self.ros_interface.add_service(e['name'])
+                                elif ielem.key == 'publishers' or ielem.key == 'subscribers':
+                                    for e in ast.literal_eval(ielem.value):
+                                        rospy.loginfo('exposing topic %r', e)
+                                        if 'name' in e.keys() : self.ros_interface.add_topic(e['name'])
+                                elif ielem.key == 'actions_servers':
+                                    for e in ast.literal_eval(ielem.value):
+                                        rospy.loginfo('exposing action server %r', e)
+                                        if 'name' in e.keys() : self.ros_interface.add_action(e['name'])
+            return req_res
+
+        else:
+            return False # FIXME : find proper error return code here.
 
     def expose_interactions(self, args):
         pass

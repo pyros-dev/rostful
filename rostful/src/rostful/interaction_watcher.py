@@ -43,6 +43,8 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
         self.interactions = {}
         self.interactions_change_cb = interactions_change_cb
 
+        self.roles = []
+
         self.get_interactions_service_proxy = None
         self.get_roles_service_proxy = None
         self.request_interaction_service_proxy = None
@@ -59,26 +61,39 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
                                                          icon=rocon_std_msgs.Icon()
                                                          )
 
-    def _set_remocon_services(self, interactions_namespace):
+    def _hook_interaction_manager(self, interactions_namespace):
         """
-            setting up remocon-interaction manager apis. and check if the services are available
-
-            :param str interactions_namespace : namespace to contact interaction manager
-
-            :returns: remocon service apis
+            setting up interaction manager apis. and check if the services are available
+            :param: interactions_namespace
+            :returns: service and pubs apis
             :rtype: dict
         """
-        remocon_services = {}
-        remocon_services['get_interactions'] = interactions_namespace + '/' + 'get_interactions'
-        remocon_services['get_roles'] = interactions_namespace + '/' + 'get_roles'
-        remocon_services['request_interaction'] = interactions_namespace + '/' + 'request_interaction'
+        iamgr_services = {}
+        iamgr_services['get_interactions'] = interactions_namespace + '/' + 'get_interactions'
+        iamgr_services['get_roles'] = interactions_namespace + '/' + 'get_roles'
+        iamgr_services['request_interaction'] = interactions_namespace + '/' + 'request_interaction'
+        iamgr_pubs = {}
+        iamgr_pubs['interactions_update'] = interactions_namespace + '/' + 'interactions_update'
 
-        for service_name in remocon_services.keys():
-            if not rocon_python_comms.service_is_available(remocon_services[service_name]):
+        for service_name in iamgr_services.keys():
+            if not rocon_python_comms.service_is_available(iamgr_services[service_name]):
                 raise rocon_python_comms.NotFoundException("'%s' service is not validated" % service_name)
 
-        return remocon_services
+        if not self.get_interactions_service_proxy :
+            self.get_interactions_service_proxy = rospy.ServiceProxy(iamgr_services['get_interactions'], rocon_interaction_srvs.GetInteractions)
+        if not self.get_roles_service_proxy :
+            self.get_roles_service_proxy = rospy.ServiceProxy(iamgr_services['get_roles'], rocon_interaction_srvs.GetRoles)
+        if not self.request_interaction_service_proxy :
+            self.request_interaction_service_proxy = rospy.ServiceProxy(iamgr_services['request_interaction'], rocon_interaction_srvs.RequestInteraction)
 
+        rospy.Subscriber(iamgr_pubs['interactions_update'], rocon_interaction_msgs.InteractionsUpdate, self._ia_update)
+
+        return iamgr_services, iamgr_pubs
+
+    def _ia_update(self, msg):
+        if msg.update:
+            # we need to refresh our interaction list
+            self.get_interactions()
 
     def run(self):
         rate = rospy.Rate(1) # 1hz
@@ -90,27 +105,27 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
         # I am the watcher on the walls.
         # I am the fire that burns against cold, the light that brings the dawn, the horn that wakes the sleepers, the shield that guards the realms of men.
         # I pledge my life and honor to the Night's Watch, for this night and all the nights to come
+        interactions_namespace = ''
         while not rospy.is_shutdown():
-            rate.sleep() # quick sleep for safety
-            try:
-                rospy.logdebug("InteractionWatcher : Get interactions service Handles")
-                interactions_namespace = rocon_python_comms.find_service_namespace('get_interactions', 'rocon_interaction_msgs/GetInteractions', unique=True)
-                remocon_services = self._set_remocon_services(interactions_namespace)
+            rate.sleep()  # quick sleep for safety
+            # init loop
+            while interactions_namespace == '':  # we enter here only once, for initialization
+                rate.sleep()  # quick sleep for safety
 
-                if not self.get_interactions_service_proxy :
-                    self.get_interactions_service_proxy = rospy.ServiceProxy(remocon_services['get_interactions'], rocon_interaction_srvs.GetInteractions)
-                if not self.get_roles_service_proxy :
-                    self.get_roles_service_proxy = rospy.ServiceProxy(remocon_services['get_roles'], rocon_interaction_srvs.GetRoles)
-                if not self.request_interaction_service_proxy :
-                    self.request_interaction_service_proxy = rospy.ServiceProxy(remocon_services['request_interaction'], rocon_interaction_srvs.RequestInteraction)
+                try:
+                    rospy.logdebug("InteractionWatcher : Get interactions service Handles")
+                    interactions_namespace = rocon_python_comms.find_service_namespace('get_interactions', 'rocon_interaction_msgs/GetInteractions', unique=True)
+                    self._hook_interaction_manager(interactions_namespace)
 
-                #TODO : add a publisher on interactions_manager to allow for mirroring data easily here
+                except rospy.ROSException:
+                    rospy.logerr("Interactions : interaction manager services unavailable.")
+                except rospy.ROSInterruptException:
+                    rospy.logerr("Interactions : ros shutdown while looking for the rapp manager services.")
+
+                # initializing interactions after we found the services.
                 self.get_interactions()
 
-            except rospy.ROSException:
-                rospy.logerr("Interactions : interaction manager services disappeared.")
-            except rospy.ROSInterruptException:
-                rospy.logerr("Interactions : ros shutdown while looking for the rapp manager services.")
+            pass  # nothing to do here at the moment
 
     def get_interactions(self):
         if self.get_interactions_service_proxy :
@@ -134,7 +149,19 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
         return self.interactions
 
     def get_roles(self):
-        pass
+        if self.get_roles_service_proxy :
+            call_result = self.get_roles_service_proxy(self.platform_info.uri)
+            added = []
+            removed = []
+            for role in call_result.roles:
+                if not role in self.roles :
+                    self.roles.append(role)
+                    added.append(role)
+            for r in list(self.roles):  # duplicating list to allow modification of original
+                if not r in call_result.roles:
+                    self.roles.remove(role)
+                    removed.append(role)
+        return self.roles
 
     def request_interaction(self, *args, **kvargs):
         """

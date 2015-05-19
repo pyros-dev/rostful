@@ -71,8 +71,8 @@ class FrontEnd(MethodView):
             if self.rocon_if.interactions.has_key(rosname):
                 mode = 'interaction'
                 interaction = self.rocon_if.interactions[rosname]
-                result = self.rocon_if.interaction_watcher.request_interaction(remocon='rostful', hash=interaction.hash)
-                if result.result :
+                result = self.rocon_if.request_interaction(rosname)
+                if result.result:
                     iname = interaction.name[7:].strip("()") if interaction.name.startswith('web_app') else interaction.name
                     return redirect(iname, code=302)
                 else:

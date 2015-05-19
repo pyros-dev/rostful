@@ -32,7 +32,7 @@ class RosNode():
         rospy.logwarn('rostful_server node started with args : %r', ros_args)
 
         self.ros_if = RosInterface()
-        self.rocon_if = RoconInterface()
+        self.rocon_if = RoconInterface(self.ros_if)
 
         # Create a dynamic reconfigure server.
         self.server = Server(RostfulConfig, self.reconfigure)
@@ -40,8 +40,8 @@ class RosNode():
     # Create a callback function for the dynamic reconfigure server.
     def reconfigure(self, config, level):
         rospy.logwarn("""Reconfigure Request coming in rostful_node!""")
-        config = self.ros_if.reconfigure(config,level)
-        config = self.rocon_if.reconfigure(config,level)
+        config = self.ros_if.reconfigure(config, level)
+        config = self.rocon_if.reconfigure(config, level)
         return config
 
     @property
@@ -56,8 +56,8 @@ class RosNode():
     def spin(self):
         rate = rospy.Rate(10)  # 10hz
         while not rospy.is_shutdown():
-            # TODO : detect new stuff coming up and expose it if needed
-            # FIXME : Cant we just listen to some topics for this, instead of looping ?
+            # do stuff here only if needed in emergency.
+            # Async event based programming is preferred.
             rate.sleep()  # loop timer only here
         rospy.spin()
 
