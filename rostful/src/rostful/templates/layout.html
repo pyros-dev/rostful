@@ -16,7 +16,7 @@
 
 <div data-role="page" id="mainlayout">
     {% block UTIL_js %}{% endblock %}
-  <div data-role="header">
+  <div data-role="header" data-id="mainheader">
     <h1>{% block header %}{% endblock %}</h1>
   </div>
 
@@ -31,7 +31,7 @@
     {% block POST %}{% endblock %}
   </div>
 
-  <div data-role="footer">
+  <div data-role="footer" data-id="mainfooter" data-position="fixed">
     <h1>{% block footer %}{% endblock %}</h1>
   </div>
 
