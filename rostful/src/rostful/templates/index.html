@@ -17,69 +17,62 @@
 
 {% from 'macros.html' import navbar %}
 
+
+{% if rapps %}
 <div data-role="page" id="rapps">
   <div data-role="header">
     <h1>RApps</h1>
   </div>
-  {% if rapps %}
     {% for name, rapp in rapps.iteritems() %}
       <a href="{{ rapp.name }}" class="ui-btn">{{ rapp.name }}</a>
     {% endfor%}
-  {% else %}
-    There is not RApps available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('rapps') }}
+  {{ navbar(rapps, actions, services, topics, 'rapps') }}
   </div>
 </div>
+{% endif%}
 
+{% if actions %}
 <div data-role="page" id="actions">
   <div data-role="header">
     <h1>Actions</h1>
   </div>
-  {% if actions %}
     {% for name, action in actions.iteritems() %}
       <a href="{{ action.name }}" class="ui-btn">{{ action.name }}</a>
     {% endfor%}
-  {% else %}
-    There is not RApps available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('actions') }}
+  {{ navbar(rapps, actions, services, topics, 'actions') }}
   </div>
 </div>
+{% endif%}
 
+{% if services %}
 <div data-role="page" id="services">
   <div data-role="header">
     <h1>Services</h1>
   </div>
-  {% if services %}
     {% for name, service in services.iteritems() %}
       <a href="{{ service.name }}" class="ui-btn">{{ service.name }}</a>
     {% endfor%}
-  {% else %}
-    There is not RApps available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('services') }}
+  {{ navbar(rapps, actions, services, topics, 'services') }}
   </div>
 </div>
+{% endif%}
 
+{% if topics %}
 <div data-role="page" id="topics">
   <div data-role="header">
     <h1>Topics</h1>
   </div>
-  {% if topics %}
     {% for name, topic  in topics.iteritems() %}
       <a href="{{ topic.name }}" class="ui-btn">{{ topic.name }}</a>
     {% endfor%}
-  {% else %}
-    There is not RApps available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('topics') }}
+  {{ navbar(rapps, actions, services, topics, 'topics') }}
   </div>
 </div>
+{% endif%}
 
 </body>
 </html>

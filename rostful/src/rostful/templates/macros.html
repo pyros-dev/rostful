@@ -1,10 +1,18 @@
-{% macro navbar(active='rapps') %}
+{% macro navbar(rapps, actions, services, topics, active='rapps') %}
     <div data-role="navbar">
       <ul>
-        <li><a href="#rapps" {% if 'rapps'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Rapps</a></li>
-        <li><a href="#actions" {% if 'actions'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Actions</a></li>
-        <li><a href="#services" {% if 'services'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Services</a></li>
-        <li><a href="#topics" {% if 'topics'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif%} >Topics</a></li>
+        {% if rapps %}
+        <li><a href="#rapps" {% if 'rapps'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Rapps</a></li>
+        {% endif %}
+        {% if actions %}
+        <li><a href="#actions" {% if 'actions'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Actions</a></li>
+        {% endif %}
+        {% if services %}
+        <li><a href="#services" {% if 'services'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Services</a></li>
+        {% endif %}
+        {% if topics %}
+        <li><a href="#topics" {% if 'topics'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Topics</a></li>
+        {% endif %}
       </ul>
     </div>
 {% endmacro %}
