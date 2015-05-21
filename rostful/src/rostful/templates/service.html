@@ -3,19 +3,21 @@
 {% block header %}Service {{ service.fullname }}{% endblock %}
 
 {% block GET %}
-<!-- Cannot GET on a Service ?? -->
+<!-- Cannot GET on a Service -->
 {% endblock %}
 
 {% block GET_ajax %}
-<!-- Cannot GET on a Service ?? -->
+<!-- Cannot GET on a Service -->
 {% endblock %}
 
 {% from 'macros.html' import generate_inputs, generate_msgdata, dynamic_array_input %}
 
 {% block UTIL_js %}
-$(document).ready(function() {
+<script type=text/javascript>
+$(document).on('pageinit', '#mainlayout', function() {
   {{ dynamic_array_input(service.srvtype[0]) }}
 });
+</script>
 {% endblock %}
 
 {% block POST %}
@@ -25,21 +27,20 @@ $(document).ready(function() {
 
   <form action="" method=post data-ajax=false>
       {{ generate_inputs(service.srvtype[0]) }}
-      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit" id="submit" value="POST NEW MSG">
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit" id="submit_{{ service.fullname|replace('/','_') }}" value="POST NEW MSG">
   </form>
-  <pre id="post_request"></pre>
-  <pre id="post_result"></pre>
+  <pre id="post_request_{{ service.fullname|replace('/','_') }}"></pre>
+  <pre id="post_result_{{ service.fullname|replace('/','_') }}"></pre>
 
 {% endblock %}
 
 {% block POST_ajax %}
 <script type=text/javascript>
 
-$(document).on('pagecreate', '#mainlayout', function(){
-  $(document).on('click', '#submit', function() { // catch the form's submit event
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#submit_{{ service.fullname|replace('/','_') }}', function() { // catch the form's submit event
     {{ generate_msgdata(service.srvtype[0]) }}
 
-    //alert ( ' sending ' + JSON.stringify(msgdata) );
     // Send data to Rostful backend through the Ajax call
     $.ajax({
         url: $SCRIPT_ROOT + '/ros{{ service.fullname }}',
@@ -48,6 +49,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
         dataType: 'json',
         beforeSend: function() {
             // This callback function will trigger before data is sent
+            $("#post_request_{{ service.fullname|replace('/','_') }}").text(JSON.stringify(msgdata,null,2));
           $.mobile.loading('show');// This will show ajax spinner
         },
         complete: function() {
@@ -55,7 +57,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will show ajax spinner
         },
         success: function (result) {
-            $("#post_result").text(JSON.stringify(result,null,2));
+            $("#post_result_{{ service.fullname|replace('/','_') }}").text(JSON.stringify(result,null,2));
         },
         error: function (request,error) {
             // This callback function will trigger on unsuccessful action

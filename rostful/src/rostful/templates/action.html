@@ -4,22 +4,22 @@
 {% block GET %}
 
   <h2>GET</h2>
-  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_status">
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_status{{action.fullname|replace('/','_')}}">
     STATUS
   </button>
-  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_feedback">
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_feedback{{action.fullname|replace('/','_')}}">
     FEEDBACK
   </button>
-  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_result">
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_result{{action.fullname|replace('/','_')}}">
     RESULT
   </button>
-  <pre id="get_response"></pre>
+  <pre id="get_response{{action.fullname|replace('/','_')}}"></pre>
 {% endblock %}
 
 {% block GET_ajax %}
 <script type=text/javascript>
 $(document).on('pagecreate', '#mainlayout', function(){
-  $(document).on('click', '#get_status', function(e){
+  $(document).on('click', '#get_status{{action.fullname|replace('/','_')}}', function(e){
     $.ajax({
       url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/status',
       dataType: 'json',
@@ -32,7 +32,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will hide ajax spinner
       },
       success: function(data) {
-        $("#get_response").text(JSON.stringify(data,null,2));
+        $("#get_response{{action.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
       },
       error: function (request,error) {
           // This callback function will trigger on unsuccessful action
@@ -42,7 +42,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     return false; // cancel original event
   });
 
-  $(document).on('click', '#get_feedback', function(e){
+  $(document).on('click', '#get_feedback{{action.fullname|replace('/','_')}}', function(e){
     $.ajax({
       url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/feedback',
       dataType: 'json',
@@ -55,7 +55,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will hide ajax spinner
       },
       success: function(data) {
-        $("#get_response").text(JSON.stringify(data,null,2));
+        $("#get_response{{action.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
       },
       error: function (request,error) {
           // This callback function will trigger on unsuccessful action
@@ -65,7 +65,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     return false; // cancel original event
   });
 
-  $(document).on('click', '#get_result', function(e){
+  $(document).on('click', '#get_result{{action.fullname|replace('/','_')}}', function(e){
     $.ajax({
       url: $SCRIPT_ROOT + '/ros{{ action.fullname }}/result',
       dataType: 'json',
@@ -78,7 +78,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will hide ajax spinner
       },
       success: function(data) {
-        $("#get_response").text(JSON.stringify(data,null,2));
+        $("#get_response{{action.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
       },
       error: function (request,error) {
           // This callback function will trigger on unsuccessful action
@@ -99,17 +99,17 @@ $(document).on('pagecreate', '#mainlayout', function(){
   <form action="" method=post data-ajax=false>
       {{ generate_inputs(action.actiontype[0]) }}
 
-      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_goal" id="submit_goal" value="POST GOAL">
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_goal" id="submit_goal{{action.fullname|replace('/','_')}}" value="POST GOAL">
   </form>
   <form action="" method=post data-ajax=false>
     <div class="ui-field-contain">
         <label for="GoalID">GoalID:</label>
         <input type=text name="GoalID" id="GoalID"/>
     </div>
-    <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_cancel" id="submit_cancel" value="CANCEL">
+    <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit_cancel" id="submit_cancel{{action.fullname|replace('/','_')}}" value="CANCEL">
   </form>
-  <pre id="post_request"></pre>
-  <pre id="post_result"></pre>
+  <pre id="post_request{{action.fullname|replace('/','_')}}"></pre>
+  <pre id="post_result{{action.fullname|replace('/','_')}}"></pre>
 
 {% endblock %}
 
@@ -117,7 +117,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
 <script type=text/javascript>
 
 $(document).on('pagecreate', '#mainlayout', function(){
-  $(document).on('click', '#submit_goal', function() { // catch the form's submit event
+  $(document).on('click', '#submit_goal{{action.fullname|replace('/','_')}}', function() { // catch the form's submit event
 
     {{ generate_msgdata(action.actiontype[0]) }}
 
@@ -149,6 +149,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
         dataType: 'json',
         beforeSend: function() {
             // This callback function will trigger before data is sent
+            $("#post_request{{action.fullname|replace('/','_')}}").text(JSON.stringify(msgdata,null,2));
           $.mobile.loading('show');// This will show ajax spinner
         },
         complete: function() {
@@ -166,7 +167,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
     return false; // cancel original event to prevent form submitting
   });
 
-  $(document).on('click', '#submit_cancel', function() { // catch the form's submit event
+  $(document).on('click', '#submit_cancel{{action.fullname|replace('/','_')}}', function() { // catch the form's submit event
     msgdata = {}
     msgdata['goal_id'] =
 
@@ -188,6 +189,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
         dataType: 'json',
         beforeSend: function() {
             // This callback function will trigger before data is sent
+            $("#post_request{{action.fullname|replace('/','_')}}").text(JSON.stringify(msgdata,null,2));
           $.mobile.loading('show');// This will show ajax spinner
         },
         complete: function() {

@@ -5,16 +5,16 @@
 
   <h2>Receive message</h2>
   <!-- Topic allow_sub : {{ topic.allow_sub }} -->
-  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_sub }} id="get_latest">
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_sub }} id="get_latest{{topic.fullname|replace('/','_')}}">
     GET LATEST MSG
   </button>
-  <pre id="get_result"></pre>
+  <pre id="get_result{{topic.fullname|replace('/','_')}}"></pre>
 {% endblock %}
 
 {% block GET_ajax %}
 <script type=text/javascript>
-$(document).on('pagecreate', '#mainlayout', function(){
-  $(document).on('click', '#get_latest', function(e){
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#get_latest{{topic.fullname|replace('/','_')}}', function(e){
     $.ajax({
       url: $SCRIPT_ROOT + '/ros{{ topic.fullname }}',
       dataType: 'json',
@@ -27,7 +27,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will hide ajax spinner
       },
       success: function(data) {
-        $("#get_result").text(JSON.stringify(data,null,2));
+        $("#get_result{{topic.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
       },
       error: function (request,error) {
           // This callback function will trigger on unsuccessful action
@@ -52,18 +52,18 @@ $(document).on('pagecreate', '#mainlayout', function(){
 
   <form action="" method=post data-ajax=false>
       {{ generate_inputs(topic.msgtype) }}
-      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit" id="submit" value="POST NEW MSG">
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit" value="POST NEW MSG">
   </form>
-  <pre id="post_request"></pre>
-  <pre id="post_result"></pre>
+  <pre id="post_request{{topic.fullname|replace('/','_')}}"></pre>
+  <pre id="post_result{{topic.fullname|replace('/','_')}}"></pre>
 
 {% endblock %}
 
 {% block POST_ajax %}
 <script type=text/javascript>
 
-$(document).on('pagecreate', '#mainlayout', function(){
-  $(document).on('click', '#submit', function() { // catch the form's submit event
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#submit{{topic.fullname|replace('/','_')}}', function() { // catch the form's submit event
     {{ generate_msgdata(topic.msgtype) }}
 
     //alert ( ' sending ' + JSON.stringify(msgdata) );
@@ -73,8 +73,9 @@ $(document).on('pagecreate', '#mainlayout', function(){
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',
-        beforeSend: function() {
+        beforeSend: function(jqXHR, settings) {
             // This callback function will trigger before data is sent
+            $("#post_request{{topic.fullname|replace('/','_')}}").text(JSON.stringify(msgdata,null,2));
           $.mobile.loading('show');// This will show ajax spinner
         },
         complete: function() {
@@ -82,7 +83,7 @@ $(document).on('pagecreate', '#mainlayout', function(){
           $.mobile.loading('hide');// This will show ajax spinner
         },
         success: function (result) {
-            $("#post_result").text(JSON.stringify(result,null,2));
+            $("#post_result{{topic.fullname|replace('/','_')}}").text(JSON.stringify(result,null,2));
         },
         error: function (request,error) {
             // This callback function will trigger on unsuccessful action
