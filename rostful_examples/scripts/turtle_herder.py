@@ -49,7 +49,7 @@ def prepare_launch_configurations(turtles):
     port = 11
     launch_text = '<concert>\n'
     for turtle in turtles:
-        launch_text += '  <launch title="%s:114%s" package="rostful" name="turtle.launch" port="114%s">\n' % (turtle.unique_name, str(port), str(port))
+        launch_text += '  <launch title="%s:114%s" package="rostful_examples" name="turtle.launch" port="114%s">\n' % (turtle.unique_name, str(port), str(port))
         launch_text += '    <arg name="turtle_name" value="%s"/>\n' % turtle.unique_name
         launch_text += '    <arg name="turtle_concert_whitelist" value="%s"/>\n' % str(turtle.concert_whitelist)  # e.g. [Turtle Concert, Turtle Teleop Concert, Concert Tutorial]
         launch_text += '    <arg name="turtle_rapp_whitelist" value="%s"/>\n' % str(turtle.rapp_whitelist)  # e.g. [rocon_apps, turtle_concert]

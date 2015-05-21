@@ -22,7 +22,7 @@
         <arg name="screen" value="true" />
         <!-- TODO : when we can pass custom rosbridge adress
         <arg name="interactions" value="true"/>
-        <arg name="interactions_list" value="[rostful/rostful, rostful/stroll, rostful/teleop]"/>
+        <arg name="interactions_list" value="[rostful/rostful, rostful_examples/stroll, rostful_examples/teleop]"/>
         -->
     </include>
 
@@ -34,7 +34,7 @@
     <arg name="rosbridge_address"        default="localhost"/>
 
     <node pkg="rocon_interactions" type="interactions_manager.py" name="interactions">
-        <rosparam param="interactions">[rostful/rostful, rostful/stroll, rostful/teleop]</rosparam>
+        <rosparam param="interactions">[rostful/rostful, rostful_examples/stroll, rostful_examples/teleop]</rosparam>
         <param name="rosbridge_address" value="$(arg rosbridge_address)"/>
         <param name="rosbridge_port" value="$(arg rosbridge_port)"/>
         <param name="rapp_manager" value="true"/>

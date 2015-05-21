@@ -1,5 +1,5 @@
 <launch>
-  <arg name="turtle_services" default="rostful/turtle.services"/>
+  <arg name="turtle_services" default="rostful_examples/turtle.services"/>
   <arg name="concert_name" default="Turtle Concert"/>
   <arg name="scheduler_type" default="compatibility_tree"/>
   <arg name="local_machine_only" default="true"/>  <!-- only invite clients if they are on the same pc -->

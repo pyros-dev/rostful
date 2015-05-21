@@ -1,0 +1,7 @@
+name: TurtleSim
+description: Turtlesim service
+author: Agnostic Pirate
+launcher_type: roslaunch
+launcher: rostful_examples/turtlesim
+icon: rostful_examples/turtlesim.png
+parameters: rostful_examples/turtlesim
