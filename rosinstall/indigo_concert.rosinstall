@@ -1,4 +1,4 @@
-- 'git': {'local-name': 'rostful', 'version': 'rocon', 'uri': 'https://github.com/asmodehn/rostful.git'}
+- 'git': {'local-name': 'rostful', 'version': 'indigo-devel', 'uri': 'https://github.com/asmodehn/rostful.git'}
 
 # == Overview ==
 #
