@@ -1,1 +1,1 @@
-- git: {local-name: rostful, uri: 'git@github.com:asmodehn/rostful.git'}
+- git: {local-name: rostful, version: indigo-devel, uri: 'git@github.com:asmodehn/rostful.git'}
