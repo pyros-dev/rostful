@@ -41,6 +41,8 @@ class RosNode():
 
         if self.enable_rocon:
             self.rocon_if = RoconInterface(self.ros_if)
+        else:
+            self.rocon_if = None
 
         # Create a dynamic reconfigure server.
         self.server = Server(RostfulConfig, self.reconfigure)
@@ -62,15 +64,6 @@ class RosNode():
             config = self.rocon_if.reconfigure(config, level)
 
         return config
-
-    @property
-    def ros_if(self):
-        return self.ros_if
-
-    @property
-    def rocon_if(self):
-        return self.rocon_if
-
 
     def spin(self):
         rate = rospy.Rate(10)  # 10hz

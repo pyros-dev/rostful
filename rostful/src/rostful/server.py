@@ -60,15 +60,23 @@ class FrontEnd(MethodView):
     def get(self, rosname=None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
-            return render_template('index.html',
-                                   pathname2url=urllib.pathname2url,
-                                   topics=self.ros_if.topics,
-                                   services=self.ros_if.services,
-                                   actions=self.ros_if.actions,
-                                   rapp_namespaces=self.rocon_if.rapps_namespaces,
-                                   interactions=self.rocon_if.interactions)
+            if self.rocon_if:
+                return render_template('index.html',
+                                       pathname2url=urllib.pathname2url,
+                                       topics=self.ros_if.topics,
+                                       services=self.ros_if.services,
+                                       actions=self.ros_if.actions,
+                                       rapp_namespaces=self.rocon_if.rapps_namespaces,
+                                       interactions=self.rocon_if.interactions)
+            else:
+                return render_template('index.html',
+                                       pathname2url=urllib.pathname2url,
+                                       topics=self.ros_if.topics,
+                                       services=self.ros_if.services,
+                                       actions=self.ros_if.actions)
+
         else:
-            if self.rocon_if.interactions.has_key(rosname):
+            if self.rocon_if and self.rocon_if.interactions.has_key(rosname):
                 mode = 'interaction'
                 interaction = self.rocon_if.interactions[rosname]
                 result = self.rocon_if.request_interaction(rosname)
@@ -78,7 +86,7 @@ class FrontEnd(MethodView):
                 else:
                     return jsonify(result), 401
                 #return render_template('interaction.html', interaction=interaction)
-            elif self.rocon_if.rapps_namespaces.has_key(rosname):
+            elif self.rocon_if and self.rocon_if.rapps_namespaces.has_key(rosname):
                 mode = 'rapp_namespace'
                 rapp_ns = self.rocon_if.rapps_namespaces[rosname]
                 return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
@@ -115,13 +123,13 @@ class Rostful(Resource):
                                          version="v0.1"))
         else:
             spliturl = rostful_name.split('/')
-            if len(spliturl) > 0 and spliturl[0] == 'interactions':
+            if len(spliturl) > 0 and spliturl[0] == 'interactions' and self.rocon_if:
                 if len(spliturl) > 1 and spliturl[1] in self.rocon_if.interactions:
                     return make_response(jsonify(self.rocon_if.interactions[spliturl[1]]))
                 else:
                     return make_response(jsonify(self.rocon_if.interactions))
 
-            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces':
+            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces' and self.rocon_if:
                 if len(spliturl) > 1 and spliturl[1] in self.rocon_if.rapps_namespaces:
                     return make_response(jsonify(self.rocon_if.rapps_namespaces[spliturl[1]]))
                 else:
