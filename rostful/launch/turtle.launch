@@ -52,6 +52,8 @@
                             '$(arg turtle_name)/invite', '$(arg turtle_name)/list_rapps', '$(arg turtle_name)/platform_info', '$(arg turtle_name)/start_rapp', '$(arg turtle_name)/stop_rapp',
                             'rosapi/services', 'rosapi/topics']" type="str" />
         <param name="actions" value="[]" type="str" />
+
+        <param name="enable_rocon" value="true" type="bool" />
         <param name="rapps_namespaces" value="['$(arg turtle_name)']" type="str" />
         <param name="interactions" value="[]" type="str" />
     </node>

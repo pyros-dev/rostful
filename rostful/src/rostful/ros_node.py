@@ -31,17 +31,36 @@ class RosNode():
         rospy.init_node('rostful_server', argv=ros_args, anonymous=True, disable_signals=True)
         rospy.logwarn('rostful_server node started with args : %r', ros_args)
 
+        enable_rocon = rospy.get_param('~enable_rocon', False)
+        self.enable_rocon = enable_rocon or (
+                (len(ast.literal_eval(rospy.get_param('~rapps_namespaces', "[]"))) > 0)
+                or (len(ast.literal_eval(rospy.get_param('~interactions', "[]"))) > 0)
+        )
+
         self.ros_if = RosInterface()
-        self.rocon_if = RoconInterface(self.ros_if)
+
+        if self.enable_rocon:
+            self.rocon_if = RoconInterface(self.ros_if)
 
         # Create a dynamic reconfigure server.
         self.server = Server(RostfulConfig, self.reconfigure)
 
     # Create a callback function for the dynamic reconfigure server.
     def reconfigure(self, config, level):
-        rospy.logwarn("""Reconfigure Request coming in rostful_node!""")
+        rospy.logwarn("""Reconfigure Request: \renable_rocon : {enable_rocon}""".format(**config))
+        self.enable_rocon = config["enable_rocon"] or (
+            len(ast.literal_eval(config["rapps_namespaces"])) > 0
+            or len(ast.literal_eval(config["interactions"])) > 0
+        )
+
+        if not self.rocon_if and self.enable_rocon:
+            self.rocon_if = RoconInterface(self.ros_if)
+
         config = self.ros_if.reconfigure(config, level)
-        config = self.rocon_if.reconfigure(config, level)
+
+        if self.rocon_if:
+            config = self.rocon_if.reconfigure(config, level)
+
         return config
 
     @property
