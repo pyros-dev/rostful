@@ -17,85 +17,76 @@
 
 {% from 'macros.html' import navbar %}
 
+
+{% if interactions %}
 <div data-role="page" id="interactions">
   <div data-role="header">
     <h1>Interactions</h1>
   </div>
-  {% if interactions %}
     {% for name, interact in interactions.iteritems() %}
       <a href="{{ pathname2url(name) }}" class="ui-btn">{{ interact.display_name }}</a>
     {% endfor%}
-  {% else %}
-    There is no Interactions available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('interact') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'interact') }}
   </div>
 </div>
+{% endif%}
 
+{% if rapp_namespaces %}
 <div data-role="page" id="rapp_namespaces">
   <div data-role="header">
     <h1>Rapp Namespaces</h1>
   </div>
-  {% if rapp_namespaces %}
     {% for name, rapp_ns in rapp_namespaces.iteritems() %}
       <a href="{{ name }}" class="ui-btn">{{ name }}</a>
     {% endfor%}
-  {% else %}
-    There is no Rapp Namespaces available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('rapp_ns') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'rapp_ns') }}
   </div>
 </div>
+{% endif %}
 
+{% if actions %}
 <div data-role="page" id="actions">
   <div data-role="header">
     <h1>Actions</h1>
   </div>
-  {% if actions %}
     {% for name, action in actions.iteritems() %}
       <a href="{{ action.fullname }}" class="ui-btn">{{ action.fullname }}</a>
     {% endfor%}
-  {% else %}
-    There is no Actions available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('actions') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'actions') }}
   </div>
 </div>
+{% endif%}
 
+{% if services %}
 <div data-role="page" id="services">
   <div data-role="header">
     <h1>Services</h1>
   </div>
-  {% if services %}
     {% for name, service in services.iteritems() %}
       <a href="{{ service.fullname }}" class="ui-btn">{{ service.fullname }}</a>
     {% endfor%}
-  {% else %}
-    There is no Services available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('services') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'services') }}
   </div>
 </div>
+{% endif%}
 
+{% if topics %}
 <div data-role="page" id="topics">
   <div data-role="header">
     <h1>Topics</h1>
   </div>
-  {% if topics %}
     {% for name, topic  in topics.iteritems() %}
       <a href="{{ topic.fullname }}" class="ui-btn">{{ topic.fullname }}</a>
     {% endfor%}
-  {% else %}
-    There is no Topics available on this ROSTful Server
-  {% endif%}
   <div data-role="footer">
-  {{ navbar('topics') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'topics') }}
   </div>
 </div>
+{% endif%}
 
 </body>
 </html>
