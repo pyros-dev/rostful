@@ -21,6 +21,7 @@ from dynamic_reconfigure.server import Server
 from rostful.cfg import RostfulConfig
 import ast
 
+
 """
 Interface with ROS.
 No inheritance to make sure destructor is called properly.
@@ -66,10 +67,11 @@ class RosNode():
         return config
 
     def spin(self):
-        rate = rospy.Rate(10)  # 10hz
+        rate = rospy.Rate(10) # 10hz
         while not rospy.is_shutdown():
             # do stuff here only if needed in emergency.
             # Async event based programming is preferred.
+            # but we might want to have an update loop from here to avoid too many threads.
             rate.sleep()  # loop timer only here
         rospy.spin()
 

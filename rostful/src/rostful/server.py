@@ -1,4 +1,8 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
+from concurrent import futures
+import threading
+
 from .ros_interface import ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
 from .ros_node import RosNode
 
@@ -60,6 +64,7 @@ class FrontEnd(MethodView):
     def get(self, rosname=None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
+            rospy.logwarn('%r', self.ros_if.topics)
             if self.rocon_if:
                 return render_template('index.html',
                                        pathname2url=urllib.pathname2url,

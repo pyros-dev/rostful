@@ -1,0 +1,28 @@
+<concert>
+  <arg name="local_machine_only" default="true"/>  <!-- only invite clients if they are on the same pc -->
+  <arg name="disable_zeroconf" default="true"/>
+
+  <launch title="concert:11311" package="rostful_examples" name="concert.launch" port="11311">
+    <arg name="local_machine_only" value="$(arg local_machine_only)"/>
+    <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+    <arg name="rostful_port" value="8081"/>
+  </launch>
+  <launch title="dudette:11312"    package="rostful_examples" name="dudette.launch" port="11312">
+    <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+    <arg name="rostful_port" value="8082"/>
+  </launch>
+  <launch title="dude:11313"    package="rostful_examples" name="dude.launch" port="11313">
+    <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+    <arg name="rostful_port" value="8083"/>
+  </launch>
+  <launch title="dude:11314"    package="rostful_examples" name="dude.launch" port="11314">
+    <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+    <arg name="rostful_port" value="8084"/>
+  </launch>
+
+  <!-- Accessories to Murder (uncomment for some useful debugging shells) -->
+  <!--  
+  <launch title="graph:11311"    package="rostful_examples" name="conductor_graph.launch" port="11311"/>
+  <launch title="remote_gateway_info:11311"    package="chatter_concert" name="remote_gateway_info.launch" port="11311"/>
+   -->
+</concert>

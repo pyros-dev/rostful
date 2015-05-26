@@ -1,0 +1,10 @@
+# A customised chatter concert with various variable overrides.
+# Leave it in if you want babbling instead of chatting.
+
+- resource_name: chatter_concert/chatter
+  overrides:
+    name: Babbler
+    description: Dudes and dudettes babbling.
+    interactions: chatter_concert/babbler
+    parameters: chatter_concert/babbler
+- resource_name: concert_service_admin/admin

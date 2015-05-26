@@ -1,0 +1,4 @@
+# The basic chatter concert with default service configuration.
+
+- resource_name: rostful_examples/chatter
+- resource_name: concert_service_admin/admin

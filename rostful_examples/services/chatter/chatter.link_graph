@@ -1,0 +1,28 @@
+# Concert client tuples are of the platform-system-robot-name-app where
+# the name is just a placemarker for the eventual concert client name.
+# All other parts of the tuple are fixed.
+
+name: "Chatter Concert"
+nodes:
+  - id: dudes
+    uri: rocon:/*/*#rocon_apps/listener
+    min: 2
+    max: 4
+  - id: dudette
+    uri: rocon:/*/dudette#rocon_apps/talker
+    parameters:
+      message: hello world
+      frequency: 15
+topics:
+  - id: chatter
+    type: std_msgs/String
+actions: []
+edges:
+  - start: chatter
+    finish: dudes
+    remap_from: chatter
+    remap_to: /conversation/chatter
+  - start: dudette
+    finish: chatter
+    remap_from: chatter
+    remap_to: /conversation/chatter

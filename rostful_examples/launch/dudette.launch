@@ -1,0 +1,18 @@
+<launch>
+  <arg name="disable_zeroconf" default="false"/>
+  <arg name="rostful_port" default="8080"/>
+
+  <include file="$(find chatter_concert)/launch/includes/_concert_client.xml">
+    <arg name="concert_client_name" value="dudette" />
+    <arg name="disable_zeroconf" value="$(arg disable_zeroconf)"/>
+  </include>
+
+
+    <!-- DEVELOPMENT -->
+  <node pkg="rostful" name="rostful_server" type="devserver" args="-p $(arg rostful_port)">
+    <param name="topics" value="['/conversation/chatter']" type="str" />
+    <param name="services" value="[]" type="str" />
+    <param name="actions" value="[]" type="str" />
+  </node>
+
+</launch>

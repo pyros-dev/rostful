@@ -1,0 +1,42 @@
+###############################################################################
+# Interactions Overrides
+#
+# This is actually an awkward way of handling the topic_name override for
+# chatter -> babbler with interactions. Better would be to get the service
+# static_link_graph itself to handle loading interactions instead of the service
+# manager so it can apply its own parameterisations.
+###############################################################################
+
+- name: chatter_concert/remocon_dude
+  role: 'Babbler'
+  compatibility: rocon:/pc/*/hydro|indigo/*
+  display_name: Qt Listener
+  description: For human dudes who have to listen to nagging dudettes.
+  max: -1
+  remappings:
+    - remap_from: chatter
+      remap_to: /conversation/babbler
+- name: com.github.rosjava.android_apps.listener.Listener
+  role: 'Babbler'
+  compatibility: rocon:/*/*/hydro/jellybean|ice_cream_sandwich|kitkat
+  display_name: Android Listener
+  description: Android listener 
+  max: -1
+  remappings:
+    - remap_from: chatter
+      remap_to: /conversation/babbler
+- name: http://wiki.ros.org/chatter_concert
+  role: 'Docs'
+  compatibility: rocon:/*/*/*/chrome|firefox|safari|opera|internet_explorer
+  display_name: Ros Wiki - Chatter Concert
+  description: A ros chatter style introduction to the concert.
+  icon:
+    resource_name: rocon_bubble_icons/ros.png
+- name: chatter_concert/listener.launch
+  role: 'Babbler'
+  compatibility: rocon:/pc/*/hydro|indigo/precise|quantal|raring|saucy|trusty
+  display_name: Roslaunch Listener
+  description: Another human dude listening to dudette, this time via roslaunch.
+  max: -1
+  parameters:
+    topic: /conversation/babbler

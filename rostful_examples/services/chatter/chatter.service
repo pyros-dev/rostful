@@ -1,0 +1,9 @@
+name: Chatter
+description: Dudes and dudettes chatting. 
+author: Daniel Stonier
+# if commented, priority will be scheduler_msgs.Request.DEFAULT_PRIORITY (0), also BACKGROUND, LOW, DEFAULT, HIGH, CRITICAL
+# priority: 0
+launcher_type: roslaunch
+launcher: rostful_examples/chatter
+interactions: rostful_examples/chatter
+parameters: rostful_examples/chatter

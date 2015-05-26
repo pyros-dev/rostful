@@ -26,6 +26,8 @@ from rosinterface.action import ActionBack
 from rosinterface.service import ServiceBack
 from rosinterface.topic import TopicBack
 
+from .ros_watcher import ROSWatcher
+
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
 MSG_PATH = '_msg'
@@ -83,6 +85,10 @@ class RosInterface():
         self.expose_topics(topics_args)
         self.expose_services(services_args)
         self.expose_actions(actions_args)
+
+        self.ros_watcher = ROSWatcher(self.topics_change_cb, self.services_change_cb, self.actions_change_cb)
+        self.ros_watcher.start()
+
 
     def reconfigure(self, config, level):
         rospy.logwarn("""ROSInterface Reconfigure Request: \ntopics : {topics} \nservices : {services} \nactions : {actions}""".format(**config))
@@ -147,7 +153,7 @@ class RosInterface():
         if topic_type is None:
             topic_type, _, _ = rostopic.get_topic_type(resolved_topic_name)
             if not topic_type:
-                rospy.logwarn( 'Cannot Expose unknown topic %s' % topic_name )
+                rospy.logwarn('Cannot Expose unknown topic %s' % topic_name)
                 self.topics_waiting.append(topic_name)
                 return False
 
@@ -173,20 +179,20 @@ class RosInterface():
     This exposes a list of topics as REST API. topics not listed here will be removed from the API
     """
     def expose_topics(self, topic_names, allow_pub=True, allow_sub=True):
-        #rospy.loginfo('Exposing topics : %r', topic_names)
+        # rospy.loginfo('Exposing topics : %r', topic_names)
         if not topic_names:
             return
         # Adding missing ones
         for topic_name in topic_names:
             if not topic_name in self.topics_args:
                 ret = self.add_topic(topic_name, allow_pub=allow_pub, allow_sub=allow_sub)
-                #if ret: rospy.loginfo ( 'Exposed Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
+                # if ret: rospy.loginfo('Exposed Topic %s Pub %r Sub %r', topic_name, allow_pub, allow_sub)
 
         # Removing extra ones
         for topic_name in self.topics_args:
             if not topic_name in topic_names:
                 ret = self.del_topic(topic_name)
-                #if ret: rospy.loginfo ( 'Removed Topic %s', topic_name)
+                # if ret: rospy.loginfo('Removed Topic %s', topic_name)
 
         # Updating the list of topics
         self.topics_args = topic_names
@@ -239,4 +245,46 @@ class RosInterface():
         # Updating the list of actions
         self.actions_args = action_names
 
+    def topics_change_cb(self, new_topics, lost_topics):
+        rospy.logwarn('new topics : %r, lost topics : %r', new_topics, lost_topics)
+        topics_lst = [t.name for t in new_topics if t.name in self.topics_waiting]
+        if len(topics_lst) > 0:
+            rospy.logwarn('exposing new topics : %r', topics_lst)
+            # Adding missing ones
+            for topic_name in topics_lst:
+                ret = self.add_topic(topic_name)
 
+        topics_lst = [t.name for t in lost_topics if t.name in self.topics_args]
+        if len(topics_lst) > 0:
+            rospy.logwarn('hiding lost topics : %r', topics_lst)
+            # Removing extra ones
+            for topic_name in topics_lst:
+                ret = self.del_topic(topic_name)
+
+    def services_change_cb(self, new_services, lost_services):
+        rospy.logwarn('new services : %r, lost services : %r', new_services, lost_services)
+        svc_list = [s.name for s in new_services if s.name in self.services_waiting]
+        if len(svc_list) > 0:
+            rospy.logwarn('exposing new services : %r', svc_list)
+            for svc_name in svc_list:
+                self.add_service(svc_name)
+
+        svc_list = [s.name for s in lost_services if s.name in self.services_args]
+        if len(svc_list) > 0:
+            rospy.logwarn('hiding lost services : %r', svc_list)
+            for svc_name in svc_list:
+                self.del_service(svc_name)
+
+    def actions_change_cb(self, new_actions, lost_actions):
+        rospy.logwarn('new actions : %r, lost actions : %r', new_actions, lost_actions)
+        act_list = [a.name for a in new_actions if a.name in self.actions_waiting]
+        if len(act_list) > 0:
+            rospy.logwarn('exposing new actions : %r', act_list)
+            for act_name in act_list:
+                self.add_action(act_name)
+
+        act_list = [a.name for a in lost_actions if a.name in self.actions_args]
+        if len(act_list) > 0:
+            rospy.logwarn('hiding lost actions : %r', act_list)
+            for act_name in act_list:
+                self.del_action(act_name)
