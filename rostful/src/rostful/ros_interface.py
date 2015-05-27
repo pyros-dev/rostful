@@ -246,45 +246,45 @@ class RosInterface():
         self.actions_args = action_names
 
     def topics_change_cb(self, new_topics, lost_topics):
-        rospy.logwarn('new topics : %r, lost topics : %r', new_topics, lost_topics)
+        # rospy.logwarn('new topics : %r, lost topics : %r', new_topics, lost_topics)
         topics_lst = [t.name for t in new_topics if t.name in self.topics_waiting]
         if len(topics_lst) > 0:
-            rospy.logwarn('exposing new topics : %r', topics_lst)
+            # rospy.logwarn('exposing new topics : %r', topics_lst)
             # Adding missing ones
             for topic_name in topics_lst:
                 ret = self.add_topic(topic_name)
 
         topics_lst = [t.name for t in lost_topics if t.name in self.topics_args]
         if len(topics_lst) > 0:
-            rospy.logwarn('hiding lost topics : %r', topics_lst)
+            # rospy.logwarn('hiding lost topics : %r', topics_lst)
             # Removing extra ones
             for topic_name in topics_lst:
                 ret = self.del_topic(topic_name)
 
     def services_change_cb(self, new_services, lost_services):
-        rospy.logwarn('new services : %r, lost services : %r', new_services, lost_services)
+        # rospy.logwarn('new services : %r, lost services : %r', new_services, lost_services)
         svc_list = [s.name for s in new_services if s.name in self.services_waiting]
         if len(svc_list) > 0:
-            rospy.logwarn('exposing new services : %r', svc_list)
+            # rospy.logwarn('exposing new services : %r', svc_list)
             for svc_name in svc_list:
                 self.add_service(svc_name)
 
         svc_list = [s.name for s in lost_services if s.name in self.services_args]
         if len(svc_list) > 0:
-            rospy.logwarn('hiding lost services : %r', svc_list)
+            # rospy.logwarn('hiding lost services : %r', svc_list)
             for svc_name in svc_list:
                 self.del_service(svc_name)
 
     def actions_change_cb(self, new_actions, lost_actions):
-        rospy.logwarn('new actions : %r, lost actions : %r', new_actions, lost_actions)
+        # rospy.logwarn('new actions : %r, lost actions : %r', new_actions, lost_actions)
         act_list = [a.name for a in new_actions if a.name in self.actions_waiting]
         if len(act_list) > 0:
-            rospy.logwarn('exposing new actions : %r', act_list)
+            # rospy.logwarn('exposing new actions : %r', act_list)
             for act_name in act_list:
                 self.add_action(act_name)
 
         act_list = [a.name for a in lost_actions if a.name in self.actions_args]
         if len(act_list) > 0:
-            rospy.logwarn('hiding lost actions : %r', act_list)
+            # rospy.logwarn('hiding lost actions : %r', act_list)
             for act_name in act_list:
                 self.del_action(act_name)
