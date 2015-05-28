@@ -7,30 +7,18 @@ import threading
 import roslib
 import rospy
 
-import rocon_interactions
-import rocon_interaction_msgs.msg as rocon_interaction_msgs
-import rocon_interaction_msgs.srv as rocon_interaction_srvs
-import rocon_interactions.web_interactions as web_interactions
+_ROCON = False
+try:
+    from rocon_interactions.rapp_watcher import RappWatcher
+    from .interaction_watcher import InteractionWatcher
 
-from rocon_interactions.rapp_watcher import RappWatcher
-from .interaction_watcher import InteractionWatcher
+    import rocon_app_manager_msgs.msg as rocon_app_manager_msgs
 
-import rocon_app_manager_msgs.msg as rocon_app_manager_msgs
-import rocon_app_manager_msgs.srv as rocon_app_manager_srvs
+    _ROCON = True
+except Exception, e:
+    rospy.logwarn('Missing rocon codebase. Rocon features disabled')
 
-from rocon_app_manager_msgs.msg import Status, RappList
-from rocon_app_manager_msgs.srv import StartRapp, StopRapp
 
-from rosinterface import exceptions
-from rosinterface.exceptions import(
-                        FailedToStartRappError,
-                        FailedToStopRappError,
-                        FailedToListRappsError,
-                        )
-
-import rocon_python_comms
-import rocon_std_msgs.msg as rocon_std_msgs
-import rocon_uri
 import ast
 
 """
@@ -58,78 +46,90 @@ class RoconInterface(object):
         rapps_ns_args = ast.literal_eval(rospy.get_param('~rapps_namespaces', "[]"))
         interactions_args = ast.literal_eval(rospy.get_param('~interactions', "[]"))
 
-        self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._available_rapps_list_changed, self._running_rapp_status_changed)
-        self.rapp_watcher.start()
+        if _ROCON:
+            self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._available_rapps_list_changed, self._running_rapp_status_changed)
+            self.rapp_watcher.start()
 
-        self.expose_rapps(rapps_ns_args)
+            self.expose_rapps(rapps_ns_args)
 
-        self.interaction_watcher = InteractionWatcher(self._interaction_status_changed)
-        self.interaction_watcher.start()
+            self.interaction_watcher = InteractionWatcher(self._interaction_status_changed)
+            self.interaction_watcher.start()
 
-        self.expose_interactions(interactions_args)
+            self.expose_interactions(interactions_args)
+        else:
+            pass  # we dont want to do anything without rocon codebase
 
     def reconfigure(self, config, level):
 
         rospy.logwarn("""Reconfigure Request: \rapps_namespaces : {rapps_namespaces}""".format(**config))
-        new_rapps = ast.literal_eval(config["rapps_namespaces"])
-        self.expose_rapps(new_rapps)
+        if _ROCON:
+            new_rapps = ast.literal_eval(config["rapps_namespaces"])
+            self.expose_rapps(new_rapps)
+        else:
+            pass
 
         #LATER
         rospy.logwarn("""Reconfigure Request: \ninteractions : {interactions}""".format(**config))
-        new_interactions = ast.literal_eval(config["interactions"])
-        self.expose_interactions(new_interactions)
+        if _ROCON:
+            new_interactions = ast.literal_eval(config["interactions"])
+            self.expose_interactions(new_interactions)
+        else:
+            pass
 
         return config
 
-    def _namespaces_change_cb(self, added_namespaces, removed_namespaces):
-        ns_to_watch=[]
-        for ns, ns_ori in [ (n.strip("/"),n) for n in added_namespaces ]: # careful with enclosing /
-            if ns in self.rapps_namespaces_waiting:
-                self.rapps_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
-                self.running_rapp_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
-                self.rapps_namespaces_waiting.remove(ns)
-                ns_to_watch.append(ns_ori)
-        for ns in [ n.strip("/") for n in removed_namespaces ]:
-            if ns in self.running_rapp_namespaces.keys():
-                del self.running_rapp_namespaces[ns]
-            if ns in self.rapps_namespaces.keys():
-                del self.rapps_namespaces[ns]
-                self.rapps_namespaces_waiting.append(ns)
+#### ROCON ONLY BEGIN
+    if _ROCON:
+        def _namespaces_change_cb(self, added_namespaces, removed_namespaces):
+            ns_to_watch=[]
+            for ns, ns_ori in [ (n.strip("/"),n) for n in added_namespaces ]: # careful with enclosing /
+                if ns in self.rapps_namespaces_waiting:
+                    self.rapps_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
+                    self.running_rapp_namespaces[ns] = {} #preparing dictionary to hold Rapps Info
+                    self.rapps_namespaces_waiting.remove(ns)
+                    ns_to_watch.append(ns_ori)
+            for ns in [ n.strip("/") for n in removed_namespaces ]:
+                if ns in self.running_rapp_namespaces.keys():
+                    del self.running_rapp_namespaces[ns]
+                if ns in self.rapps_namespaces.keys():
+                    del self.rapps_namespaces[ns]
+                    self.rapps_namespaces_waiting.append(ns)
 
-        return ns_to_watch
+            return ns_to_watch
 
-    def _available_rapps_list_changed(self, namespace, added_available_rapps, removed_available_rapps):
-        namespace = namespace.strip("/") # remove potential parasits characters #TODO : check absolute/relative naming
-        if namespace in self.rapps_namespaces.keys() :
-            for k, v in added_available_rapps.iteritems():
-                self.rapps_namespaces[namespace][k] = v
-                rospy.loginfo('found rapp in %r : %r', namespace, k)
+        def _available_rapps_list_changed(self, namespace, added_available_rapps, removed_available_rapps):
+            namespace = namespace.strip("/") # remove potential parasits characters #TODO : check absolute/relative naming
+            if namespace in self.rapps_namespaces.keys() :
+                for k, v in added_available_rapps.iteritems():
+                    self.rapps_namespaces[namespace][k] = v
+                    rospy.loginfo('found rapp in %r : %r', namespace, k)
 
-            for k, v in removed_available_rapps.iteritems():
-                if k in self.rapps_namespaces[namespace].keys():
-                    del self.rapps_namespaces[namespace][k]
-                    rospy.loginfo('removed rapp in %r : %r', namespace, k)
+                for k, v in removed_available_rapps.iteritems():
+                    if k in self.rapps_namespaces[namespace].keys():
+                        del self.rapps_namespaces[namespace][k]
+                        rospy.loginfo('removed rapp in %r : %r', namespace, k)
 
-    def _running_rapp_status_changed(self, namespace, rapp_status, rapp):
-        namespace = namespace.strip("/")  # remove potential parasites characters #TODO : check absolute/relative naming
-        if namespace in self.rapps_namespaces.keys():
-            if rapp_status == rocon_app_manager_msgs.Status.RAPP_RUNNING:
-                self.running_rapp_namespaces[namespace] = rapp
-                rospy.loginfo('started rapp in %r : %r', namespace, rapp['display_name'])
-            elif rapp_status == rocon_app_manager_msgs.Status.RAPP_STOPPED and namespace in self.running_rapp_namespaces:
-                del self.running_rapp_namespaces[namespace]
-                if 'display_name' in rapp.keys():
-                    rospy.loginfo('stopped rapp in %r : %r', namespace, rapp['display_name'])
+        def _running_rapp_status_changed(self, namespace, rapp_status, rapp):
+            namespace = namespace.strip("/")  # remove potential parasites characters #TODO : check absolute/relative naming
+            if namespace in self.rapps_namespaces.keys():
+                if rapp_status == rocon_app_manager_msgs.Status.RAPP_RUNNING:
+                    self.running_rapp_namespaces[namespace] = rapp
+                    rospy.loginfo('started rapp in %r : %r', namespace, rapp['display_name'])
+                elif rapp_status == rocon_app_manager_msgs.Status.RAPP_STOPPED and namespace in self.running_rapp_namespaces:
+                    del self.running_rapp_namespaces[namespace]
+                    if 'display_name' in rapp.keys():
+                        rospy.loginfo('stopped rapp in %r : %r', namespace, rapp['display_name'])
 
-    def _interaction_status_changed(self, added_interactions, removed_interactions):
-        for i in added_interactions:
-            self.interactions[i.name] = i
-            rospy.loginfo('found interaction %r', i.name)
+        def _interaction_status_changed(self, added_interactions, removed_interactions):
+            for i in added_interactions:
+                self.interactions[i.name] = i
+                rospy.loginfo('found interaction %r', i.name)
 
-        for i in removed_interactions:
-            if i.name in self.interactions.keys():
-                del self.interactions[i.name]
-                rospy.loginfo('removed interaction %r', i.name)
+            for i in removed_interactions:
+                if i.name in self.interactions.keys():
+                    del self.interactions[i.name]
+                    rospy.loginfo('removed interaction %r', i.name)
+#### ROCON ONLY END
 
     def add_rapp_ns(self, rapp_ns):
         rapp_ns = rapp_ns.strip("/") # normalizing ns names #TODO : check absolute/relative naming
