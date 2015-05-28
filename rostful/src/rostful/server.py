@@ -8,16 +8,8 @@ from .ros_node import RosNode
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy
-from rospy.service import ServiceManager
-import rosservice, rostopic
-import actionlib_msgs.msg
-
-from importlib import import_module
-from collections import deque
-
 import json
-import sys
-import re
+
 from StringIO import StringIO
 
 from rosinterface import message_conversion as msgconv
@@ -36,18 +28,6 @@ from flask.ext.cors import CORS
 from flask_restful import Resource, Api, reqparse
 from flask.ext.login import LoginManager, login_required
 
-from rosinterface.service import ServiceBack
-from .interaction import Interaction
-from .interaction_table import InteractionsTable
-
-import rocon_interactions
-import rocon_interaction_msgs.msg as rocon_interaction_msgs
-import rocon_interaction_msgs.srv as rocon_interaction_srvs
-import rocon_interactions.web_interactions as web_interactions
-import rocon_python_comms
-import rocon_std_msgs.msg as rocon_std_msgs
-import rocon_uri
-
 import urllib
 
 """
@@ -61,6 +41,7 @@ class FrontEnd(MethodView):
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
 
+    @login_required
     def get(self, rosname=None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
@@ -120,6 +101,7 @@ class Rostful(Resource):
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
 
+    # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rostful_name=None):
         rospy.logwarn('in Rostful with rostful_name: %r', rostful_name)
         if not rostful_name:
@@ -173,6 +155,7 @@ class BackEnd(Resource):
         super(BackEnd, self).__init__()
         self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
 
+    # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
 
         rospy.logwarn('in BackEnd with rosname: %r', rosname)
@@ -297,6 +280,7 @@ class BackEnd(Resource):
         else:
             return make_response('', 404)
 
+    # TODO: think about login rest service before disabling REST services if not logged in
     def post(self, rosname):
 
         try:
@@ -393,12 +377,12 @@ class Server():
         #TODO : flexible config by getting env var
 
         #initializes DB
-        self.db = db.init_app(self.app)
+        db.init_app(self.app)
+        self.db = db
 
         # Setup Flask-Security
-        user_datastore = SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
-        security = Security(self.app, user_datastore)
-
+        self.user_datastore = SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
+        self.security = Security(self.app, self.user_datastore)
 
         # One of the simplest configurations. Exposes all resources matching /* to
         # CORS and allows the Content-Type header, which is necessary to POST JSON
@@ -411,6 +395,7 @@ class Server():
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
 
+        # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
         self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])

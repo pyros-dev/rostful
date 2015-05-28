@@ -19,12 +19,12 @@ from flask.ext.migrate import Migrate, MigrateCommand
 from flask.ext.script import Manager, Option
 
 #setup migrations
-#python rostful db migrate
-#python rostful db upgrade
+#python -m rostful db migrate
+#python -m rostful db upgrade
 # Need help ?
-#python rostful db --help
+#python -m rostful db --help
 
-rostful_server=Server()
+rostful_server = Server()
 migrate = Migrate(rostful_server.app, rostful_server.db)
 manager = Manager(rostful_server.app)
 #TODO : http://stackoverflow.com/questions/29872867/using-flask-migrate-with-flask-script-and-application-factory/29882346#29882346
@@ -50,69 +50,16 @@ def init():
         #this will create the file
         rostful_server.app.open_instance_resource('flask_config.py', 'w')
 
-    #run db upgrade to make sure our db schema is initialized
+    #run db upgrade to make sure our db schema is initialized ( here instead of in shell script )
     #TODO
     #add seed data to the database
     #TODO : prompt
     #prompt_bool(name, default=False, yes_choices=None, no_choices=None)
-    user_datastore.create_user(email='admin@yujin.net', password='adminpass')
-    db.session.commit()
+    rostful_server.user_datastore.create_user(email='admin@yujin.net', password='adminpass')
+    rostful_server.db.session.commit()
 
 
 from flask_script import Command
-#class FlaskServer(Command):
-
-    #description = 'Run the app within Flask Debug Server. Should NOT be used in production.'
-
-    #def __init__(self, host='', port=8080, ros_args=''):
-        #self.port = port
-        #self.host = host
-        #self.ros_args = ros_args
-
-    #def get_options(self):
-        #return (
-            #Option('-h', '--host',
-                   #dest='host',
-                   #default=self.host),
-
-            #Option('-p', '--port',
-                   #dest='port',
-                   #type=int,
-                   #default=self.port),
-
-            #Option('-r', '--ros_args',
-                   #dest='ros_args',
-                   #default=self.ros_args),
-        #)
-
-    #def handle(self, app, *args, **kwargs):
-
-        #host = kwargs['host']
-        #port = kwargs['port']
-        #workers = kwargs['ros_args']
-
-        #try:
-            #app.logger.info('host %r', host)
-            #app.logger.info('port %r', port)
-            #app.logger.info('ros_args %r', ros_args)
-
-            ##Disable this line to debug the webapp without ROS
-            #app_post_rosinit(app, ros_args)
-
-            ##Adding a logger
-            #if not app.debug:
-                #file_handler = RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
-                #file_handler.setLevel(logging.INFO)
-                #app.logger.addHandler(file_handler)
-
-            #app.logger.info('Starting Flask server on port %d', port)
-            #app.run(host=host,port=port,debug=True)
-
-        #except KeyboardInterrupt:
-            #app.logger.info('Shutting down the Flask server')
-
-
-#manager.add_command('flask', FlaskServer())
 
 @manager.command
 @manager.option('-h', '--host', dest='host', default='')

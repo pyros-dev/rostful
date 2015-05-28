@@ -1,18 +1,6 @@
 from __future__ import absolute_import
 
-import roslib
 import rospy
-from rospy.service import ServiceManager
-import rosservice, rostopic
-import actionlib_msgs.msg
-
-from importlib import import_module
-from collections import deque
-
-import json
-import sys
-import re
-from StringIO import StringIO
 
 from .ros_interface import RosInterface
 from .rocon_interface import RoconInterface
