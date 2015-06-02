@@ -2,6 +2,9 @@
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 
+#forcing the current working directory to our parent
+cd "$DIR"/..
+
 echo $*
 
 #necessary to handle Flask Script arguments ( since ros doesnt pass it s argument in a standard/readline way )
