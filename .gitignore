@@ -5,6 +5,5 @@ lib/
 *~
 *.pyc
 *.pyo
-.*project
 doc/.zim
 *.geany
