@@ -65,7 +65,7 @@ from flask_script import Command
 @manager.option('-h', '--host', dest='host', default='')
 @manager.option('-p', '--port', type=int, dest='port', default=8080)
 @manager.option('-r', '--ros_args', dest='ros_args', default='')
-def flask(host='',port=8080, ros_args=''):
+def flask(host='', port=8080, ros_args=''):
     try:
         #type=int doesnt see to work
         if isinstance(port, basestring) : port = int(port)
@@ -84,10 +84,11 @@ def flask(host='',port=8080, ros_args=''):
             rostful_server.app.logger.addHandler(file_handler)
 
         rostful_server.app.logger.info('Starting Flask server on port %d', port)
-        rostful_server.app.run(host=host,port=port,debug=False)  # setting debug to false so killing the ros node also kills the server child
+        rostful_server.app.run(host=host, port=port, debug=False)  # setting debug to false so killing the ros node also kills the server child
 
     except KeyboardInterrupt:
         rostful_server.app.logger.info('Shutting down the Flask server')
+        rostful_server.shutdown()
 
 
 
