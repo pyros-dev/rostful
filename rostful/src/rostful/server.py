@@ -67,11 +67,16 @@ class FrontEnd(MethodView):
                 interaction = self.rocon_if.interactions[rosname]
                 result = self.rocon_if.request_interaction(rosname)
                 if result.result:
-                    iname = interaction.name[7:].strip("()") if interaction.name.startswith('web_app') else interaction.name
-                    return redirect(iname, code=302)
+                    if interaction.name.startswith('web_app'):
+                        iname = interaction.name[7:].strip("()")
+                        rospy.logwarn("Redirecting to WebApp at %r", iname)
+                        return render_template('interaction.html', interaction=interaction)
+                        #return redirect(iname, code=302)
+                    else:
+                        return render_template('interaction.html', interaction=interaction)
                 else:
                     return jsonify(result), 401
-                #return render_template('interaction.html', interaction=interaction)
+
             elif self.rocon_if and self.rocon_if.rapps_namespaces.has_key(rosname):
                 mode = 'rapp_namespace'
                 rapp_ns = self.rocon_if.rapps_namespaces[rosname]

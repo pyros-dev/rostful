@@ -47,7 +47,8 @@ class RoconInterface(object):
         interactions_args = ast.literal_eval(rospy.get_param('~interactions', "[]"))
 
         if _ROCON:
-            self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._available_rapps_list_changed, self._running_rapp_status_changed)
+            #TODO : Rapp Watcher shouldnt even get started when we are running on concert. It s useful only on Robot.
+            self.rapp_watcher = RappWatcher( self._namespaces_change_cb, self._available_rapps_list_changed, self._running_rapp_status_changed, silent_timeout=True)
             self.rapp_watcher.start()
 
             self.expose_rapps(rapps_ns_args)

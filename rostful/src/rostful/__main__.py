@@ -84,7 +84,7 @@ def flask(host='',port=8080, ros_args=''):
             rostful_server.app.logger.addHandler(file_handler)
 
         rostful_server.app.logger.info('Starting Flask server on port %d', port)
-        rostful_server.app.run(host=host,port=port,debug=True)
+        rostful_server.app.run(host=host,port=port,debug=False)  # setting debug to false so killing the ros node also kills the server child
 
     except KeyboardInterrupt:
         rostful_server.app.logger.info('Shutting down the Flask server')

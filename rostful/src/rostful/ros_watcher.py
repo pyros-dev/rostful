@@ -65,11 +65,13 @@ class ROSWatcher(threading.Thread):  #TODO : DO NOT inherit from thread. instead
 
                 if len(new_conns[PUBLISHER]) > 0 or len(lost_conns[PUBLISHER]) > 0:
                     self.topics_change_cb([ c.name for c in new_conns[PUBLISHER]], [c.name for c in lost_conns[PUBLISHER]])
+                if len(new_conns[SUBSCRIBER]) > 0 or len(lost_conns[SUBSCRIBER]) > 0:
+                    self.topics_change_cb([ c.name for c in new_conns[SUBSCRIBER]], [c.name for c in lost_conns[SUBSCRIBER]])
 
                 if len(new_conns[SERVICE]) > 0 or len(lost_conns[SERVICE]) > 0:
                     self.services_change_cb([c.name for c in new_conns[SERVICE]], [c.name for c in lost_conns[SERVICE]])
 
-                if len(new_conns[ACTION_SERVER]) > 0 or len(lost_conns[SERVICE]) > 0:
+                if len(new_conns[ACTION_SERVER]) > 0 or len(lost_conns[ACTION_SERVER]) > 0:
                     #FIXME : do we need clients here ??
                     self.actions_change_cb([c.name for c in new_conns[ACTION_SERVER]], [c.name for c in lost_conns[ACTION_SERVER]])
 

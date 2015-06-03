@@ -1,0 +1,16 @@
+<launch>
+  <!-- ******************************* Arguments ******************************* -->
+  <arg name="rostful_port" default="8080"/>
+  <arg name="topics" default="[]" />
+  <arg name="services" default="[]" />
+  <arg name="actions" default="[]" />
+  <arg name="enable_rocon" default="false" />
+
+  <!-- rostful dev server -->
+  <node pkg="rostful" name="rostful_server" type="devserver" args="-p $(arg rostful_port)">
+    <param name="topics" value="$(arg topics)" type="str" />
+    <param name="services" value="$(arg services)" type="str" />
+    <param name="actions" value="$(arg actions)" type="str" />
+    <param name="enable_rocon" value="$(arg enable_rocon)" type="bool" />
+  </node>
+</launch>

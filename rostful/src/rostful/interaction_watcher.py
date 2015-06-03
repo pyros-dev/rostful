@@ -144,7 +144,7 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
                     removed.append(interaction)
 
             self.interactions_change_cb(added, removed)
-            rospy.logerr('Loaded %r Interactions', len(self.interactions_table))
+            rospy.loginfo('Loaded %r Interactions', len(self.interactions_table))
             self.interactions = {i.name: i for i in self.interactions_table}
         return self.interactions
 
