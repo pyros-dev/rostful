@@ -1,2 +1,2 @@
-- git: {local-name: rostful, version: indigo-devel, uri: 'git@github.com:asmodehn/rostful.git'}
-- git: {local-name: tutorials, uri: 'git@github.com:ros/common_tutorials.git'}
+- git: {local-name: rostful, version: indigo-devel, uri: 'https://github.com/asmodehn/rostful.git'}
+- git: {local-name: flask-ext-catkin, uri: 'https://github.com/asmodehn/flask-ext-catkin.git'}
