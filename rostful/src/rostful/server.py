@@ -23,10 +23,10 @@ import urlparse
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
-from flask.ext.security import Security, SQLAlchemyUserDatastore
-from flask.ext.cors import CORS
-from flask_restful import Resource, Api, reqparse
-from flask.ext.login import LoginManager, login_required
+from flask.ext import security
+from flask.ext import cors
+from flask.ext import restful
+from flask.ext import login
 
 import urllib
 
@@ -41,7 +41,7 @@ class FrontEnd(MethodView):
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
 
-    @login_required
+    @login.login_required
     def get(self, rosname=None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
@@ -100,7 +100,7 @@ class FrontEnd(MethodView):
 """
 Additional REST services provided by Rostful itself
 """
-class Rostful(Resource):
+class Rostful(restful.Resource):
     def __init__(self, ros_node):
         super(Rostful, self).__init__()
         self.ros_if = ros_node.ros_if  # getting ros interface
@@ -155,7 +155,7 @@ View for backend pages
 """
 
 
-class BackEnd(Resource):
+class BackEnd(restful.Resource):
     def __init__(self, ros_node):
         super(BackEnd, self).__init__()
         self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
@@ -165,7 +165,7 @@ class BackEnd(Resource):
 
         rospy.logwarn('in BackEnd with rosname: %r', rosname)
 
-        parser = reqparse.RequestParser()
+        parser = restful.reqparse.RequestParser()
         parser.add_argument('full', type=bool)
         parser.add_argument('json', type=bool)
         args = parser.parse_args()
@@ -386,13 +386,13 @@ class Server():
         self.db = db
 
         # Setup Flask-Security
-        self.user_datastore = SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
-        self.security = Security(self.app, self.user_datastore)
+        self.user_datastore = security.SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
+        self.security = security.Security(self.app, self.user_datastore)
 
         # One of the simplest configurations. Exposes all resources matching /* to
         # CORS and allows the Content-Type header, which is necessary to POST JSON
         # cross origin.
-        self.cors = CORS(self.app, resources=r'/*', allow_headers='Content-Type')
+        self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
     def launch(self, ros_args):
         self.ros_node = RosNode(ros_args)
@@ -406,7 +406,7 @@ class Server():
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
-        self.api = Api(self.app)
+        self.api = restful.Api(self.app)
 
     def shutdown(self):
         func = request.environ.get('werkzeug.server.shutdown')

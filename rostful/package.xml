@@ -19,16 +19,12 @@
   <build_depend>driver_base</build_depend>
   <build_depend>roslint</build_depend>
   <build_depend>python-flask</build_depend>
-  <build_depend>python-flask-restful</build_depend>
-  <build_depend>python-flask-login</build_depend>
   <!-- gunicorn -->
   <build_depend>rospy</build_depend>
 
   <run_depend>dynamic_reconfigure</run_depend>
   <run_depend>driver_base</run_depend>
   <run_depend>python-flask</run_depend>
-  <run_depend>python-flask-restful</run_depend>
-  <run_depend>python-flask-login</run_depend>
   <!-- gunicorn -->
   <run_depend>rospy</run_depend>
   <run_depend>actionlib_msgs</run_depend>
