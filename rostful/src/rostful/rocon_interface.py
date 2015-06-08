@@ -156,12 +156,14 @@ class RoconInterface(object):
         for rapp_ns in rapp_namespaces:
             if not rapp_ns in self.rapps_namespaces_args:
                 ret = self.add_rapp_ns(rapp_ns)
-                if ret: rospy.loginfo( 'Added Rapp Namespace %s', rapp_ns )
+                if ret:
+                    rospy.loginfo('Added Rapp Namespace %s', rapp_ns)
 
         for rapp_ns in self.rapps_namespaces_args:
             if not rapp_ns in rapp_namespaces:
                 ret = self.del_rapp_ns(rapp_ns)
-                if ret: rospy.loginfo ( 'Removed Rapp Namespace %s', rapp_ns )
+                if ret:
+                    rospy.loginfo('Removed Rapp Namespace %s', rapp_ns)
 
         #Updating the list of Rapps Namespaces
         self.rapps_namespaces_args = [ n.strip("/") for n in rapp_namespaces ]  # normalizing ns names #TODO : check absolute/relative naming
@@ -186,19 +188,22 @@ class RoconInterface(object):
                                 if ielem.key == 'services':
                                     for e in ast.literal_eval(ielem.value):
                                         rospy.loginfo('exposing service %r', e)
-                                        if 'name' in e.keys() : self.ros_interface.add_service(e['name'])
+                                        if 'name' in e.keys():
+                                            self.ros_interface.add_service(e['name'])
                                 elif ielem.key == 'publishers' or ielem.key == 'subscribers':
                                     for e in ast.literal_eval(ielem.value):
                                         rospy.loginfo('exposing topic %r', e)
-                                        if 'name' in e.keys() : self.ros_interface.add_topic(e['name'])
-                                elif ielem.key == 'actions_servers':
+                                        if 'name' in e.keys():
+                                            self.ros_interface.add_topic(e['name'])
+                                elif ielem.key == 'actions_servers' or ielem.key == 'actions_clients':
                                     for e in ast.literal_eval(ielem.value):
                                         rospy.loginfo('exposing action server %r', e)
-                                        if 'name' in e.keys() : self.ros_interface.add_action(e['name'])
+                                        if 'name' in e.keys():
+                                            self.ros_interface.add_action(e['name'])
             return req_res
 
         else:
-            return False # FIXME : find proper error return code here.
+            return False  # FIXME : find proper error return code here.
 
     def expose_interactions(self, args):
         pass

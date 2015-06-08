@@ -172,7 +172,7 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
         """
         if self.request_interaction_service_proxy :
             call_result = self.request_interaction_service_proxy(rocon_interaction_srvs.RequestInteractionRequest(*args, **kvargs))
-            rospy.logerr('Request_InterAction response : %r', call_result)
+            rospy.logwarn('Request_InterAction response : %r', call_result)
             return call_result
         return None
 
@@ -183,7 +183,7 @@ class InteractionWatcher(threading.Thread):  #TODO : DO NOT inherit from thread.
         :param kvargs:
         :return: future
         """
-        return self.executor.submit(self._request_interaction, *args, **kvargs)
+        return self.executor.submit(self.request_interaction, *args, **kvargs)
 
     def __del__(self):
         if self.executor:

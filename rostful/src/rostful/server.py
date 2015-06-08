@@ -23,10 +23,12 @@ import urlparse
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
-from flask.ext import security
-from flask.ext import cors
-from flask.ext import restful
-from flask.ext import login
+
+import flask_security as security
+import flask_cors as cors
+import flask_restful as restful
+import flask_login as login
+
 
 import urllib
 
