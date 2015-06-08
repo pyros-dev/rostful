@@ -98,6 +98,10 @@ class ROSWatcher(threading.Thread):  #TODO : DO NOT inherit from thread. instead
 
                 # TODO : find a simple way to detect actions ( or drop support for it if it s too much useless code ? )
 
+                self.publishers = publishers
+                self.subscribers = subscribers
+                self.services = services
+
             except socket.error:
                 rospy.logerr("Gateway : couldn't get system state from the master "
                              "[did you set your master uri to a wireless IP that just went down?]")

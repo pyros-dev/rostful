@@ -6,11 +6,12 @@ import os, sys
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # absolute import not using __init__.py
     from rostful import server
-    from rostful.server import Server
+    from rostful.server import rostful_server
 else:
-    from . import server
-    from .server import Server
+    #relative import using __init__.py
+    from . import rostful_server
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -24,7 +25,6 @@ from flask.ext.script import Manager, Option
 # Need help ?
 #python -m rostful db --help
 
-rostful_server = Server()
 migrate = Migrate(rostful_server.app, rostful_server.db)
 manager = Manager(rostful_server.app)
 #TODO : http://stackoverflow.com/questions/29872867/using-flask-migrate-with-flask-script-and-application-factory/29882346#29882346
