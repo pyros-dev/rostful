@@ -4,7 +4,6 @@ project(rostful)
 # Minimal Python module setup
 find_package(catkin REQUIRED COMPONENTS roslint rospy actionlib_msgs dynamic_reconfigure)
 catkin_python_setup()
-generate_dynamic_reconfigure_options(cfg/rostful.cfg)
 
 # make sure configure headers are built before any node using them
 #add_dependencies(rostful ${${PROJECT_NAME}_EXPORTED_TARGETS})

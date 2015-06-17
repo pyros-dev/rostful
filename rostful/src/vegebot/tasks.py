@@ -13,7 +13,7 @@ from celery.utils.log import get_task_logger
 _logger = get_task_logger(__name__)
 
 #import required ros modules
-from rosinterface.ros_node import RosNode
+from rostful_node import RostfulNode
 
 
 from config.default import *
@@ -82,7 +82,9 @@ class Vegebot(Task):
         super(Vegebot, self).__init__(*args, **kwargs)
         global g_ros_args
         try:
-            self.ros_node = RosNode(g_ros_args)
+            self.ros_node = RostfulNode(g_ros_args)
+            self.ros_if = self.ros_node.ros_if
+            self.rocon_if = self.ros_node.rocon_if
             # List all requirement for this overseer to be able to start
             pass
         except Exception, e:

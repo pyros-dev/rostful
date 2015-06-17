@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from .ros_node import RosNode
+from rostful_node import RostfulNode
 
 import os
 
@@ -45,7 +45,7 @@ class Server(object):
         self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
     def launch(self, ros_args):
-        self.ros_node = RosNode(ros_args)
+        self.ros_node = RostfulNode(ros_args)
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
