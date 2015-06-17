@@ -9,3 +9,11 @@ SECRET_KEY = '\x930)\xd5\x1d\x93\x19\xd6\xbf\x15\xa5c\xd9r\t\x8b)TP-7\xaal\x8e9m
 
 #TODO : use flask instance directory ?
 SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, 'rostful_auth.db')
+
+
+REDIS_URL = 'redis://localhost:6380'
+CELERY_BROKER_URL = 'redis://localhost:6380'
+CELERY_RESULT_BACKEND = 'redis://localhost:6380'  # not mandatory
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'

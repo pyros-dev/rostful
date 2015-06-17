@@ -124,7 +124,7 @@ class RosInterface():
         if ws_name.startswith('/'):
             ws_name = ws_name[1:]
 
-        if not self.services.pop(ws_name,None) :
+        if not self.services.pop(ws_name, None):
             self.services_waiting.remove(service_name)
         return True
 

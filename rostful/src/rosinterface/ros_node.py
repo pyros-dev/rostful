@@ -3,7 +3,14 @@ from __future__ import absolute_import
 import rospy
 
 from .ros_interface import RosInterface
-from .rocon_interface import RoconInterface
+
+_ROCON_IF = False
+try :
+    from roconinterface.rocon_interface import RoconInterface
+    _ROCON_IF = True
+except Exception, e:
+    rospy.logwarn('Missing rocon interface. Rocon features disabled')
+
 
 from dynamic_reconfigure.server import Server
 from rostful.cfg import RostfulConfig
@@ -14,7 +21,7 @@ import ast
 Interface with ROS.
 No inheritance to make sure destructor is called properly.
 """
-class RosNode():
+class RosNode(object):
     def __init__(self, ros_args):
         #we initialize the node here, passing ros parameters
         rospy.init_node('rostful_server', argv=ros_args, anonymous=True, disable_signals=True)
@@ -28,7 +35,7 @@ class RosNode():
 
         self.ros_if = RosInterface()
 
-        if self.enable_rocon:
+        if _ROCON_IF and self.enable_rocon:
             self.rocon_if = RoconInterface(self.ros_if)
         else:
             self.rocon_if = None
@@ -44,12 +51,12 @@ class RosNode():
             or len(ast.literal_eval(config["interactions"])) > 0
         )
 
-        if not self.rocon_if and self.enable_rocon:
+        if _ROCON_IF and not self.rocon_if and self.enable_rocon:
             self.rocon_if = RoconInterface(self.ros_if)
 
         config = self.ros_if.reconfigure(config, level)
 
-        if self.rocon_if:
+        if _ROCON_IF and self.rocon_if:
             config = self.rocon_if.reconfigure(config, level)
 
         return config

@@ -16,8 +16,8 @@ else:
 import logging
 from logging.handlers import RotatingFileHandler
 
-from flask.ext.migrate import Migrate, MigrateCommand
-from flask.ext.script import Manager, Option
+from flask_migrate import Migrate, MigrateCommand
+from flask_script import Manager, Option
 
 #setup migrations
 #python -m rostful db migrate

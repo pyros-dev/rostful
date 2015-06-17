@@ -14,7 +14,7 @@ from . import db_models
 from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
 
-class Server():
+class Server(object):
     #TODO : pass config file from command line here
     def __init__(self):
         #TODO : change into application factory (https://github.com/miguelgrinberg/Flask-Migrate/issues/45)

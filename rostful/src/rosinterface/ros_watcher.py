@@ -5,6 +5,7 @@ import threading
 import socket
 import rospy
 
+#This module does not depend on rocon, just use connections from the package if available
 _ROCON = False
 try:
     from rocon_python_comms import connections, PUBLISHER, SUBSCRIBER, SERVICE, ACTION_SERVER, ACTION_CLIENT
