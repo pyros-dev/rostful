@@ -14,6 +14,14 @@ from . import db_models
 from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
 
+
+import signal
+import sys
+def signal_handler(signal, frame):
+        print('You pressed Ctrl+C!')
+        sys.exit(0)
+
+
 class Server(object):
     #TODO : pass config file from command line here
     def __init__(self):
@@ -25,8 +33,7 @@ class Server(object):
                          instance_relative_config=True
                          )
 
-        self.app.config.from_object('config.default')
-        self.app.config.from_object('config.development')
+        self.app.config.from_object('rostful.cfg.flask.Development')
         #TODO : flexible config by chosing file
         #TODO : flexible config by getting file from instance folder
         #TODO : flexible config by getting env var
@@ -45,7 +52,22 @@ class Server(object):
         self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
     def launch(self, ros_args):
+
+
+
         self.ros_node = RostfulNode(ros_args)
+
+        import rospy
+
+        def handler(signal, frame):
+            print('You pressed Ctrl+C!')
+            rospy.signal_shutdown('Closing')
+            sys.exit(0)
+            #self.shutdown()
+
+        signal.signal(signal.SIGINT, handler)
+
+
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)

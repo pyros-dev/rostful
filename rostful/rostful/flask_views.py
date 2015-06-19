@@ -20,6 +20,7 @@ import urlparse
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
+from flask_restful import reqparse
 import flask_restful as restful
 import flask_login as login
 
@@ -160,7 +161,7 @@ class BackEnd(restful.Resource):
 
         rospy.logwarn('in BackEnd with rosname: %r', rosname)
 
-        parser = restful.reqparse.RequestParser()
+        parser = reqparse.RequestParser()
         parser.add_argument('full', type=bool)
         parser.add_argument('json', type=bool)
         args = parser.parse_args()

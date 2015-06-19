@@ -7,11 +7,13 @@ import sys
 # importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+    # to be able to import tasks
+    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
     # absolute import not using __init__.py
     from gardener import gardener
 else:
     # relative import using __init__.py
-    from .gardener import gardener
+    from . import gardener
 
 import logging
 import click
@@ -24,7 +26,7 @@ import config.development
 #TODO : add more arguments to match celery worker useful options
 @click.command()
 @click.option('--ros_args', default='', help='holder for all ros arguments if needed')
-def gardener(ros_args):
+def gardener_run(ros_args):
     #click.echo('ros_args=%s' % ros_args)
     try:
         logging.basicConfig(level=logging.INFO)
@@ -42,4 +44,4 @@ def gardener(ros_args):
 
 
 if __name__ == '__main__':
-    gardener()
+    gardener_run()

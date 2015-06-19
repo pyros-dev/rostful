@@ -1,17 +1,10 @@
 # All ways to run rostful and all Manager commands
 # should be defined here for consistency
 from __future__ import absolute_import
-import os, sys
+import os
+import sys
 
-#importing current package if needed ( solving relative package import from __main__ problem )
-if __package__ is None:
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    # absolute import not using __init__.py
-    from rostful import server
-    from rostful.server import rostful_server
-else:
-    #relative import using __init__.py
-    from . import rostful_server
+import rostful
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -20,13 +13,13 @@ from flask_migrate import Migrate, MigrateCommand
 from flask_script import Manager, Option
 
 #setup migrations
-#python -m rostful db migrate
-#python -m rostful db upgrade
+#python flask.py db migrate
+#python flask.py db upgrade
 # Need help ?
-#python -m rostful db --help
+#python flask.py db --help
 
-migrate = Migrate(rostful_server.app, rostful_server.db)
-manager = Manager(rostful_server.app)
+migrate = Migrate(rostful.rostful_server.app, rostful.rostful_server.db)
+manager = Manager(rostful.rostful_server.app)
 #TODO : http://stackoverflow.com/questions/29872867/using-flask-migrate-with-flask-script-and-application-factory/29882346#29882346
 #manager.add_option("-c", "--config", dest="config_module", required=False)
 manager.add_command('db', MigrateCommand)
@@ -39,7 +32,7 @@ def init():
     Create useful configuration files and database on first install
     """
     #Create instance config file name, to make it easy to modify when deploying
-    filename = os.path.join(rostful_server.app.instance_path, 'flask_config.py')
+    filename = os.path.join(rostful.rostful_server.app.instance_path, 'flask_config.py')
     if not os.path.isfile(filename) :
         #this will create the directories if needed
         try:
@@ -48,15 +41,15 @@ def init():
             if exception.errno != errno.EEXIST:
                 raise
         #this will create the file
-        rostful_server.app.open_instance_resource('flask_config.py', 'w')
+        rostful.rostful_server.app.open_instance_resource('flask_config.py', 'w')
 
     #run db upgrade to make sure our db schema is initialized ( here instead of in shell script )
     #TODO
     #add seed data to the database
     #TODO : prompt
     #prompt_bool(name, default=False, yes_choices=None, no_choices=None)
-    rostful_server.user_datastore.create_user(email='admin@yujin.net', password='adminpass')
-    rostful_server.db.session.commit()
+    rostful.rostful_server.user_datastore.create_user(email='admin@yujin.net', password='adminpass')
+    rostful.rostful_server.db.session.commit()
 
 
 from flask_script import Command
@@ -70,28 +63,28 @@ def flask(host='', port=8080, ros_args=''):
         #type=int doesnt see to work
         if isinstance(port, basestring) : port = int(port)
 
-        rostful_server.app.logger.info('host %r', host)
-        rostful_server.app.logger.info('port %r', port)
-        rostful_server.app.logger.info('ros_args %r', ros_args)
+        rostful.rostful_server.app.logger.info('host %r', host)
+        rostful.rostful_server.app.logger.info('port %r', port)
+        rostful.rostful_server.app.logger.info('ros_args %r', ros_args)
 
         #Disable this line to debug the webapp without ROS
-        rostful_server.launch(ros_args.split())
+        rostful.rostful_server.launch(ros_args.split())
 
         #Adding a logger
-        if not rostful_server.app.debug:
+        if not rostful.rostful_server.app.debug:
             file_handler = RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
             file_handler.setLevel(logging.INFO)
-            rostful_server.app.logger.addHandler(file_handler)
+            rostful.rostful_server.app.logger.addHandler(file_handler)
 
-        rostful_server.app.logger.info('Starting Flask server on port %d', port)
+        rostful.rostful_server.app.logger.info('Starting Flask server on port %d', port)
         # debug is needed to investigate server errors.
         # use_reloader set to False => killing the ros node also kills the server child.
-        rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+        rostful.rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+        # TODO : move this to rostful_server launch method
 
     except KeyboardInterrupt:
-        rostful_server.app.logger.info('Shutting down the Flask server')
-        rostful_server.shutdown()
-
+        rostful.rostful_server.app.logger.info('Shutting down the Flask server')
+        rostful.rostful_server.shutdown()
 
 
 ### TODO : This can be simplified when moving to gunicorn >= 19
@@ -163,6 +156,26 @@ class GunicornServer(Command):
             FlaskApplication().run()
 
 manager.add_command('gunicorn', GunicornServer())
+
+
+
+import logging
+import click
+
+#TODO : handle config file via command line arg ?
+@manager.command
+@manager.option('-r', '--ros_args', dest='ros_args', default='', help='holder for all ros arguments if needed')
+def worker(ros_args):
+    #click.echo('ros_args=%s' % ros_args)
+    try:
+        logging.basicConfig(level=logging.INFO)
+
+        logging.debug('Starting Celery worker')
+        # Starting Celery worker process
+        rostful.rostful_worker.launch(ros_args)
+
+    except KeyboardInterrupt:
+        logging.debug('Shutting down the Celery worker')
 
 
 #to be able to use Flask-Script directly on this package
