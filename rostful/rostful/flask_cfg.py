@@ -1,7 +1,7 @@
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-from . import celery
+from . import celery_cfg
 
 class Default(object):
     DEBUG = False
@@ -15,7 +15,7 @@ class Default(object):
 
     @property
     def celery(self):
-        return celery.Default
+        return celery_cfg.Default
 
 class Development(Default):
     DEBUG = True
@@ -23,14 +23,14 @@ class Development(Default):
 
     @property
     def celery(self):
-        return celery.Development
+        return celery_cfg.Development
 
 
 class Production(Default):
 
     @property
     def celery(self):
-        return celery.Production
+        return celery_cfg.Production
 
 
 class Testing(Default):
@@ -38,5 +38,5 @@ class Testing(Default):
 
     @property
     def celery(self):
-        return celery.Testing
+        return celery_cfg.Testing
 

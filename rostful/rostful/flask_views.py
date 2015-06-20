@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from .ros_interface import ActionBack, get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+from rosinterface import ActionBack
+from rostful_node.ros_interface import get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy

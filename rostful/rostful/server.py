@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
-from rostful_node import RostfulNode
 
 import os
+import sys
+import logging
+
+try:
+    import rostful_node
+except:
+    print "rostful_node module is not accessible in sys.path. It is required to run rostful."
+    print "sys.path = %r", sys.path
+    raise
+
+from . import flask_cfg
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
 import flask_security as security
@@ -15,25 +25,16 @@ from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
 
 
-import signal
-import sys
-def signal_handler(signal, frame):
-        print('You pressed Ctrl+C!')
-        sys.exit(0)
-
-
 class Server(object):
     #TODO : pass config file from command line here
     def __init__(self):
-        #TODO : change into application factory (https://github.com/miguelgrinberg/Flask-Migrate/issues/45)
-        #because apparently ROS start python node from ~user/.ros, and it obviously cant find templates there
         self.app = Flask('rostful',
                          static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
                          template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
                          instance_relative_config=True
                          )
 
-        self.app.config.from_object('rostful.cfg.flask.Development')
+        self.app.config.from_object(flask_cfg.Development)
         #TODO : flexible config by chosing file
         #TODO : flexible config by getting file from instance folder
         #TODO : flexible config by getting env var
@@ -51,23 +52,8 @@ class Server(object):
         # cross origin.
         self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
-    def launch(self, ros_args):
-
-
-
-        self.ros_node = RostfulNode(ros_args)
-
-        import rospy
-
-        def handler(signal, frame):
-            print('You pressed Ctrl+C!')
-            rospy.signal_shutdown('Closing')
-            sys.exit(0)
-            #self.shutdown()
-
-        signal.signal(signal.SIGINT, handler)
-
-
+    def _setup(self, ros_node):
+        self.ros_node = ros_node
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
@@ -80,11 +66,20 @@ class Server(object):
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
         self.api = restful.Api(self.app)
 
-    def shutdown(self):
-        func = request.environ.get('werkzeug.server.shutdown')
-        if func is None:
-            raise RuntimeError('Not running with the Werkzeug Server')
-        func()
+    def launch_flask(self, host, port, ros_args):
+        with rostful_node.RostfulNode(ros_args) as node:
+            self._setup(node)
+
+            # Adding a file logger if we are not in debug mode
+            if not rostful_server.app.debug:
+                file_handler = logging.RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
+                file_handler.setLevel(logging.INFO)
+                rostful_server.app.logger.addHandler(file_handler)
+
+            rostful_server.app.logger.info('Starting Flask server on port %d', port)
+            # debug is needed to investigate server errors.
+            # use_reloader set to False => killing the ros node also kills the server child.
+            rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
 
 
 # Creating THE only instance of Server.
