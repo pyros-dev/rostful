@@ -8,9 +8,9 @@ import sys
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from rostful import rostful_server, rostful_worker
+    from rostful import rostful_server
 else:
-    from . import rostful_server, rostful_worker
+    from . import rostful_server
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -73,6 +73,7 @@ def flask(host='', port=8080, ros_args=''):
     rostful_server.app.logger.info('host %r port %r', host, port)
     rostful_server.app.logger.info('ros_args %r', ros_args)
 
+    #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
     rostful_server.launch_flask(host, port, ros_args.split())
 
@@ -152,19 +153,25 @@ manager.add_command('gunicorn', GunicornServer())
 
 
 import logging
-import click
+
 
 #TODO : handle config file via command line arg ?
 @manager.command
+@manager.option('-b', '--broker', dest='broker', default='', help='holder for all ros arguments if needed')
 @manager.option('-r', '--ros_args', dest='ros_args', default='', help='holder for all ros arguments if needed')
-def worker(ros_args):
-    #click.echo('ros_args=%s' % ros_args)
+def worker(broker='redis://localhost', ros_args=''):
     try:
         logging.basicConfig(level=logging.INFO)
 
         logging.debug('Starting Celery worker')
+
+        #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
+
         # Starting Celery worker process
-        rostful_worker.launch(ros_args)
+        rostful_server.launch_worker(ros_args.split())
+
+        pass
+
 
     except KeyboardInterrupt:
         logging.debug('Shutting down the Celery worker')

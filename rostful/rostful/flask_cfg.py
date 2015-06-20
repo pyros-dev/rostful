@@ -13,30 +13,25 @@ class Default(object):
     # using flask instance directory
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, '..', 'instance', 'rostful_auth.db')
 
-    @property
-    def celery(self):
-        return celery_cfg.Default
+
+    REDIS_URL = 'redis://localhost:6379'
+    CELERY_BROKER_URL = REDIS_URL
+    CELERY_RESULT_BACKEND = REDIS_URL
+    CELERY_ACCEPT_CONTENT = ['application/json']
+    CELERY_TASK_SERIALIZER = 'json'
+    CELERY_RESULT_SERIALIZER = 'json'
+
 
 class Development(Default):
     DEBUG = True
     SQLALCHEMY_ECHO = False
 
-    @property
-    def celery(self):
-        return celery_cfg.Development
-
 
 class Production(Default):
-
-    @property
-    def celery(self):
-        return celery_cfg.Production
+    pass
 
 
 class Testing(Default):
     TESTING = True
 
-    @property
-    def celery(self):
-        return celery_cfg.Testing
 

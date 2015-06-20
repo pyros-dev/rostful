@@ -1,7 +1,7 @@
 <launch>
   <!-- ******************************* Arguments ******************************* -->
   <arg name="rostful_port" default="8080"/>
-  <arg name="topics" default="[]" />
+  <arg name="topics" default="['turtle1/pose']" />
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
   <arg name="enable_rocon" default="false" />
@@ -13,4 +13,13 @@
     <param name="actions" value="$(arg actions)" type="str" />
     <param name="enable_rocon" value="$(arg enable_rocon)" type="bool" />
   </node>
+
+  <!-- rostful dev server -->
+  <node pkg="rostful" name="rostful_worker" type="worker" args="-b 'redis://localhost:6380'">
+    <param name="topics" value="$(arg topics)" type="str" />
+    <param name="services" value="$(arg services)" type="str" />
+    <param name="actions" value="$(arg actions)" type="str" />
+    <param name="enable_rocon" value="$(arg enable_rocon)" type="bool" />
+  </node>
+
 </launch>

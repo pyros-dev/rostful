@@ -9,16 +9,9 @@ from redis import Redis
 import random
 
 #NOT WORKING
-#from config.default import *
-CELERY_ACCEPT_CONTENT = ['application/json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-#from config.development import *
-REDIS_URL = 'redis://localhost:6379'
-CELERY_BROKER_URL = REDIS_URL
-CELERY_RESULT_BACKEND = REDIS_URL
 
-celery = Celery(broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
+
+
 # needed for importers to get correct settings
 
 
@@ -26,7 +19,7 @@ celery = Celery(broker=CELERY_BROKER_URL, backend=CELERY_RESULT_BACKEND)
 redis = Redis()
 
 ### defining extra tasks to be run by the vegebot
-from vegebot import tasks
+#from vegebot import tasks
 import turtlesim.msg
 
 #locally define extended tasks ?
@@ -36,12 +29,14 @@ import turtlesim.msg
 
 ### test methods
 
+from rostful import rostful_celery_tasks
+
 # testing turtle topics
 def test_turtle_topics():
     # link topic extraction and topic inject to move relatively one turtle.
-    result = tasks.topic_extract.apply_async(('pose', ))
+    result = rostful_celery_tasks.topic_extract.apply_async(('/turtle1/pose', ))
     print result.get()
-
+    pass
 
 # testing turtle services
 def test_turtle_services():

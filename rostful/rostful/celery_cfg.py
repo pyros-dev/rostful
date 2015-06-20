@@ -2,7 +2,7 @@ import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
 class Default(object):
-    REDIS_URL = 'redis://localhost:6380'
+    REDIS_URL = 'redis://localhost:6379'
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL
     CELERY_ACCEPT_CONTENT = ['application/json']

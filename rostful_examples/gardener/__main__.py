@@ -19,8 +19,6 @@ import logging
 import click
 
 #only needed to pass arguments to the worker
-import config.default
-import config.development
 
 #TODO : handle config file via command line arg ?
 #TODO : add more arguments to match celery worker useful options
@@ -33,6 +31,8 @@ def gardener_run(ros_args):
 
         logging.debug('Starting Gardener ')
 
+        from rostful import rostful_celery_tasks
+        #rostful_celery_tasks.add_together.apply_async((2,4))
         gardener.test_turtle_topics()
         #gardener.test_turtle_services()
         #gardener.test_turtle_action()

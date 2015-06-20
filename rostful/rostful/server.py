@@ -19,10 +19,15 @@ import flask_security as security
 import flask_cors as cors
 import flask_restful as restful
 import flask_login as login
+import flask_celery as celery
+
+from celery.bin import Option
 
 from . import db_models
 from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
+from .worker import RosArgs
+from .celery_tasks import celery
 
 
 class Server(object):
@@ -52,6 +57,15 @@ class Server(object):
         # cross origin.
         self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
+        #Setup Flask-Celery
+        self.celery = celery
+        self.celery.init_app(self.app)
+
+        self.celery.user_options['worker'].add(
+            Option("--ros_args", action="store", dest="ros_args", default=None, help="Activate support of rapps")
+        )
+        self.celery.steps['worker'].add(RosArgs)
+
     def _setup(self, ros_node):
         self.ros_node = ros_node
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
@@ -65,6 +79,7 @@ class Server(object):
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
         self.api = restful.Api(self.app)
+
 
     def launch_flask(self, host, port, ros_args):
         with rostful_node.RostfulNode(ros_args) as node:
@@ -80,6 +95,38 @@ class Server(object):
             # debug is needed to investigate server errors.
             # use_reloader set to False => killing the ros node also kills the server child.
             rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+
+    def launch_worker(self, ros_args):
+        with rostful_node.RostfulNode(ros_args) as node:
+            self._setup(node)
+
+            #Hacking Flask-Celery Base Task
+            task_base = self.celery.Task
+
+            # Add Flask app context to celery instance.
+            class RosNodeTask(task_base):
+                """Task instance can access RosNode."""
+                def __init__(self):
+                    task_base.__init__(self)  # calling init the old way
+                    self.ros_node = node
+
+            setattr(RosNodeTask, 'abstract', True)
+            setattr(self.celery, 'Task', RosNodeTask)
+
+            #if isinstance(ros_args, list):
+            #    ros_args
+            # Starting Celery worker process
+            rostful_server.celery.worker_main(argv=[
+                'celery',
+                #'--app=celery'
+                #'--config=celery_cfg.Development',
+                '--events',
+                '--loglevel=DEBUG',
+                #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
+                '--concurrency=1',
+                '--autoreload',
+                #'--ros_args=' + ros_args
+            ], )
 
 
 # Creating THE only instance of Server.
