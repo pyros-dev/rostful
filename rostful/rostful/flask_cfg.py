@@ -1,7 +1,6 @@
 import os
 basedir = os.path.abspath(os.path.dirname(__file__))
 
-from . import celery_cfg
 
 class Default(object):
     DEBUG = False
