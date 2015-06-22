@@ -124,7 +124,7 @@ class Server(object):
                 '--loglevel=DEBUG',
                 #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
                 '--concurrency=1',
-                '--autoreload',
+                '--autoreload', # not working ??
                 #'--ros_args=' + ros_args
             ], )
 

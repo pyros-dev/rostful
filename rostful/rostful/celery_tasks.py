@@ -16,6 +16,12 @@ _logger = get_task_logger(__name__)
 #import required ros modules
 from rostful_node import RostfulNode
 
+class TopicNotFound(Exception):
+    pass
+
+class ServiceNotFound(Exception):
+    pass
+
 @celery.task(bind=True)
 @single_instance
 def add_together(a, b):
@@ -68,23 +74,73 @@ class RostfulTask(Task):
     def after_return(self, *args, **kwargs):
         print('DeliveryOverseer returned: {0!r}'.format(self.request))
 
-@celery.task(base=RostfulTask, bind=True)
-def topic_inject(self, topic_name,msg):
-    #TODO : dynamically match kwargs and msg content
-    topic = self.ros_node.ros_if.topics[topic_name]
-    msg = topic.get()
-    pass
+import unicodedata
+import json
+from rosinterface import message_conversion as msgconv
+@celery.task(bind=True)
+def topic_inject(self, topic_name, input_data):
+    #TODO : dynamically match kwargs and msg content => maybe in topicBack instead ?
+    topic_name = unicodedata.normalize('NFKD', topic_name).encode('ascii', 'ignore')
+    if topic_name[0] == '/':
+        topic_name = topic_name[1:]
+
+    if not topic_name in self.ros_node.ros_if.topics:
+        raise TopicNotFound
+    else:
+        topic = self.ros_node.ros_if.topics[topic_name]
+        input_msg_type = topic.rostype
+
+        input_msg = input_msg_type()
+        input_data = json.loads(input_data)
+        input_data.pop('_format', None)
+        msgconv.populate_instance(input_data, input_msg)
+
+        topic.publish(input_msg)  # NOT WORKING ?
+
+    return "{}"
 
 @celery.task(bind=True)
 def topic_extract(self, topic_name):
-    topic = self.ros_node.ros_if.topics[topic_name]
-    msg = topic.get()
-    pass
+    topic_name = unicodedata.normalize('NFKD', topic_name).encode('ascii', 'ignore')
+    if topic_name[0] == '/':
+        topic_name = topic_name[1:]
+    if not topic_name in self.ros_node.ros_if.topics:
+        raise TopicNotFound
+    else:
+        topic = self.ros_node.ros_if.topics[topic_name]
+        msg = topic.get()
+        # converting to json ( TMP )
+        # TODO : convert to python dict for simple serialization by celery
+        output_data = msgconv.extract_values(msg) if msg is not None else None
+        output_data = json.dumps(output_data)
+
+    return output_data
 
 @celery.task(bind=True)
-def service_request(self, service_name):
-    #TODO : dynamically match kwargs and msg content
-    pass
+def service_call(self, service_name, input_data):
+    #TODO : dynamically match kwargs and msg content => maybe in serviceBack instead ?
+    service_name = unicodedata.normalize('NFKD', service_name).encode('ascii', 'ignore')
+    if service_name[0] == '/':
+        service_name = service_name[1:]
+
+    if not service_name in self.ros_node.ros_if.services:
+        raise ServiceNotFound
+    else:
+
+        service = self.ros_node.ros_if.services[service_name]
+        input_msg_type = service.rostype_req
+        input_msg = input_msg_type()
+
+        input_data = json.loads(input_data)
+        input_data.pop('_format', None)
+        msgconv.populate_instance(input_data, input_msg)
+        ret_msg = service.call(input_msg)
+
+        output_data = msgconv.extract_values(ret_msg)
+        #output_data['_format'] = 'ros'
+        output_data = json.dumps(output_data)
+
+    return output_data
 
 @celery.task(bind=True)
 def action_goal(self, action_name, goal):
