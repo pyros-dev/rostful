@@ -1,0 +1,42 @@
+{% extends "layout.html" %}
+{% block title %}Rapp Namespace {{ rapp_ns.name }}{% endblock %}
+{% block header %}Rapp Namespace {{ rapp_ns.name }}{% endblock %}
+
+{% block GET %}
+<!-- Cannot GET on a Namespace ?? -->
+
+    {% for rn, rapp in rapp_ns.iteritems() %}
+        <h2>{{rn}}</h2>
+        <ul>
+        {% for n,e in rapp.iteritems() %}
+            {% if not n.startswith('icon') %}
+                <li> {{ n }} : {{ e }}</li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+    {% endfor %}
+
+{% endblock %}
+
+{% block GET_ajax %}
+<!-- Cannot GET on a Namespace ?? -->
+{% endblock %}
+
+{% from 'macros.html' import generate_inputs, generate_msgdata, dynamic_array_input %}
+
+{% block UTIL_js %}
+{% endblock %}
+
+{% block POST %}
+
+{% endblock %}
+
+{% block POST_ajax %}
+
+{% endblock %}
+
+
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
+
+
