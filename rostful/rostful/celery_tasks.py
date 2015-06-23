@@ -3,6 +3,7 @@ from __future__ import absolute_import
 import time
 
 from celery import Task
+from celery.contrib.abortable import AbortableTask
 from flask_celery import Celery, single_instance  # flask not needed for this
 
 import random
@@ -20,6 +21,9 @@ class TopicNotFound(Exception):
     pass
 
 class ServiceNotFound(Exception):
+    pass
+
+class ActionNotFound(Exception):
     pass
 
 @celery.task(bind=True)
@@ -52,99 +56,114 @@ def long_task(self):
 
 import inspect
 
-
-class RostfulTask(Task):
-    abstract = True
-    _node = None
-    def __init__(self, *args, **kwargs):
-        super(RostfulTask, self).__init__(*args, **kwargs)
-        global g_ros_args
-        print('Initialized RostfulTask called by %r', inspect.stack()[1][3])
-
-
-    def _requester_feedback(self, request_set):
-        '''
-          Callback used to act on feedback coming from the scheduler request handler.
-
-          @param request_set : a snapshot of the state of all requests from this requester
-          @type concert_scheduler_requests.transition.RequestSet
-        '''
-        _logger.error("REQUESTER FEEDBACK : %r", request_set)
-
-    def after_return(self, *args, **kwargs):
-        print('DeliveryOverseer returned: {0!r}'.format(self.request))
-
 import unicodedata
 import json
 from rosinterface import message_conversion as msgconv
+from rosinterface import ActionBack
+import datetime
+
+import rospy
+import rostful_node
+from importlib import import_module
+
 @celery.task(bind=True)
 def topic_inject(self, topic_name, input_data):
-    #TODO : dynamically match kwargs and msg content => maybe in topicBack instead ?
-    topic_name = unicodedata.normalize('NFKD', topic_name).encode('ascii', 'ignore')
-    if topic_name[0] == '/':
-        topic_name = topic_name[1:]
+    rospy.wait_for_service('inject_topic')
 
-    if not topic_name in self.ros_node.ros_if.topics:
-        raise TopicNotFound
-    else:
-        topic = self.ros_node.ros_if.topics[topic_name]
-        input_msg_type = topic.rostype
-
-        input_msg = input_msg_type()
-        input_data = json.loads(input_data)
-        input_data.pop('_format', None)
-        msgconv.populate_instance(input_data, input_msg)
-
-        topic.publish(input_msg)  # NOT WORKING ?
-
-    return "{}"
+    try:
+        inject_topic = rospy.ServiceProxy('inject_topic', rostful_node.srv.InjectTopic)
+        #TODO : check data format ?
+        res = inject_topic(topic_name, input_data)
+        return {'injected': res.injected}
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
 
 @celery.task(bind=True)
 def topic_extract(self, topic_name):
-    topic_name = unicodedata.normalize('NFKD', topic_name).encode('ascii', 'ignore')
-    if topic_name[0] == '/':
-        topic_name = topic_name[1:]
-    if not topic_name in self.ros_node.ros_if.topics:
-        raise TopicNotFound
-    else:
-        topic = self.ros_node.ros_if.topics[topic_name]
-        msg = topic.get()
-        # converting to json ( TMP )
-        # TODO : convert to python dict for simple serialization by celery
-        output_data = msgconv.extract_values(msg) if msg is not None else None
-        output_data = json.dumps(output_data)
 
-    return output_data
+    rospy.wait_for_service('extract_topic')
+    try:
+        extract_topic = rospy.ServiceProxy('extract_topic', rostful_node.srv.ExtractTopic)
+        res_data = extract_topic(topic_name)
+        return {'extracted': res_data.extracted, 'data_json': res_data.data_json}
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
 
 @celery.task(bind=True)
 def service_call(self, service_name, input_data):
-    #TODO : dynamically match kwargs and msg content => maybe in serviceBack instead ?
-    service_name = unicodedata.normalize('NFKD', service_name).encode('ascii', 'ignore')
-    if service_name[0] == '/':
-        service_name = service_name[1:]
 
-    if not service_name in self.ros_node.ros_if.services:
-        raise ServiceNotFound
-    else:
+    rospy.wait_for_service('call_service')
+    try:
+        call_service = rospy.ServiceProxy('call_service', rostful_node.srv.CallService)
+        res_data = call_service(service_name, input_data)
+        return {'data_json': res_data.data_json}
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
 
-        service = self.ros_node.ros_if.services[service_name]
-        input_msg_type = service.rostype_req
-        input_msg = input_msg_type()
+@celery.task(bind=True, base=AbortableTask)
+def action(self, action_name, input_data, feedback_time=2.0):
 
-        input_data = json.loads(input_data)
-        input_data.pop('_format', None)
-        msgconv.populate_instance(input_data, input_msg)
-        ret_msg = service.call(input_msg)
+    # we want to wait for all services
+    rospy.wait_for_service('start_action')
+    rospy.wait_for_service('cancel_action')
+    rospy.wait_for_service('status_action')
 
-        output_data = msgconv.extract_values(ret_msg)
-        #output_data['_format'] = 'ros'
-        output_data = json.dumps(output_data)
+    # because Actions ( interpreted from roslib.js ) and because we don't wan to know about the action msg type here
+    # use hte task ID as a goal ID
+    goalID = 'goal_' + str(self.request.id)
+    # Fill in the goal message
+    msgdata = '{ "goal_id" : { "stamp" : { "secs" : 0, "nsecs" : 0 }, "id" : "'\
+              + goalID\
+              + '" }, "goal" : '\
+              + input_data\
+              + '}'
 
-    return output_data
+    started = False
+    try:
+        start_action = rospy.ServiceProxy('start_action', rostful_node.srv.StartAction)
 
-@celery.task(bind=True)
-def action_goal(self, action_name, goal):
-    #TODO : dynamically match kwargs and msg content
-    pass
+        #TODO : check data format ?
+        if not self.is_aborted():  # to make sure we didnt abort before it starts...
+            res = start_action(action_name, msgdata)
+            #goalID ??
+            started = res.started
+
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
+
+    if started:
+
+        try:
+            cancel_action = rospy.ServiceProxy('cancel_action', rostful_node.srv.CancelAction)
+            status_action = rospy.ServiceProxy('status_action', rostful_node.srv.StatusAction)
+            feedback_action = rospy.ServiceProxy('feedback_action', rostful_node.srv.FeedbackAction)
+            result_action = rospy.ServiceProxy('result_action', rostful_node.srv.ResultAction)
+
+            while not self.is_aborted():
+                #TODO We need to hook action statuses into the celery task statuses somehow...
+                status = status_action(action_name)
+                print "status %r", status
+                feedback = feedback_action(action_name)
+                print "feedback %r", feedback
+
+                # if fb:  # if we get feedback, we expect the standard action msg definition
+                #    self.update_state(state='FEEDBACK',
+                #    meta={'header': fb.header, 'status': fb.status,
+                #       'feedback': fb.feedback})
+
+                time.sleep(feedback_time)
+
+            if self.is_aborted():
+
+                res = cancel_action(action_name, goalID)
+                #goalID ??
+            else:
+                result = result_action(action_name)
+                print "result %r", result
+                return "{'header':" + result.header + ", 'status':" + result.status + ", 'feedback':" + result.feedback + "}"
+
+        except rospy.ServiceException, e:
+            print "Service call failed: %s" % e
+
 
 #TODO : rocon stuff ( RAPP )

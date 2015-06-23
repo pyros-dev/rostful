@@ -59,12 +59,14 @@ def init():
 
 
 from flask_script import Command
+# little bit buggy... how about click ?? check https://github.com/smurfix/flask-script/issues/97
 
 @manager.command
 @manager.option('-h', '--host', dest='host', default='')
 @manager.option('-p', '--port', type=int, dest='port', default=8080)
+@manager.option('-w', '--worker-enabled', action='store_true', dest='worker_enabled')
 @manager.option('-r', '--ros_args', dest='ros_args', default='')
-def flask(host='', port=8080, ros_args=''):
+def flask(host='', port=8080, worker_enabled=True, ros_args=''):
 
     #type=int doesnt see to work
     if isinstance(port, basestring):
@@ -75,7 +77,7 @@ def flask(host='', port=8080, ros_args=''):
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch_flask(host, port, ros_args.split())
+    rostful_server.launch_flask(host, port, worker_enabled, ros_args.split())
 
 
 
@@ -150,32 +152,36 @@ class GunicornServer(Command):
 
 manager.add_command('gunicorn', GunicornServer())
 
-
-
-import logging
-
-
-#TODO : handle config file via command line arg ?
 @manager.command
-@manager.option('-b', '--broker', dest='broker', default='', help='holder for all ros arguments if needed')
-@manager.option('-r', '--ros_args', dest='ros_args', default='', help='holder for all ros arguments if needed')
-def worker(broker='redis://localhost', ros_args=''):
-    try:
-        logging.basicConfig(level=logging.INFO)
+def test():
+    import rospy
+    # INIT NODE
+    rospy.init_node('rostful', anonymous=True, disable_signals=True)
 
-        logging.debug('Starting Celery worker')
+    def pubfun():
+        # TEST
+        import rospy, time, std_msgs.msg
+        testpub = rospy.Publisher('/foo', std_msgs.msg.String, queue_size=1)
+        time.sleep(1)
+        testpub.publish("testPUB")
 
-        #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
+    import threading
+    t = threading.Thread(target=pubfun)
+    t.start()
 
-        # Starting Celery worker process
-        rostful_server.launch_worker(ros_args.split())
+    def subfun():
+        # TEST
+        import rospy, time, std_msgs.msg
+        def cb(data):
+            print data
 
-        pass
+        testsub = rospy.Subscriber('/foo', std_msgs.msg.String, callback=cb ,queue_size=1)
+        time.sleep(5)
 
-
-    except KeyboardInterrupt:
-        logging.debug('Shutting down the Celery worker')
-
+    import multiprocessing
+    p = multiprocessing.Process(target=subfun)
+    p.start()
+    p.join()
 
 #to be able to use Flask-Script directly on this package
 manager.run()

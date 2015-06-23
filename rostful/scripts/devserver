@@ -17,13 +17,17 @@ case $key in
     PORT="$2"
     shift 2
     ;;
+    -w|--worker-enabled)
+    WORKER="-w"
+    shift 1
+    ;;
     __*)
     ROSARGS="${ROSARGS:+$ROSARGS }$key"
     #ros option
     shift 1
     ;;
     *)
-            # unknown option
+    # unknown option
     echo "Unknown Option"
     shift 1
     ;;
@@ -34,5 +38,7 @@ HOST=${HOST:+"-h $HOST"}
 PORT=${PORT:+"-p $PORT"}
 ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
-python -tt -m rostful flask ${HOST} ${PORT} "${ROSARGS}"
+set -x
+
+python -tt -m rostful flask ${HOST} ${PORT} ${WORKER} "${ROSARGS}"
 

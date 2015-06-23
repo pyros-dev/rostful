@@ -61,10 +61,10 @@ class Server(object):
         self.celery = celery
         self.celery.init_app(self.app)
 
-        self.celery.user_options['worker'].add(
-            Option("--ros_args", action="store", dest="ros_args", default=None, help="Activate support of rapps")
-        )
-        self.celery.steps['worker'].add(RosArgs)
+        #self.celery.user_options['worker'].add(
+        #    Option("--ros_args", action="store", dest="ros_args", default=None, help="Activate support of rapps")
+        #)
+        #self.celery.steps['worker'].add(RosArgs)
 
     def _setup(self, ros_node):
         self.ros_node = ros_node
@@ -81,53 +81,45 @@ class Server(object):
         self.api = restful.Api(self.app)
 
 
-    def launch_flask(self, host, port, ros_args):
-        with rostful_node.RostfulNode(ros_args) as node:
-            self._setup(node)
+    def launch_flask(self, host, port, enable_worker, ros_args):
 
-            # Adding a file logger if we are not in debug mode
-            if not rostful_server.app.debug:
-                file_handler = logging.RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
-                file_handler.setLevel(logging.INFO)
-                rostful_server.app.logger.addHandler(file_handler)
+         #One RostfulNode is needed for Flask.
+         #TODO : check if still true with multiple web process
+         with rostful_node.RostfulNode(argv=ros_args) as node:
+             self._setup(node)
 
-            rostful_server.app.logger.info('Starting Flask server on port %d', port)
-            # debug is needed to investigate server errors.
-            # use_reloader set to False => killing the ros node also kills the server child.
-            rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+             # Celery needs rostfulNode running, but usesit via ros, and not python(not working interprocess)
+             if enable_worker:
+                 import threading
+                 # TODO : investigate a simpler way to start the (unique) worker asynchronously ?
+                 rostful_server.celery_worker = threading.Thread(
+                     target=rostful_server.celery.worker_main,
+                     kwargs={'argv': [
+                         'celery',
+                         #'--app=celery'
+                         #'--config=celery_cfg.Development',
+                         '--events',
+                         '--loglevel=DEBUG',
+                         #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
+                         '--concurrency=1',
+                         '--autoreload',  # not working ??
+                         #'--ros_args=' + ros_args
+                     ]}
+                 )
+                 rostful_server.celery_worker.start()
+                 #TODO : fix signal handling when running celery in another thread...
 
-    def launch_worker(self, ros_args):
-        with rostful_node.RostfulNode(ros_args) as node:
-            self._setup(node)
 
-            #Hacking Flask-Celery Base Task
-            task_base = self.celery.Task
+             # Adding a file logger if we are not in debug mode
+             if not rostful_server.app.debug:
+                 file_handler = logging.RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
+                 file_handler.setLevel(logging.INFO)
+                 rostful_server.app.logger.addHandler(file_handler)
 
-            # Add Flask app context to celery instance.
-            class RosNodeTask(task_base):
-                """Task instance can access RosNode."""
-                def __init__(self):
-                    task_base.__init__(self)  # calling init the old way
-                    self.ros_node = node
-
-            setattr(RosNodeTask, 'abstract', True)
-            setattr(self.celery, 'Task', RosNodeTask)
-
-            #if isinstance(ros_args, list):
-            #    ros_args
-            # Starting Celery worker process
-            rostful_server.celery.worker_main(argv=[
-                'celery',
-                #'--app=celery'
-                #'--config=celery_cfg.Development',
-                '--events',
-                '--loglevel=DEBUG',
-                #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
-                '--concurrency=1',
-                '--autoreload', # not working ??
-                #'--ros_args=' + ros_args
-            ], )
-
+             rostful_server.app.logger.info('Starting Flask server on port %d', port)
+             # debug is needed to investigate server errors.
+             # use_reloader set to False => killing the ros node also kills the server child.
+             rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
 
 # Creating THE only instance of Server.
 rostful_server = Server()
