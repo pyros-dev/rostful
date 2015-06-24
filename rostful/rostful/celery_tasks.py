@@ -90,7 +90,7 @@ def topic_extract(self, topic_name):
         print "Service call failed: %s" % e
 
 @celery.task(bind=True)
-def service_call(self, service_name, input_data):
+def service(self, service_name, input_data):
 
     rospy.wait_for_service('call_service')
     try:
@@ -166,4 +166,26 @@ def action(self, action_name, input_data, feedback_time=2.0):
             print "Service call failed: %s" % e
 
 
-#TODO : rocon stuff ( RAPP )
+@celery.task(bind=True, base=AbortableTask)
+def rocon_app(self, rapp_name, input_data):
+
+    rospy.wait_for_service('start_rapp')
+    try:
+        call_service = rospy.ServiceProxy('start_rapp', rostful_node.srv.StartRapp)
+        res_data = call_service(rapp_name, input_data)
+        if res_data.started:
+
+
+            time.sleep(42)
+
+            call_service = rospy.ServiceProxy('stop_rapp', rostful_node.srv.StopRapp)
+            res_data = call_service()
+
+
+
+
+
+        return {'data_json': res_data.data_json}
+    except rospy.ServiceException, e:
+        print "Service call failed: %s" % e
+

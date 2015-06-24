@@ -59,6 +59,7 @@ class Server(object):
         self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
 
         #Setup Flask-Celery
+        # TODO : check SHARK http://sharq.io => how about double backend ? celery+flask or shark
         self.celery = celery
         self.celery.init_app(self.app)
 
