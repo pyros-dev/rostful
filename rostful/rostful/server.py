@@ -7,8 +7,9 @@ import logging
 
 try:
     import rostful_node
-except:
+except Exception, e:
     print "rostful_node module is not accessible in sys.path. It is required to run rostful."
+    print "Exception caught : ", e
     print "sys.path = %r", sys.path
     raise
 
@@ -99,7 +100,7 @@ class Server(object):
                          #'--app=celery'
                          #'--config=celery_cfg.Development',
                          '--events',
-                         '--loglevel=DEBUG',
+                         '--loglevel=INFO',
                          #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
                          '--concurrency=1',
                          '--autoreload',  # not working ??
