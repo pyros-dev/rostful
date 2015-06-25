@@ -17,12 +17,6 @@ _logger = get_task_logger(__name__)
 #import required ros modules
 from rostful_node import RostfulNode
 
-class TopicNotFound(Exception):
-    pass
-
-class ServiceNotFound(Exception):
-    pass
-
 class ActionNotFound(Exception):
     pass
 
@@ -67,39 +61,20 @@ import rostful_node
 from importlib import import_module
 
 @celery.task(bind=True)
-def topic_inject(self, topic_name, input_data):
-    rospy.wait_for_service('inject_topic')
-
-    try:
-        inject_topic = rospy.ServiceProxy('inject_topic', rostful_node.srv.InjectTopic)
-        #TODO : check data format ?
-        res = inject_topic(topic_name, input_data)
-        return {'injected': res.injected}
-    except rospy.ServiceException, e:
-        print "Service call failed: %s" % e
+def topic_inject(self, topic_name, **kwargs):
+    res = self.app.ros_node_client.inject(topic_name, **kwargs)
+    return res
 
 @celery.task(bind=True)
 def topic_extract(self, topic_name):
+    res = self.app.ros_node_client.extract(topic_name)
+    return res
 
-    rospy.wait_for_service('extract_topic')
-    try:
-        extract_topic = rospy.ServiceProxy('extract_topic', rostful_node.srv.ExtractTopic)
-        res_data = extract_topic(topic_name)
-        return {'extracted': res_data.extracted, 'data_json': res_data.data_json}
-    except rospy.ServiceException, e:
-        print "Service call failed: %s" % e
 
 @celery.task(bind=True)
-def service(self, service_name, input_data):
-    #TODO : check multiprocessing https://docs.python.org/2/library/multiprocessing.html to talk to rostfulnode with pure python
-    # or maybe we can just use the class instance from another process ?
-    rospy.wait_for_service('call_service')
-    try:
-        call_service = rospy.ServiceProxy('call_service', rostful_node.srv.CallService)
-        res_data = call_service(service_name, input_data)
-        return {'data_json': res_data.data_json}
-    except rospy.ServiceException, e:
-        print "Service call failed: %s" % e
+def service(self, service_name, **kwargs):
+    res = self.app.ros_node_client.call(service_name, **kwargs)
+    return res
 
 @celery.task(bind=True, base=AbortableTask)
 def action(self, action_name, input_data, feedback_time=2.0):

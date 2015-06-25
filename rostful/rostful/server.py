@@ -68,18 +68,26 @@ class Server(object):
         #)
         #self.celery.steps['worker'].add(RosArgs)
 
-    def _setup(self, ros_node):
+    def _setup(self, ros_node, ros_node_client):
         self.ros_node = ros_node
+        self.celery.ros_node_client = ros_node_client
+
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
 
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
+
         self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+
+        #TODO : put everything under robot/worker name here ( so we can evolve to support multiple workers )
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
+
+        #TMP
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
+
         self.api = restful.Api(self.app)
 
 
@@ -87,8 +95,8 @@ class Server(object):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
-         with rostful_node.RostfulNode(argv=ros_args) as node:
-             self._setup(node)
+         with rostful_node.RostfulCtx(argv=ros_args) as node_ctx:
+             self._setup(node_ctx.node, node_ctx.client)
 
              # Celery needs rostfulNode running, but usesit via ros, and not python(not working interprocess)
              if enable_worker:
