@@ -91,7 +91,8 @@ def topic_extract(self, topic_name):
 
 @celery.task(bind=True)
 def service(self, service_name, input_data):
-
+    #TODO : check multiprocessing https://docs.python.org/2/library/multiprocessing.html to talk to rostfulnode with pure python
+    # or maybe we can just use the class instance from another process ?
     rospy.wait_for_service('call_service')
     try:
         call_service = rospy.ServiceProxy('call_service', rostful_node.srv.CallService)
@@ -169,16 +170,16 @@ def action(self, action_name, input_data, feedback_time=2.0):
 @celery.task(bind=True, base=AbortableTask)
 def rocon_app(self, rapp_name, input_data):
 
-    rospy.wait_for_service('start_rapp')
+    rospy.wait_for_service('~start_rapp')
     try:
-        call_service = rospy.ServiceProxy('start_rapp', rostful_node.srv.StartRapp)
+        call_service = rospy.ServiceProxy('~start_rapp', rostful_node.srv.StartRapp)
         res_data = call_service(rapp_name, input_data)
         if res_data.started:
 
 
             time.sleep(42)
 
-            call_service = rospy.ServiceProxy('stop_rapp', rostful_node.srv.StopRapp)
+            call_service = rospy.ServiceProxy('~stop_rapp', rostful_node.srv.StopRapp)
             res_data = call_service()
 
 
