@@ -12,33 +12,31 @@ import random
 
 if __name__ == '__main__':
 
-    result = rostful_celery_tasks.action.apply_async((
-        '/turtle_shape_server',
-        '{ "edges": 5, "radius" : 3 }'
-    ))
+    result = rostful_celery_tasks.action.apply_async(
+        args=['/turtle_shape_server'],
+        kwargs={
+            "edges": 5,
+            "radius": 3
+        }
+    )
+    try:
+        while result.state != 'FAILURE' and result.state != 'SUCCESS':
+            time.sleep(1)
+            if result.state == 'PENDING':
+                # job did not start yet
+                print "Pending..."
 
-    while result.state != 'FAILURE' and result.state != 'SUCCESS':
-        time.sleep(1)
-        if result.state == 'PENDING':
-            # job did not start yet
-            print "Pending..."
-
-        elif result.state != 'FAILURE':
-            response = {
-                'state': result.state,
-                'header': result.info.get('current', ''),
-                'feedback': result.info.get('feedback', ''),
-                'status': result.info.get('status', '')
-            }
-            if 'result' in result.info:
-                response['result'] = result.info['result']
-        else:
-            # something went wrong in the background job
-            response = {
-                'state': result.state,
-                'status': str(result.info),  # this is the exception raised
-            }
+            elif result.state != 'FAILURE':
+                print result.state, result.info.get('rostful_data', '')
+                if 'result' in result.info:
+                    print "RESULT: {0}".format(result.info['result'])
+            else:
+                print result.state, result.info.get('rostful_data', '')
 
 
-    print result.get()  # waiting for result here ( but we don't have to )
-    pass
+        print result.get()  # waiting for result here ( but we don't have to )
+        pass
+
+    except KeyboardInterrupt:
+        result.abort()
+        #TODO Keep checking state

@@ -77,69 +77,54 @@ def service(self, service_name, **kwargs):
     return res
 
 @celery.task(bind=True, base=AbortableTask)
-def action(self, action_name, input_data, feedback_time=2.0):
+def action(self, action_name, **kwargs):
 
-    # we want to wait for all services
-    rospy.wait_for_service('start_action')
-    rospy.wait_for_service('cancel_action')
-    rospy.wait_for_service('status_action')
+    #interfacing celery task with ros action. both are supposed to represent a long running async job.
 
-    # because Actions ( interpreted from roslib.js ) and because we don't wan to know about the action msg type here
-    # use hte task ID as a goal ID
+    #NOTE : kwargs can contain multiple goals (?) or one action task is one goal... more goals mean more action tasks ?
+
+    # because Actions ( interpreted from roslib.js ) and because we don't want to know about the action msg type here
+    # use the task ID as a goal ID
     goalID = 'goal_' + str(self.request.id)
-    # Fill in the goal message
-    msgdata = '{ "goal_id" : { "stamp" : { "secs" : 0, "nsecs" : 0 }, "id" : "'\
-              + goalID\
-              + '" }, "goal" : '\
-              + input_data\
-              + '}'
 
-    started = False
-    try:
-        start_action = rospy.ServiceProxy('start_action', rostful_node.srv.StartAction)
+    if not self.is_aborted():  # to make sure we didnt abort before it starts...
+        res = self.app.ros_node_client.action_goal(action_name, goalID, **kwargs)
 
-        #TODO : check data format ?
-        if not self.is_aborted():  # to make sure we didnt abort before it starts...
-            res = start_action(action_name, msgdata)
-            #goalID ??
-            started = res.started
+        # get full goalID
+        if 'goal_id' in res.keys():
+            goalID = res['goal_id']
 
-    except rospy.ServiceException, e:
-        print "Service call failed: %s" % e
-
-    if started:
-
-        try:
-            cancel_action = rospy.ServiceProxy('cancel_action', rostful_node.srv.CancelAction)
-            status_action = rospy.ServiceProxy('status_action', rostful_node.srv.StatusAction)
-            feedback_action = rospy.ServiceProxy('feedback_action', rostful_node.srv.FeedbackAction)
-            result_action = rospy.ServiceProxy('result_action', rostful_node.srv.ResultAction)
-
-            while not self.is_aborted():
-                #TODO We need to hook action statuses into the celery task statuses somehow...
-                status = status_action(action_name)
-                print "status %r", status
-                feedback = feedback_action(action_name)
-                print "feedback %r", feedback
-
-                # if fb:  # if we get feedback, we expect the standard action msg definition
-                #    self.update_state(state='FEEDBACK',
-                #    meta={'header': fb.header, 'status': fb.status,
-                #       'feedback': fb.feedback})
-
-                time.sleep(feedback_time)
-
-            if self.is_aborted():
-
-                res = cancel_action(action_name, goalID)
-                #goalID ??
+        polling_period = 2.0
+        while not self.is_aborted() and (
+            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status') in [0, 1, 6, 7]
+        ):
+            # watch goal and feedback
+            #TODO : estimate progression ? what if multiple goals ?
+            res = self.app.ros_node_client.action_goal(action_name, goalID)
+            # if res had empty status action si finished => we need to break out
+            if not res.get('goal_status', {}):
+                break
             else:
-                result = result_action(action_name)
-                print "result %r", result
-                return "{'header':" + result.header + ", 'status':" + result.status + ", 'feedback':" + result.feedback + "}"
+                self.update_state(
+                    state='FEEDBACK',
+                    meta={'rostful_data': res,}
+                )
 
-        except rospy.ServiceException, e:
-            print "Service call failed: %s" % e
+                time.sleep(polling_period)
+
+        #detect action end and match celery status
+        if self.is_aborted() or (
+            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [4, 5, 8]
+        ):
+            #TODO : set state and info properly
+            return celery.states.FAILURE
+        elif (
+            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [2, 3]
+        ):
+            res = self.app.ros_node_client.action_result(action_name, goalID)
+            return res
+
+    return {}  # unhandled status ??
 
 
 @celery.task(bind=True, base=AbortableTask)

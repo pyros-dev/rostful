@@ -38,7 +38,7 @@ class FrontEnd(MethodView):
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
 
-    @login.login_required
+    #TMP @login.login_required
     def get(self, rosname=None):
         rospy.logwarn('in FrontEnd with rosname: %r', rosname)
         if not rosname:
@@ -96,6 +96,7 @@ class FrontEnd(MethodView):
 
 """
 Additional REST services provided by Rostful itself
+TMP : these should ideally be provided by a Ros node ( rostful-node )
 """
 class Rostful(restful.Resource):
     def __init__(self, ros_node):
@@ -151,7 +152,8 @@ class Rostful(restful.Resource):
 View for backend pages
 """
 
-
+#TODO : use rostfulnode instead of direct libraries
+#TODO : get worker name and send through celery to support multiple workers
 class BackEnd(restful.Resource):
     def __init__(self, ros_node):
         super(BackEnd, self).__init__()
