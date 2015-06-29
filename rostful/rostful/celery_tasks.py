@@ -87,7 +87,7 @@ def action(self, action_name, **kwargs):
     # use the task ID as a goal ID
     goalID = 'goal_' + str(self.request.id)
 
-    if not self.is_aborted():  # to make sure we didnt abort before it starts...
+    if not self.is_aborted():  # to make sure we didn't abort before it starts...
         res = self.app.ros_node_client.action_goal(action_name, goalID, **kwargs)
 
         # get full goalID
@@ -95,34 +95,35 @@ def action(self, action_name, **kwargs):
             goalID = res['goal_id']
 
         polling_period = 2.0
-        while not self.is_aborted() and (
-            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status') in [0, 1, 6, 7]
-        ):
+        while not self.is_aborted():
+
             # watch goal and feedback
             #TODO : estimate progression ? what if multiple goals ?
             res = self.app.ros_node_client.action_goal(action_name, goalID)
-            # if res had empty status action si finished => we need to break out
-            if not res.get('goal_status', {}):
-                break
-            else:
+
+            if res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status') in [0, 1, 6, 7]:
                 self.update_state(
                     state='FEEDBACK',
                     meta={'rostful_data': res,}
                 )
+            #detect action end and match celery status
+            elif res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [4, 5, 8]:
+                #TODO : set state and info properly
+                self.update_state(
+                    state=celery.states.FAILURE,
+                    meta={'rostful_data': res,}
+                )
+                return
+            elif res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [2, 3]:
+                res = self.app.ros_node_client.action_result(action_name, goalID)
+                self.update_state(
+                    state=celery.states.SUCCESS,
+                    meta={'rostful_data': res,}
+                )
 
-                time.sleep(polling_period)
 
-        #detect action end and match celery status
-        if self.is_aborted() or (
-            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [4, 5, 8]
-        ):
-            #TODO : set state and info properly
-            return celery.states.FAILURE
-        elif (
-            res and res.get('goal_status', {}) and res.get('goal_status', {}).get('status', {}) in [2, 3]
-        ):
-            res = self.app.ros_node_client.action_result(action_name, goalID)
-            return res
+            time.sleep(polling_period)
+        return res
 
     return {}  # unhandled status ??
 
