@@ -21,6 +21,10 @@ case $key in
     WORKER="-w"
     shift 1
     ;;
+    -t|--worker-tasks)
+    TASKS="$2"
+    shift 2
+    ;;
     __*)
     ROSARGS="${ROSARGS:+$ROSARGS }$key"
     #ros option
@@ -36,9 +40,10 @@ done
 
 HOST=${HOST:+"-h $HOST"}
 PORT=${PORT:+"-p $PORT"}
+TASKS=${TASKS:+"-t $TASKS"}
 ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
 set -x
 
-python -tt -m rostful flask ${HOST} ${PORT} ${WORKER} "${ROSARGS}"
+python -tt -m rostful flask ${HOST} ${PORT} ${WORKER} ${TASKS} "${ROSARGS}"
 

@@ -1,0 +1,105 @@
+#!/bin/bash
+# Uses a PID file to add daemon-like behavior to flower and beat
+# THIS IS ONLY FOR DEVELOPMENT. Celery has a daemon mode for production
+#######################################################################
+
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+#forcing the current working directory to our parent
+cd "$DIR"/..
+
+usage() {
+  echo "Usage: `basename $0` {start|stop|restart|force-stop|force-restart|status} " >&2
+}
+
+# At least one arguments is required.
+if [[ -z "${1}" ]]; then
+  usage
+  exit 127
+fi
+
+FLOWERPID=flower.pid
+# CAREFUL : this one is already is managed by beat
+BEATPID=beat.pid
+
+start() {
+  if [ ! -f $FLOWERPID ]; then
+    celery -A task_planner.celery_tasks flower & echo $! > $FLOWERPID
+  else
+    echo "flower already running. skipped."
+  fi
+  if [ ! -f $BEATPID ]; then
+    celery -A task_planner.celery_tasks beat --pidfile=$BEATPID &
+  else
+    echo "beat already running. skipped."
+  fi
+}
+
+status() {
+  if [ ! -f $FLOWERPID ]; then
+    echo "Flower is not running (missing $FLOWERPID)."
+  elif [ -e /proc/$(cat $FLOWERPID)/exe ]; then
+    echo "Flower is running (PID: $(cat $FLOWERPID))."
+  else
+    echo "Flower is not running (tested PID: $(cat $FLOWERPID))."
+    rm $FLOWERPID
+  fi
+
+  if [ ! -f $BEATPID ]; then
+    echo "Beat is not running (missing $BEATPID)."
+  elif [ -e /proc/$(cat $BEATPID)/exe ]; then
+    echo "Beat is running (PID: $(cat $BEATPID))."
+  else
+    echo "Beat is not running (tested PID: $(cat $BEATPID))."
+    rm $BEATPID
+  fi
+
+}
+
+stop() {
+  if [ ! -f $FLOWERPID ]; then
+    echo "Flower is not running (missing $FLOWERPID)."
+  elif [ -e /proc/$(cat $FLOWERPID)/exe ]; then
+    kill $1 $(cat $FLOWERPID)
+    rm $FLOWERPID
+  else
+    echo "Flower is not running (tested PID: $(cat $FLOWERPID))."
+    rm $FLOWERPID
+  fi
+
+  if [ ! -f $BEATPID ]; then
+    echo "Beat is not running (missing $BEATPID)."
+  elif [ -e /proc/$(cat $BEATPID)/exe ]; then
+    kill $1 $(cat $BEATPID)
+    # BEATPID file should be deleted by celerybeat itself.
+  else
+    echo "Beat is not running (tested PID: $(cat $BEATPID))."
+    rm $BEATPID
+  fi
+}
+
+case "$1" in
+  start)
+        start;
+        ;;
+  restart)
+        stop; sleep 1; start;
+        ;;
+  stop)
+        stop
+        ;;
+  force-stop)
+        stop -9
+        ;;
+  force-restart)
+        stop -9; sleep 1; start;
+        ;;
+  status)
+        status
+        ;;
+  *)
+    usage
+    exit 127
+    ;;
+esac
+

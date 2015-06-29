@@ -17,37 +17,6 @@ _logger = get_task_logger(__name__)
 #import required ros modules
 from rostful_node import RostfulNode
 
-class ActionNotFound(Exception):
-    pass
-
-@celery.task(bind=True)
-@single_instance
-def add_together(a, b):
-    _logger.info("Sleeping 7s")
-    time.sleep(7)
-    _logger.info("Adding %s + %s" % (a, b))
-    return a + b
-
-@celery.task(bind=True)
-def long_task(self):
-    """Background task that runs a long function with progress reports."""
-    verb = ['Starting up', 'Booting', 'Repairing', 'Loading', 'Checking']
-    adjective = ['master', 'radiant', 'silent', 'harmonic', 'fast']
-    noun = ['solar array', 'particle reshaper', 'cosmic ray', 'orbiter', 'bit']
-    message = ''
-    total = random.randint(10, 50)
-    for i in range(total):
-        if not message or random.random() < 0.25:
-            message = '{0} {1} {2}...'.format(random.choice(verb),
-                                              random.choice(adjective),
-                                              random.choice(noun))
-        self.update_state(state='PROGRESS',
-                          meta={'current': i, 'total': total,
-                                'status': message})
-        time.sleep(1)
-    return {'current': 100, 'total': 100, 'status': 'Task completed! from rostful celery_worker package', 'result': 42}
-
-
 import inspect
 
 import unicodedata
@@ -60,6 +29,7 @@ import rospy
 import rostful_node
 from importlib import import_module
 
+# TODO : we should probably move these to rostful-node as shared tasks...
 @celery.task(bind=True)
 def topic_inject(self, topic_name, **kwargs):
     res = self.app.ros_node_client.inject(topic_name, **kwargs)
@@ -78,6 +48,7 @@ def service(self, service_name, **kwargs):
 
 @celery.task(bind=True, base=AbortableTask)
 def action(self, action_name, **kwargs):
+#TODO : fix this, somehow... we should probably use the actionlib Client somwhere...
 
     #interfacing celery task with ros action. both are supposed to represent a long running async job.
 
@@ -129,12 +100,12 @@ def action(self, action_name, **kwargs):
 
 
 @celery.task(bind=True, base=AbortableTask)
-def rocon_app(self, rapp_name, input_data):
+def rocon_app(self, rapp_name, **kwargs):
 
     rospy.wait_for_service('~start_rapp')
     try:
         call_service = rospy.ServiceProxy('~start_rapp', rostful_node.srv.StartRapp)
-        res_data = call_service(rapp_name, input_data)
+        res_data = call_service(rapp_name, **kwargs)
         if res_data.started:
 
 

@@ -26,7 +26,7 @@ from celery.bin import Option
 
 from . import db_models
 from .db_models import db
-from .flask_views import FrontEnd, BackEnd, Rostful
+from .flask_views import FrontEnd, BackEnd, Rostful, Scheduler
 from .worker import RosArgs
 from .celery_tasks import celery
 
@@ -75,6 +75,7 @@ class Server(object):
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
+        scheduler = Scheduler.as_view('scheduler', self.ros_node)
 
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
 
@@ -84,21 +85,28 @@ class Server(object):
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
 
-        #TMP
+        #REST Interface with scheduler
+        self.app.add_url_rule('/schedule/<path:date>', 'scheduler', view_func=scheduler, methods=['GET', 'POST'])
+
+        #TMP -> replace by using rosapi
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
 
         self.api = restful.Api(self.app)
 
 
-    def launch_flask(self, host, port, enable_worker, ros_args):
+    def launch_flask(self, host, port, enable_worker, tasks, ros_args):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
          with rostful_node.RostfulCtx(argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
 
-             # Celery needs rostfulNode running, but usesit via ros, and not python(not working interprocess)
+             # importing extra tasks
+             if tasks != '':
+                self.celery.conf.update({'CELERY_IMPORTS': tasks})
+
+             # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
              if enable_worker:
                  import threading
                  # TODO : investigate a simpler way to start the (unique) worker asynchronously ?
@@ -106,7 +114,7 @@ class Server(object):
                      target=rostful_server.celery.worker_main,
                      kwargs={'argv': [
                          'celery',
-                         #'--app=celery'
+                         #'--app=celery',
                          #'--config=celery_cfg.Development',
                          '--events',
                          '--loglevel=INFO',

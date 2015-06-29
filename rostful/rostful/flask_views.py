@@ -357,3 +357,23 @@ class BackEnd(restful.Resource):
         except Exception, e:
             rospy.logerr('An exception occurred! %s', e)
             return make_response(e, 500)
+
+#TODO
+class Scheduler(restful.Resource):
+    def __init__(self, ros_node):
+        super(BackEnd, self).__init__()
+        self.ros_if = ros_node.ros_if  #getting only ros_if for now (TMP).
+
+    def get(self, rosname):
+        try:
+            pass
+        except Exception, e:
+            rospy.logerr('An exception occurred! %s', e)
+            return make_response(e, 500)
+
+    def post(self, rosname):
+        try:
+            pass
+        except Exception, e:
+            rospy.logerr('An exception occurred! %s', e)
+            return make_response(e, 500)

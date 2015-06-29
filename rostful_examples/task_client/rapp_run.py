@@ -12,10 +12,12 @@ import random
 
 if __name__ == '__main__':
 
-    result = rostful_celery_tasks.rocon_app.apply_async((
-        '/gocart/gopher_rapps/delivery',
-        '{ "data": 5}'
-    ))
+    result = rostful_celery_tasks.rocon_app.apply_async(
+        args=['/gocart/gopher_rapps/delivery'],
+        kwargs={
+            "data": 5
+        }
+    )
 
     # while result.state != 'FAILURE' and result.state != 'SUCCESS':
     #     time.sleep(1)
