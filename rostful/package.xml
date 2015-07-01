@@ -10,7 +10,7 @@
   <url type="repository">https://github.com/asmodehn/rostful</url>
   <url type="bugtracker">https://github.com/asmodehn/rostful/issues</url>
 
-  <author>Ben Kehoe</author>
+  <author email="benkehoe@somewhere.net">Ben Kehoe</author>
   <maintainer email="asmodehn@gmail.com">AlexV</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
