@@ -1,6 +1,6 @@
 <package>
   <name>rostful</name>
-  <version>0.0.2</version>
+  <version>0.0.4</version>
   <description>
       REST API for ROS
   </description>

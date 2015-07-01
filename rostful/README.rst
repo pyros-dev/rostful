@@ -19,5 +19,9 @@ roslaunch rostful rostful.launch
 
 so that users from both world can use it efficiently.
 
+TODO
+====
 
+Because of the many python dependencies that may not be suitable/possible to expose via rosdep, this package should slowly become a pure python package.
+Rostful-node will be the package handling the transition from ros world to python world.
 
