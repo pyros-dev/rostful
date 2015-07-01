@@ -5,4 +5,5 @@ Change history
 -----
 Converted to Catkin
 Migrated from raw python to Flask
+Added Celery Support for async tasks
 Experimental Rocon support
