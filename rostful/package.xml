@@ -1,6 +1,6 @@
 <package>
   <name>rostful</name>
-  <version>0.0.4</version>
+  <version>0.0.7</version>
   <description>
       REST API for ROS
   </description>
@@ -19,6 +19,7 @@
   <build_depend>driver_base</build_depend>
   <build_depend>roslint</build_depend>
   <build_depend>python-flask</build_depend>
+  <build_depend>actionlib_msgs</build_depend>
   <!-- gunicorn -->
   <build_depend>rospy</build_depend>
 

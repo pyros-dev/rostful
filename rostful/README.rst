@@ -25,3 +25,23 @@ TODO
 Because of the many python dependencies that may not be suitable/possible to expose via rosdep, this package should slowly become a pure python package.
 Rostful-node will be the package handling the transition from ros world to python world.
 
+
+PYTHON VIRTUALENV SETUP
+=======================
+
+How to setup your python virtual environment on Ubuntu (tested on Trusty 14.04)
+* Install and Setup virtualenvwrapper if needed
+```
+sudo apt-get install virtualenvwrapper
+echo "source /etc/bash_completion.d/virtualenvwrapper" >> ~/.bashrc
+```
+* Create your virtual environment for your project
+```
+mkvirtualenv myproject --no-site-packages
+workon myproject
+```
+* Populate it to use rostful. The catkin dependency is temporarily needed to be able to use the setup.py currently provided in rostful.
+```
+pip install catkin-pkg rostful
+```
+

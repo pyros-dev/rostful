@@ -8,6 +8,9 @@ setup_args = generate_distutils_setup(
     packages=[
         'rostful',
     ],
+    install_requires=[
+        'rostful_node'
+    ]
 )
 
 setup(**setup_args)

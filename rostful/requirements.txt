@@ -26,5 +26,6 @@ pytz==2015.4
 redis==2.10.3
 six==1.9.0
 tornado==4.2
+catkin-pkg
 
 -e .
