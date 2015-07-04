@@ -30,7 +30,7 @@ import urllib
 """
 View for frontend pages
 """
-
+# TODO: maybe consider http://www.flaskapi.org/
 
 class FrontEnd(MethodView):
     def __init__(self, ros_node):
