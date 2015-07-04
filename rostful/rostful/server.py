@@ -95,7 +95,7 @@ class Server(object):
         self.api = restful.Api(self.app)
 
 
-    def launch_flask(self, host, port, enable_worker, tasks, ros_args):
+    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', ros_args=''):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
@@ -107,7 +107,7 @@ class Server(object):
                 self.celery.conf.update({'CELERY_IMPORTS': tasks})
 
              # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
-             if enable_worker:
+             if broker_url != '':  # we activate celery only if the broker address has been passed as argument.
                  import threading
                  # TODO : investigate a simpler way to start the (unique) worker asynchronously ?
                  rostful_server.celery_worker = threading.Thread(
@@ -118,7 +118,7 @@ class Server(object):
                          #'--config=celery_cfg.Development',
                          '--events',
                          '--loglevel=INFO',
-                         #'--broker=' + celery_cfg.Development.CELERY_BROKER_URL,
+                         '--broker=' + broker_url,
                          '--concurrency=1',
                          '--autoreload',  # not working ??
                          #'--ros_args=' + ros_args
@@ -134,10 +134,15 @@ class Server(object):
                  file_handler.setLevel(logging.INFO)
                  rostful_server.app.logger.addHandler(file_handler)
 
-             rostful_server.app.logger.info('Starting Flask server on port %d', port)
-             # debug is needed to investigate server errors.
-             # use_reloader set to False => killing the ros node also kills the server child.
-             rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+             try:
+                 rostful_server.app.logger.info('Starting Flask server on port %d', port)
+                 # debug is needed to investigate server errors.
+                 # use_reloader set to False => killing the ros node also kills the server child.
+                 rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+             except Exception, e:
+                 print e
+                 #TODO: if port = default value, catch the "port already in use" exception and increment port number, and try again
+
 
 # Creating THE only instance of Server.
 rostful_server = Server()

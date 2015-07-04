@@ -12,7 +12,7 @@ class Default(object):
     # using flask instance directory
     SQLALCHEMY_DATABASE_URI = 'sqlite:///' + os.path.join(basedir, '..', 'instance', 'rostful_auth.db')
 
-
+    # NOTE : useful only for sending task. worker get URL from cmd line args
     REDIS_URL = 'redis://localhost:6379'
     CELERY_BROKER_URL = REDIS_URL
     CELERY_RESULT_BACKEND = REDIS_URL

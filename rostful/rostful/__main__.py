@@ -64,10 +64,10 @@ from flask_script import Command
 @manager.command
 @manager.option('-h', '--host', dest='host', default='')
 @manager.option('-p', '--port', type=int, dest='port', default=8080)
-@manager.option('-w', '--worker-enabled', action='store_true', dest='worker_enabled')
-@manager.option('-t', '--worker-tasks', dest='tasks')
+@manager.option('-b', '--broker-url', dest='broker_url', default='')  # by default use config module value
+@manager.option('-t', '--worker-tasks', dest='tasks', default='')  # by default use config module value
 @manager.option('-r', '--ros_args', dest='ros_args', default='')
-def flask(host='', port=8080, worker_enabled=True, tasks='', ros_args=''):
+def flask(host='', port=8080, broker_url='', tasks='', ros_args=''):
 
     #type=int doesnt see to work
     if isinstance(port, basestring):
@@ -79,7 +79,7 @@ def flask(host='', port=8080, worker_enabled=True, tasks='', ros_args=''):
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch_flask(host, port, worker_enabled, tasks, ros_args.split())
+    rostful_server.launch_flask(host, port, broker_url, tasks, ros_args.split())
 
 
 
