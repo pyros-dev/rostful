@@ -134,14 +134,20 @@ class Server(object):
                  file_handler.setLevel(logging.INFO)
                  rostful_server.app.logger.addHandler(file_handler)
 
-             try:
-                 rostful_server.app.logger.info('Starting Flask server on port %d', port)
-                 # debug is needed to investigate server errors.
-                 # use_reloader set to False => killing the ros node also kills the server child.
-                 rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
-             except Exception, e:
-                 print e
-                 #TODO: if port = default value, catch the "port already in use" exception and increment port number, and try again
+             import socket  # just to catch the "Address already in use error"
+             port_retries = 5
+             while port_retries > 0:  # keep trying
+                 try:
+                     rostful_server.app.logger.info('Starting Flask server on port %d', port)
+                     # debug is needed to investigate server errors.
+                     # use_reloader set to False => killing the ros node also kills the server child.
+                     rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+                     break
+                 except socket.error, msg:
+                     port_retries -= 1
+                     port += 1
+                     rostful_server.app.logger.error('Socker Error : {0}'.format(msg))
+                     #TODO: if port = default value, catch the "port already in use" exception and increment port number, and try again
 
 
 # Creating THE only instance of Server.
