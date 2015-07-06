@@ -102,6 +102,13 @@ class Server(object):
          with rostful_node.RostfulCtx(argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
 
+             # changing broker
+             if broker_url != '':
+                self.celery.conf.update({
+                    'CELERY_BROKER_URL': broker_url,
+                    'CELERY_RESULT_BACKEND': broker_url,
+                })
+
              # importing extra tasks
              if tasks != '':
                 self.celery.conf.update({'CELERY_IMPORTS': tasks})

@@ -59,7 +59,7 @@ def init():
 
 
 from flask_script import Command
-# little bit buggy... how about click ?? check https://github.com/smurfix/flask-script/issues/97
+# TODO : little bit buggy... how about click ?? check https://github.com/smurfix/flask-script/issues/97
 
 @manager.command
 @manager.option('-h', '--host', dest='host', default='')
