@@ -65,21 +65,22 @@ from flask_script import Command
 @manager.option('-h', '--host', dest='host', default='')
 @manager.option('-p', '--port', type=int, dest='port', default=8080)
 @manager.option('-b', '--broker-url', dest='broker_url', default='')  # by default use config module value
+#@manager.option('--no-worker', dest='no_worker', action='store_true', required=False)
 @manager.option('-t', '--worker-tasks', dest='tasks', default='')  # by default use config module value
 @manager.option('-r', '--ros_args', dest='ros_args', default='')
-def flask(host='', port=8080, broker_url='', tasks='', ros_args=''):
+def flask(host='', port=8080, broker_url='', no_worker=False, tasks='', ros_args=''):
 
     #type=int doesnt see to work
     if isinstance(port, basestring):
         port = int(port)
 
     rostful_server.app.logger.info('host %r port %r', host, port)
-    rostful_server.app.logger.info('tasks %r', tasks)
+    rostful_server.app.logger.info('boker %r worker %r tasks %r', broker_url, not no_worker, tasks)
     rostful_server.app.logger.info('ros_args %r', ros_args)
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch_flask(host, port, broker_url, tasks, ros_args.split())
+    rostful_server.launch_flask(host, port, broker_url, not no_worker, tasks, ros_args.split())
 
 
 

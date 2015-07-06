@@ -95,7 +95,7 @@ class Server(object):
         self.api = restful.Api(self.app)
 
 
-    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', ros_args=''):
+    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', worker=True, tasks='', ros_args=''):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
@@ -107,7 +107,7 @@ class Server(object):
                 self.celery.conf.update({'CELERY_IMPORTS': tasks})
 
              # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
-             if broker_url != '':  # we activate celery only if the broker address has been passed as argument.
+             if worker:
                  import threading
                  # TODO : investigate a simpler way to start the (unique) worker asynchronously ?
                  rostful_server.celery_worker = threading.Thread(

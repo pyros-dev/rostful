@@ -17,6 +17,10 @@ case $key in
     PORT="$2"
     shift 2
     ;;
+    --no-worker)
+    WORKER="--no_worker"
+    shift 1
+    ;;
     -b|--broker-url)
     BROKER="$2"
     shift 2
@@ -46,5 +50,5 @@ ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
 set -x
 
-python -tt -m rostful flask ${HOST} ${PORT} ${BROKER} ${TASKS} "${ROSARGS}"
+python -tt -m rostful flask ${HOST} ${PORT} ${BROKER} ${WORKER} ${TASKS} "${ROSARGS}"
 
