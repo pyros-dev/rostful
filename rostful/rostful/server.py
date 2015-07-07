@@ -108,7 +108,7 @@ class Server(object):
 
         #REST Backend
         #Careful Celery must be initialized before
-        self.api.add_resource(Scheduler, '/api/schedule/<path:rurl>', resource_class_args=(self.logger, self.celery), )
+        self.api.add_resource(Scheduler, '/api/schedule/<path:rurl>', resource_class_args=(self.logger, self.celery), methods=['GET','POST'] )
 
 
     def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', worker=True, ros_args=''):
