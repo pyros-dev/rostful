@@ -45,7 +45,7 @@ class Server(object):
         #TODO : flexible config by getting file from instance folder
         #TODO : flexible config by getting env var
 
-        #initializes DB
+        #initializes DB (needed here to allow migrations without launching flask server)
         db.init_app(self.app)
         self.db = db
 
@@ -56,17 +56,35 @@ class Server(object):
         # One of the simplest configurations. Exposes all resources matching /* to
         # CORS and allows the Content-Type header, which is necessary to POST JSON
         # cross origin.
-        self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='Content-Type')
+        self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='*')
+
+        # REST API extended to render exceptions as json
+        # https://gist.github.com/grampajoe/6529609
+        # http://www.wiredmonk.me/error-handling-and-logging-in-flask-restful.html
+        class Api(restful.Api):
+            def handle_error(self, e):
+                # Attach the exception to itself so Flask-Restful's error handler
+                # tries to render it.
+                if not hasattr(e, 'data'):  # TODO : fix/improve this
+                    e.data = e
+                return super(Api, self).handle_error(e)
+
+        # TMP not sure which one is best
+        self.api = restful.Api(self.app)
+        #self.api = Api(self.app)
 
         #Setup Flask-Celery
         # TODO : check SHARK http://sharq.io => how about double backend ? celery+flask or shark
         self.celery = celery
-        self.celery.init_app(self.app)
 
         #self.celery.user_options['worker'].add(
         #    Option("--ros_args", action="store", dest="ros_args", default=None, help="Activate support of rapps")
         #)
         #self.celery.steps['worker'].add(RosArgs)
+
+    @property
+    def logger(self):
+        return self.app.logger
 
     def _setup(self, ros_node, ros_node_client):
         self.ros_node = ros_node
@@ -75,7 +93,6 @@ class Server(object):
         rostfront = FrontEnd.as_view('frontend', self.ros_node)
         rostback = BackEnd.as_view('backend', self.ros_node)
         rostful = Rostful.as_view('rostful', self.ros_node)
-        scheduler = Scheduler.as_view('scheduler', self.ros_node)
 
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
 
@@ -85,33 +102,37 @@ class Server(object):
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
 
-        #REST Interface with scheduler
-        self.app.add_url_rule('/schedule/<path:date>', 'scheduler', view_func=scheduler, methods=['GET', 'POST'])
-
         #TMP -> replace by using rosapi
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
 
-        self.api = restful.Api(self.app)
+        #REST Backend
+        #Careful Celery must be initialized before
+        self.api.add_resource(Scheduler, '/api/schedule/<path:rurl>', resource_class_args=(self.logger, self.celery), )
 
 
-    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', worker=True, tasks='', ros_args=''):
+    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', worker=True, ros_args=''):
+
+         print host, port, broker_url, tasks, worker
+
+         # changing broker ( needed even without worker running here )
+         if broker_url != '':
+            self.app.config.update(
+                CELERY_BROKER_URL=broker_url,
+                CELERY_RESULT_BACKEND=broker_url,
+            )
+
+         # importing extra tasks ( needed even without worker running here )
+         if tasks != '':
+             self.app.config.update(CELERY_IMPORTS=tasks)
+
+         #finalizing celery instantiation with latest parameters
+         self.celery.init_app(self.app)
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
          with rostful_node.RostfulCtx(argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
-
-             # changing broker
-             if broker_url != '':
-                self.celery.conf.update({
-                    'CELERY_BROKER_URL': broker_url,
-                    'CELERY_RESULT_BACKEND': broker_url,
-                })
-
-             # importing extra tasks
-             if tasks != '':
-                self.celery.conf.update({'CELERY_IMPORTS': tasks})
 
              # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
              if worker:

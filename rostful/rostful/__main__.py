@@ -75,12 +75,12 @@ def flask(host='', port=8080, broker_url='', no_worker=False, tasks='', ros_args
         port = int(port)
 
     rostful_server.app.logger.info('host %r port %r', host, port)
-    rostful_server.app.logger.info('boker %r worker %r tasks %r', broker_url, not no_worker, tasks)
+    rostful_server.app.logger.info('boker %r tasks %r worker %r', broker_url, tasks, not no_worker)
     rostful_server.app.logger.info('ros_args %r', ros_args)
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch_flask(host, port, broker_url, not no_worker, tasks, ros_args.split())
+    rostful_server.launch_flask(host, port, broker_url, tasks, not no_worker, ros_args.split())
 
 
 

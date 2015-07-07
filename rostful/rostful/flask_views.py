@@ -25,6 +25,11 @@ from flask_restful import reqparse
 import flask_restful as restful
 import flask_login as login
 
+from webargs.flaskparser import FlaskParser, use_kwargs
+from webargs import Arg
+
+parser = FlaskParser()
+
 import urllib
 
 """
@@ -360,20 +365,84 @@ class BackEnd(restful.Resource):
 
 #TODO
 class Scheduler(restful.Resource):
-    def __init__(self, ros_node):
-        super(BackEnd, self).__init__()
-        self.ros_if = ros_node.ros_if  #getting only ros_if for now (TMP).
+    def __init__(self, logger, celery):
+        super(Scheduler, self).__init__()
+        self.logger = logger
+        self.celery = celery
+        self.celery.loader.import_default_modules()  # needed to get the CELERY_IMPORTS task in the registry
 
-    def get(self, rosname):
+
+    def get(self, rurl):
+        self.logger.info('GET on backend with rurl = %r', rurl)
         try:
+            rpath = rurl.split('/')
+            if rpath[0] == 'status':
+                #TODO : get task dynamically from celery set
+
+                task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].AsyncResult(rpath[1])  # rpath[1] should be the task_id
+                if task.state == 'PENDING':
+                    # job did not start yet
+                    response = {
+                        'state': task.state,
+                        'current': 0,
+                        'total': 1,
+                        'status': 'Pending...'
+                    }
+                elif task.state != 'FAILURE':
+
+                    response = {
+                        'state': task.state,
+                        'current': task.info.get('current', 0),
+                        'total': task.info.get('total', 1),
+                        'status': task.info.get('status', '')
+                    }
+                else:
+                    # something went wrong in the background job
+                    response = {
+                        'state': task.state,
+                        'current': 1,
+                        'total': 1,
+                        'status': str(task.info),  # this is the exception raised
+                    }
+                return jsonify(response)
+
+            else:
+                restful.abort(404, message="api {} doesnt exist".format(rpath[0]))
+
             pass
         except Exception, e:
             rospy.logerr('An exception occurred! %s', e)
             return make_response(e, 500)
 
-    def post(self, rosname):
+    def post(self, rurl):
         try:
-            pass
+            rpath = rurl.split('/')
+
+            if rpath[0] == 'delivery':
+                # TMP assume schedule/now
+
+                user_args = {
+                    'delivery_path': Arg({
+                        'place': Arg(str, required=True),
+                    }, multiple=True)
+                }
+
+                delivery_path = parser.parse(user_args, request, locations=('json', 'form'))
+
+                #useful to debug parameters send with the request
+                #json = request.get_json()
+                #return jsonify({key: json[key] for key in json})
+
+                self.logger.info('data : %r', delivery_path)
+
+                if 'gopher_rocon.celery_tasks.delivery_rapp' in self.celery.tasks.keys():
+                    task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].apply_async(kwargs=delivery_path)
+                    # using status_url to workaround CORS header Location not being accessible from jquery
+                    return {'status_url': 'http://localhost:8080/api/schedule/status/' + task.id}, 202, {'Location': 'http://localhost:8080/api/schedule/status/' + task.id}  # url_for ?
+                else:
+                    return {}, 404
+
         except Exception, e:
-            rospy.logerr('An exception occurred! %s', e)
+            self.logger.info('Exception on schedule with rurl = %r', rurl)
             return make_response(e, 500)
+

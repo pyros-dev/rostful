@@ -20,6 +20,8 @@ class Default(object):
     CELERY_TASK_SERIALIZER = 'json'
     CELERY_RESULT_SERIALIZER = 'json'
 
+    CELERY_IMPORTS='gopher_rocon.celery_tasks'
+
 
 class Development(Default):
     DEBUG = True
