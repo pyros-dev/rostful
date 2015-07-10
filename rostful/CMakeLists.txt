@@ -23,6 +23,18 @@ file(GLOB_RECURSE ${PROJECT_NAME}_PY_SRCS
 roslint_python(${${PROJECT_NAME}_PY_SCRIPTS}
                ${${PROJECT_NAME}_PY_SRCS})
 
+install(DIRECTORY migrations/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/migrations
+)
+
+install(DIRECTORY interactions/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/interactions
+)
+
+install(DIRECTORY launch/
+  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
+)
+
 ## Unit tests
 if (CATKIN_ENABLE_TESTING)
   add_subdirectory(tests)
