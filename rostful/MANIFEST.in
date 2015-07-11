@@ -1,5 +1,4 @@
 include requirements.txt
-include constraints.txt
 include package.xml
 recursive-include rostful/static *
 recursive-include rostful/templates *
