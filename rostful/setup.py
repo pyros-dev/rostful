@@ -18,6 +18,7 @@ setup_args = generate_distutils_setup(
     # include_package_data=True,
     package_data={
         'rostful': [
+            'static/js/moment/*',
             'static/js/jquery/*',
             'static/js/jquery-mobile/*',
             'static/js/jquery-mobile/images/*',

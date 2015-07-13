@@ -364,7 +364,7 @@ class BackEnd(restful.Resource):
             return make_response(e, 500)
 
 import datetime
-import pytz
+import aniso8601  # using this since it s already in our dependencies
 class Scheduler(restful.Resource):
     def __init__(self, logger, celery):
         super(Scheduler, self).__init__()
@@ -426,12 +426,7 @@ class Scheduler(restful.Resource):
                     'delivery_path': Arg({
                         'place': Arg(str, required=True),
                     }, multiple=True),
-                    'eta': Arg({
-                        'hour': Arg(int, default=0),
-                        'minute': Arg(int, default=0),
-                        'second': Arg(int, default=0),
-                        # 'timezone': Arg(),
-                    })
+                    'eta': Arg(str, default='')  # expecting a ISO-8601 string
                 }
 
                 delivery_data = parser.parse(user_args, request, locations=('json', 'form'))
@@ -443,23 +438,12 @@ class Scheduler(restful.Resource):
                 self.logger.info('data : %r', delivery_data)
 
                 if 'gopher_rocon.celery_tasks.delivery_rapp' in self.celery.tasks.keys():
-                    dt = datetime.datetime.now()
-                    if 'eta' in delivery_data.keys():
-                        dt = datetime.datetime.today().replace(
-                            hour=delivery_data['eta'].get('hour', 0),
-                            minute=delivery_data['eta'].get('minute', 0),
-                            second=delivery_data['eta'].get('second', 0)
-                        )
-                        #hardcoding timezone
-                        dt = pytz.timezone('Asia/Seoul').localize(dt)
-                        # TODO : find the timezone from system ? from param ?
-                        #celery uses UTC by default : we need to convert
-                        dt = dt.astimezone(pytz.timezone('UTC'))
+                    dt = aniso8601.parse_datetime(delivery_data['eta'])
 
                     task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].apply_async(kwargs=delivery_data, eta=dt)
                     # using status_url to workaround CORS header Location not being accessible from js
                     #TODO : fix this
-                    return {'status_url': 'http://localhost:8080/api/schedule/status/' + task.id}, 202, {'Location': 'http://localhost:8080/api/schedule/status/' + task.id}  # url_for ?
+                    return {'broker_url': task.backend.url, 'status_url': 'http://localhost:8080/api/schedule/status/' + task.id}, 202, {'Location': 'http://localhost:8080/api/schedule/status/' + task.id}  # url_for ?
                 else:
                     return {}, 404
 
