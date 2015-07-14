@@ -381,29 +381,18 @@ class Scheduler(restful.Resource):
                 #TODO : get task dynamically from celery set
 
                 task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].AsyncResult(rpath[1])  # rpath[1] should be the task_id
-                if task.state == 'PENDING':
+                self.logger.info('TASK content = %r', task)
+                if task.state == 'SUCCESS':
                     # job did not start yet
                     response = {
                         'state': task.state,
-                        'current': 0,
-                        'total': 1,
-                        'status': 'Pending...'
-                    }
-                elif task.state != 'FAILURE':
-
-                    response = {
-                        'state': task.state,
-                        'current': task.info.get('current', 0),
-                        'total': task.info.get('total', 1),
-                        'status': task.info.get('status', '')
+                        'result': task.result,
                     }
                 else:
                     # something went wrong in the background job
                     response = {
                         'state': task.state,
-                        'current': 1,
-                        'total': 1,
-                        'status': str(task.info),  # this is the exception raised
+                        'info': task.info,  # this is the exception raised if FAILURE
                     }
                 return jsonify(response)
 
