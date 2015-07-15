@@ -195,14 +195,19 @@ class BackEnd(restful.Resource):
 
         if not suffix:
             if not self.ros_if.topics.has_key(path):
-                for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
-                    action_name = path[:-(len(action_suffix) + 1)]
-                    if path.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
-                        action = self.ros_if.actions[action_name]
-                        msg = action.get(action_suffix)
-                        break
+                if self.ros_if.services.has_key(path):
+                    service = self.ros_if.services[path]
+
+                    msg = service.call()
                 else:
-                    return make_response('', 404)
+                    for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
+                        action_name = path[:-(len(action_suffix) + 1)]
+                        if path.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
+                            action = self.ros_if.actions[action_name]
+                            msg = action.get(action_suffix)
+                            break
+                    else:
+                        return make_response('', 404)
             else:
                 topic = self.ros_if.topics[path]
 
