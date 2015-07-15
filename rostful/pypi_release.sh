@@ -2,7 +2,7 @@
 
 #TODO : find ~/.pypirc and extract repository
 if [ $# -lt 1 ]; then
-    echo "Usage : $0 <pypi|pypitest>"
+    echo "Usage : $0 <pypi|testpypi>"
     exit 127
 fi
 

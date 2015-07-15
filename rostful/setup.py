@@ -43,12 +43,14 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
         # this is better than using package data ( since behavior is a bit different from distutils... )
         include_package_data=True,  # use MANIFEST.in during install.
         install_requires=[
-            'Rostful-node',
-            'Flask',
+            'rostful_node',
+            'Flask==0.10.1',
             'Flask-Celery-Helper',
-            'Flask-Cors',
+            'Flask-Cors==2.0.1',
             'Flask-Script',
+            'Flask-Security==1.7.4',
             'Flask-Restful',
+            'Flask-SQLAlchemy==2.0',
         ],
         zip_safe=False,  # TODO testing...
     )
