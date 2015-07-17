@@ -40,5 +40,6 @@ ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
 set -x
 
-celery flower ${BROKER} ${TASKS} "${ROSARGS}"
+# need to call python to use the flask-ext-catkin version accessible after  "source <devel|install>/setup.bash"
+python -tt -m flower ${BROKER} ${TASKS} "${ROSARGS}"
 

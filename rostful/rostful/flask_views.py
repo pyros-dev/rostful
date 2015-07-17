@@ -380,7 +380,7 @@ class Scheduler(restful.Resource):
             if rpath[0] == 'status':
                 #TODO : get task dynamically from celery set
 
-                task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].AsyncResult(rpath[1])  # rpath[1] should be the task_id
+                task = self.celery.tasks['gopher_rocon_bootstrap.celery_tasks.delivery_rapp'].AsyncResult(rpath[1])  # rpath[1] should be the task_id
                 self.logger.info('TASK content = %r', task)
                 if task.state == 'SUCCESS':
                     # job did not start yet
@@ -426,10 +426,10 @@ class Scheduler(restful.Resource):
 
                 self.logger.info('data : %r', delivery_data)
 
-                if 'gopher_rocon.celery_tasks.delivery_rapp' in self.celery.tasks.keys():
+                if 'gopher_rocon_bootstrap.celery_tasks.delivery_rapp' in self.celery.tasks.keys():
                     dt = aniso8601.parse_datetime(delivery_data['eta'])
 
-                    task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].apply_async(kwargs=delivery_data, eta=dt)
+                    task = self.celery.tasks['gopher_rocon_bootstrap.celery_tasks.delivery_rapp'].apply_async(kwargs=delivery_data, eta=dt)
                     # using status_url to workaround CORS header Location not being accessible from js
                     #TODO : fix this
                     return {'broker_url': task.backend.url, 'status_url': 'http://localhost:8080/api/schedule/status/' + task.id}, 202, {'Location': 'http://localhost:8080/api/schedule/status/' + task.id}  # url_for ?
