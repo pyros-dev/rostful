@@ -26,7 +26,7 @@ from celery.bin import Option
 
 from . import db_models
 from .db_models import db
-from .flask_views import FrontEnd, BackEnd, Rostful, Scheduler
+from .flask_views import FrontEnd, BackEnd, Rostful
 from .worker import RosArgs
 from .celery_tasks import celery
 
@@ -105,11 +105,6 @@ class Server(object):
         #TMP -> replace by using rosapi
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
-
-        #REST Backend
-        #Careful Celery must be initialized before
-        #self.api.add_resource(Scheduler, '/api/schedule/<path:rurl>', resource_class_args=(self.logger, self.celery), methods=['GET','POST'] )
-        # TODO : remove this and use flower.
 
     def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', worker=True, ros_args=''):
 
