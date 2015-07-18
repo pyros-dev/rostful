@@ -12,6 +12,14 @@ while [[ $# > 0 ]]
 do
 key="$1"
 case $key in
+    --conf)
+    CONF="$2"
+    shift 2
+    ;;
+    --config)
+    CONFIG="$2"
+    shift 2
+    ;;
     -b|--broker-url)
     BROKER="$2"
     shift 2
@@ -33,7 +41,8 @@ case $key in
 esac
 done
 
-
+CONF=${CONF:+"--conf=$CONF"}
+CONFIG=${CONFIG:+"--config=$CONFIG"}
 BROKER=${BROKER:+"-b $BROKER"}
 TASKS=${TASKS:+"-A $TASKS"}
 ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
@@ -41,5 +50,5 @@ ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 set -x
 
 # need to call python to use the flask-ext-catkin version accessible after  "source <devel|install>/setup.bash"
-python -tt -m flower ${BROKER} ${TASKS} "${ROSARGS}"
+python -tt -m flower ${CONF} ${CONFIG} ${BROKER} ${TASKS} "${ROSARGS}"
 

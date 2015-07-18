@@ -397,7 +397,7 @@ class Scheduler(restful.Resource):
                     # something went wrong in the background job
                     response = {
                         'state': task.state,
-                        'info': task.info,  # this is the exception raised if FAILURE
+                        'result': task.info,  # this is the exception raised if FAILURE
                     }
                 return jsonify(response)
 
