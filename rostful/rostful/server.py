@@ -90,9 +90,9 @@ class Server(object):
         self.ros_node = ros_node
         self.celery.ros_node_client = ros_node_client
 
-        rostfront = FrontEnd.as_view('frontend', self.ros_node)
-        rostback = BackEnd.as_view('backend', self.ros_node)
-        rostful = Rostful.as_view('rostful', self.ros_node)
+        rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger)
+        rostback = BackEnd.as_view('backend', self.ros_node, self.logger)
+        rostful = Rostful.as_view('rostful', self.ros_node, self.logger)
 
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
 
