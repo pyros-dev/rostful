@@ -1,0 +1,12 @@
+<launch>
+  <!-- ******************************* Arguments ******************************* -->
+  <arg name="broker_url" default="redis://localhost:6379"/>
+  <arg name="worker_tasks" default="rostful.celery_tasks"/>
+  <arg name="conf" default="flowerconfig.py"/>
+  <arg name="config" default="celeryconfig.py"/>
+
+  <!-- flower server -->
+  <node pkg="rostful" name="flower" type="flower" args="--conf $(arg conf) --config $(arg config) --broker-url $(arg broker_url) --worker-tasks $(arg worker_tasks)">
+  </node>
+
+</launch>

@@ -38,16 +38,17 @@ View for frontend pages
 # TODO: maybe consider http://www.flaskapi.org/
 
 class FrontEnd(MethodView):
-    def __init__(self, ros_node):
+    def __init__(self, ros_node, logger):
         super(FrontEnd, self).__init__()
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
+        self.logger = logger
 
     #TMP @login.login_required
     def get(self, rosname=None):
-        rospy.logwarn('in FrontEnd with rosname: %r', rosname)
+        self.logger.warning('in FrontEnd with rosname: %r', rosname)
         if not rosname:
-            rospy.logwarn('%r', self.ros_if.topics)
+            self.logger.warning('%r', self.ros_if.topics)
             if self.rocon_if:
                 return render_template('index.html',
                                        pathname2url=urllib.pathname2url,
@@ -71,7 +72,7 @@ class FrontEnd(MethodView):
                 if result.result:
                     if interaction.name.startswith('web_app'):
                         iname = interaction.name[7:].strip("()")
-                        rospy.logwarn("Redirecting to WebApp at %r", iname)
+                        self.logger.warning("Redirecting to WebApp at %r", iname)
                         return render_template('interaction.html', interaction=interaction)
                         #return redirect(iname, code=302)
                     else:
@@ -104,14 +105,15 @@ Additional REST services provided by Rostful itself
 TMP : these should ideally be provided by a Ros node ( rostful-node )
 """
 class Rostful(restful.Resource):
-    def __init__(self, ros_node):
+    def __init__(self, ros_node, logger):
         super(Rostful, self).__init__()
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
+        self.logger = logger
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rostful_name=None):
-        rospy.logwarn('in Rostful with rostful_name: %r', rostful_name)
+        self.logger.warning('in Rostful with rostful_name: %r', rostful_name)
         if not rostful_name:
             return make_response(jsonify(name="Rostful",
                                          description="REST Services for ROS",
@@ -160,14 +162,15 @@ View for backend pages
 #TODO : use rostfulnode instead of direct libraries
 #TODO : get worker name and send through celery to support multiple workers
 class BackEnd(restful.Resource):
-    def __init__(self, ros_node):
+    def __init__(self, ros_node, logger):
         super(BackEnd, self).__init__()
         self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
+        self.logger = logger
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
 
-        rospy.logwarn('in BackEnd with rosname: %r', rosname)
+        self.logger.warning('in BackEnd with rosname: %r', rosname)
 
         parser = reqparse.RequestParser()
         parser.add_argument('full', type=bool)
@@ -195,14 +198,19 @@ class BackEnd(restful.Resource):
 
         if not suffix:
             if not self.ros_if.topics.has_key(path):
-                for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
-                    action_name = path[:-(len(action_suffix) + 1)]
-                    if path.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
-                        action = self.ros_if.actions[action_name]
-                        msg = action.get(action_suffix)
-                        break
+                if self.ros_if.services.has_key(path):
+                    service = self.ros_if.services[path]
+
+                    msg = service.call()
                 else:
-                    return make_response('', 404)
+                    for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
+                        action_name = path[:-(len(action_suffix) + 1)]
+                        if path.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
+                            action = self.ros_if.actions[action_name]
+                            msg = action.get(action_suffix)
+                            break
+                    else:
+                        return make_response('', 404)
             else:
                 topic = self.ros_if.topics[path]
 
@@ -211,7 +219,7 @@ class BackEnd(restful.Resource):
 
                 msg = topic.get()
 
-            rospy.logwarn('mimetypes : %s', request.accept_mimetypes)
+            self.logger.warning('mimetypes : %s', request.accept_mimetypes)
 
             if request_wants_ros(request):
                 content_type = ROS_MSG_MIMETYPE
@@ -220,7 +228,7 @@ class BackEnd(restful.Resource):
                     msg.serialize(output_data)
                 output_data = output_data.getvalue()
             else:  # we default to json
-                rospy.logwarn('sending back json')
+                self.logger.warning('sending back json')
                 content_type = 'application/json'
                 output_data = msgconv.extract_values(msg) if msg is not None else None
                 output_data = json.dumps(output_data)
@@ -293,7 +301,7 @@ class BackEnd(restful.Resource):
     def post(self, rosname):
 
         try:
-            rospy.logwarn('POST')
+            self.logger.warning('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
@@ -309,16 +317,16 @@ class BackEnd(restful.Resource):
                     return make_response('', 405)
                 input_msg_type = topic.rostype
             else:
-                rospy.logwarn('ACTION')
+                self.logger.warning('ACTION')
                 for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix) + 1)]
                     if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
                         mode = 'action'
                         action_mode = suffix
-                        rospy.logwarn('MODE:%r', action_mode)
+                        self.logger.warning('MODE:%r', action_mode)
                         action = self.ros_if.actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
-                        rospy.logwarn('input_msg_type:%r', input_msg_type)
+                        self.logger.warning('input_msg_type:%r', input_msg_type)
                         break
                 else:
                     return make_response('', 404)
@@ -326,7 +334,7 @@ class BackEnd(restful.Resource):
             input_data = request.environ['wsgi.input'].read(length)
 
             input_msg = input_msg_type()
-            rospy.logwarn('input_msg:%r', input_msg)
+            self.logger.warning('input_msg:%r', input_msg)
             if use_ros:
                 input_msg.deserialize(input_data)
             else:
@@ -336,14 +344,14 @@ class BackEnd(restful.Resource):
 
             ret_msg = None
             if mode == 'service':
-                rospy.logwarn('calling service %s with msg : %s', service.name, input_msg)
+                self.logger.warning('calling service %s with msg : %s', service.name, input_msg)
                 ret_msg = service.call(input_msg)
             elif mode == 'topic':
-                rospy.logwarn('publishing \n%s to topic %s', input_msg, topic.name)
+                self.logger.warning('publishing \n%s to topic %s', input_msg, topic.name)
                 topic.publish(input_msg)
                 return make_response('{}', 200)  # content_type='application/json')
             elif mode == 'action':
-                rospy.logwarn('publishing %s to action %s', input_msg, action.name)
+                self.logger.warning('publishing %s to action %s', input_msg, action.name)
                 action.publish(action_mode, input_msg)
                 return make_response('{}', 200)  # content_type='application/json')
 
@@ -360,110 +368,5 @@ class BackEnd(restful.Resource):
 
             return make_response(output_data, 200)  #, content_type=content_type)
         except Exception, e:
-            rospy.logerr('An exception occurred! %s', e)
+            self.logger.error('An exception occurred! %s', e)
             return make_response(e, 500)
-
-import datetime
-import pytz
-class Scheduler(restful.Resource):
-    def __init__(self, logger, celery):
-        super(Scheduler, self).__init__()
-        self.logger = logger
-        self.celery = celery
-        self.celery.loader.import_default_modules()  # needed to get the CELERY_IMPORTS task in the registry
-
-
-    def get(self, rurl):
-        self.logger.info('GET on backend with rurl = %r', rurl)
-        try:
-            rpath = rurl.split('/')
-            if rpath[0] == 'status':
-                #TODO : get task dynamically from celery set
-
-                task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].AsyncResult(rpath[1])  # rpath[1] should be the task_id
-                if task.state == 'PENDING':
-                    # job did not start yet
-                    response = {
-                        'state': task.state,
-                        'current': 0,
-                        'total': 1,
-                        'status': 'Pending...'
-                    }
-                elif task.state != 'FAILURE':
-
-                    response = {
-                        'state': task.state,
-                        'current': task.info.get('current', 0),
-                        'total': task.info.get('total', 1),
-                        'status': task.info.get('status', '')
-                    }
-                else:
-                    # something went wrong in the background job
-                    response = {
-                        'state': task.state,
-                        'current': 1,
-                        'total': 1,
-                        'status': str(task.info),  # this is the exception raised
-                    }
-                return jsonify(response)
-
-            else:
-                restful.abort(404, message="api {} doesnt exist".format(rpath[0]))
-
-            pass
-        except Exception, e:
-            rospy.logerr('An exception occurred! %s', e)
-            return make_response(e, 500)
-
-    def post(self, rurl):
-        try:
-            rpath = rurl.split('/')
-
-            if rpath[0] == 'delivery':
-                # TMP assume schedule/now
-
-                user_args = {
-                    'delivery_path': Arg({
-                        'place': Arg(str, required=True),
-                    }, multiple=True),
-                    'eta': Arg({
-                        'hour': Arg(int, default=0),
-                        'minute': Arg(int, default=0),
-                        'second': Arg(int, default=0),
-                        # 'timezone': Arg(),
-                    })
-                }
-
-                delivery_data = parser.parse(user_args, request, locations=('json', 'form'))
-
-                #useful to debug parameters send with the request
-                #json = request.get_json()
-                #return jsonify({key: json[key] for key in json})
-
-                self.logger.info('data : %r', delivery_data)
-
-                if 'gopher_rocon.celery_tasks.delivery_rapp' in self.celery.tasks.keys():
-                    dt = datetime.datetime.now()
-                    if 'eta' in delivery_data.keys():
-                        dt = datetime.datetime.today().replace(
-                            hour=delivery_data['eta'].get('hour', 0),
-                            minute=delivery_data['eta'].get('minute', 0),
-                            second=delivery_data['eta'].get('second', 0)
-                        )
-                        #hardcoding timezone
-                        dt = pytz.timezone('Asia/Seoul').localize(dt)
-                        # TODO : find the timezone from system ? from param ?
-                        #celery uses UTC by default : we need to convert
-                        dt = dt.astimezone(pytz.timezone('UTC'))
-
-                    task = self.celery.tasks['gopher_rocon.celery_tasks.delivery_rapp'].apply_async(kwargs=delivery_data, eta=dt)
-                    # using status_url to workaround CORS header Location not being accessible from js
-                    #TODO : fix this
-                    return {'status_url': 'http://localhost:8080/api/schedule/status/' + task.id}, 202, {'Location': 'http://localhost:8080/api/schedule/status/' + task.id}  # url_for ?
-                else:
-                    return {}, 404
-
-        except Exception, e:
-            self.logger.info('Exception on schedule with rurl = %r', rurl)
-            return make_response(e, 500)
-

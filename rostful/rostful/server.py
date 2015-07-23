@@ -26,7 +26,7 @@ from celery.bin import Option
 
 from . import db_models
 from .db_models import db
-from .flask_views import FrontEnd, BackEnd, Rostful, Scheduler
+from .flask_views import FrontEnd, BackEnd, Rostful
 from .worker import RosArgs
 from .celery_tasks import celery
 
@@ -90,9 +90,9 @@ class Server(object):
         self.ros_node = ros_node
         self.celery.ros_node_client = ros_node_client
 
-        rostfront = FrontEnd.as_view('frontend', self.ros_node)
-        rostback = BackEnd.as_view('backend', self.ros_node)
-        rostful = Rostful.as_view('rostful', self.ros_node)
+        rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger)
+        rostback = BackEnd.as_view('backend', self.ros_node, self.logger)
+        rostful = Rostful.as_view('rostful', self.ros_node, self.logger)
 
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
 
@@ -105,11 +105,6 @@ class Server(object):
         #TMP -> replace by using rosapi
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
-
-        #REST Backend
-        #Careful Celery must be initialized before
-        self.api.add_resource(Scheduler, '/api/schedule/<path:rurl>', resource_class_args=(self.logger, self.celery), methods=['GET','POST'] )
-
 
     def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', worker=True, ros_args=''):
 

@@ -52,7 +52,7 @@ $(document).on('pageinit', '#mainlayout', function(){
 
   <form action="" method=post data-ajax=false>
       {{ generate_inputs(topic.msgtype) }}
-      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit" value="POST NEW MSG">
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit{{topic.fullname|replace('/','_')}}" value="POST NEW MSG">
   </form>
   <pre id="post_request{{topic.fullname|replace('/','_')}}"></pre>
   <pre id="post_result{{topic.fullname|replace('/','_')}}"></pre>
