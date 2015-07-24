@@ -15,7 +15,7 @@ except Exception, e:
 
 from . import flask_cfg
 
-from flask import Flask, request, make_response, render_template, jsonify, redirect
+from flask import Flask, request, make_response, render_template, url_for, jsonify, redirect
 import flask_security as security
 import flask_cors as cors
 import flask_restful as restful
@@ -94,8 +94,8 @@ class Server(object):
         rostback = BackEnd.as_view('backend', self.ros_node, self.logger)
         rostful = Rostful.as_view('rostful', self.ros_node, self.logger)
 
+        # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
-
         self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
 
         #TODO : put everything under robot/worker name here ( so we can evolve to support multiple workers )
@@ -164,7 +164,13 @@ class Server(object):
                      rostful_server.app.logger.info('Starting Flask server on port %d', port)
                      # debug is needed to investigate server errors.
                      # use_reloader set to False => killing the ros node also kills the server child.
-                     rostful_server.app.run(host=host, port=port, debug=True, use_reloader=False)
+                     rostful_server.app.run(
+                         host=host,
+                         port=port,
+                         debug=True,
+                         use_reloader=False,
+                         threaded=True,  # addressing low performance issues
+                     )
                      break
                  except socket.error, msg:
                      port_retries -= 1
