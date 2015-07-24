@@ -17,6 +17,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
         ],
         package_data={
             'rostful': [
+                'static/favicon.ico',
                 'static/js/moment/*',
                 'static/js/jquery/*',
                 'static/js/jquery-mobile/*',
