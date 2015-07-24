@@ -15,7 +15,7 @@ from celery.utils.log import get_task_logger
 _logger = get_task_logger(__name__)
 
 #import required ros modules
-from rostful_node import RostfulNode
+from rostful_node import RostfulCtx
 
 import inspect
 
