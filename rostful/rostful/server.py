@@ -126,7 +126,7 @@ class Server(object):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
-         with rostful_node.RostfulCtx(argv=ros_args) as node_ctx:
+         with rostful_node.RostfulCtx(name='rostful', argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
 
              # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
