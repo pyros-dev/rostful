@@ -4,12 +4,10 @@ from __future__ import absolute_import
 from . import flask_cfg as rostful_cfg_flask
 
 from .server import rostful_server
-from . import celery_tasks as rostful_celery_tasks
 
 ### TODO This package also contains a Client
 
 __all__ = [
     'rostful_cfg_flask',
     'rostful_server',
-    'rostful_celery_tasks'
 ]

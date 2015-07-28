@@ -102,7 +102,7 @@ class FrontEnd(MethodView):
 
 """
 Additional REST services provided by Rostful itself
-TMP : these should ideally be provided by a Ros node ( rostful-node )
+TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
 """
 class Rostful(restful.Resource):
     def __init__(self, ros_node, logger):

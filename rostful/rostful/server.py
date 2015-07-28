@@ -20,15 +20,10 @@ import flask_security as security
 import flask_cors as cors
 import flask_restful as restful
 import flask_login as login
-import flask_celery as celery
-
-from celery.bin import Option
 
 from . import db_models
 from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
-from .worker import RosArgs
-from .celery_tasks import celery
 
 
 class Server(object):
@@ -73,22 +68,12 @@ class Server(object):
         self.api = restful.Api(self.app)
         #self.api = Api(self.app)
 
-        #Setup Flask-Celery
-        # TODO : check SHARK http://sharq.io => how about double backend ? celery+flask or shark
-        self.celery = celery
-
-        #self.celery.user_options['worker'].add(
-        #    Option("--ros_args", action="store", dest="ros_args", default=None, help="Activate support of rapps")
-        #)
-        #self.celery.steps['worker'].add(RosArgs)
-
     @property
     def logger(self):
         return self.app.logger
 
     def _setup(self, ros_node, ros_node_client):
         self.ros_node = ros_node
-        self.celery.ros_node_client = ros_node_client
 
         rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger)
         rostback = BackEnd.as_view('backend', self.ros_node, self.logger)
@@ -106,50 +91,14 @@ class Server(object):
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
 
-    def launch_flask(self, host='127.0.0.1', port=8080, broker_url='', tasks='', worker=True, ros_args=''):
+    def launch_flask(self, host='127.0.0.1', port=8080, ros_args=''):
 
-         print host, port, broker_url, tasks, worker
-
-         # changing broker ( needed even without worker running here )
-         if broker_url != '':
-            self.app.config.update(
-                CELERY_BROKER_URL=broker_url,
-                CELERY_RESULT_BACKEND=broker_url,
-            )
-
-         # importing extra tasks ( needed even without worker running here )
-         if tasks != '':
-             self.app.config.update(CELERY_IMPORTS=tasks)
-
-         #finalizing celery instantiation with latest parameters
-         self.celery.init_app(self.app)
+         print host, port
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
          with rostful_node.RostfulCtx(name='rostful', argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
-
-             # Celery needs rostfulNode running, and uses it via python via an interprocess Pipe interface
-             if worker:
-                 import threading
-                 # TODO : investigate a simpler way to start the (unique) worker asynchronously ?
-                 rostful_server.celery_worker = threading.Thread(
-                     target=rostful_server.celery.worker_main,
-                     kwargs={'argv': [
-                         'celery',
-                         #'--app=celery',
-                         #'--config=celery_cfg.Development',
-                         '--events',
-                         '--loglevel=INFO',
-                         '--broker=' + broker_url,
-                         '--concurrency=1',
-                         '--autoreload',  # not working ??
-                         #'--ros_args=' + ros_args
-                     ]}
-                 )
-                 rostful_server.celery_worker.start()
-                 #TODO : fix signal handling when running celery in another thread...
-
 
              # Adding a file logger if we are not in debug mode
              if not rostful_server.app.debug:
