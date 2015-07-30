@@ -28,6 +28,7 @@ $ wstool init src https://raw.githubusercontent.com/asmodehn/rostful/indigo-deve
 
 Install all dependencies:
 ```
+$ rosdep update
 $ rosdep install --from-paths src --ignore-src -y
 ```
 
