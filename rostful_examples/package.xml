@@ -30,6 +30,7 @@
   <!-- gunicorn -->
   <run_depend>rospy</run_depend>
   <run_depend>actionlib_msgs</run_depend>
+  <run_depend>turtlesim</run_depend>
 
   <!-- these dependencies are only for testing -->
   <run_depend>python-yaml</run_depend>

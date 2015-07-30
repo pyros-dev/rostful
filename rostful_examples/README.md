@@ -40,7 +40,7 @@ $ source devel/setup.bash
 
 ## Test :
 ```
-$ roslaunch rostful turtlesim.launch --screen
+$ roslaunch rostful turtlesim_dev.launch --screen
 ```
 
 Then use [Postman](https://chrome.google.com/webstore/detail/postman-rest-client/fdmmgilgnpjigdojojpjoooidkmcomcm?hl=en)/Chrome or [HTTPRequester](https://addons.mozilla.org/en-us/firefox/addon/httprequester/)/Firefox or any other REST client extension for your favorite browser to be able to manually send requests to the exposed ROS topics/services
