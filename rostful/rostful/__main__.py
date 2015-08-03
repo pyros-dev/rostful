@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import sys
+import click
 
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
@@ -58,15 +59,14 @@ def init():
     rostful_server.db.session.commit()
 
 
-from flask_script import Command
-# TODO : little bit buggy... how about click ?? check https://github.com/smurfix/flask-script/issues/97
 
+@click.command
+@click.option('-h', '--host', default='')
+@click.option('-p', '--port', default=8080)
+@click.option('-r', '--ros_args', default='')
 @manager.command
-@manager.option('-h', '--host', dest='host', default='')
-@manager.option('-p', '--port', type=int, dest='port', default=8080)
-@manager.option('-r', '--ros_args', dest='ros_args', default='')
 def flask(host='', port=8080, broker_url='', no_worker=False, tasks='', ros_args=''):
-
+    
     #type=int doesnt see to work
     if isinstance(port, basestring):
         port = int(port)
@@ -78,10 +78,8 @@ def flask(host='', port=8080, broker_url='', no_worker=False, tasks='', ros_args
     #Launch the server
     rostful_server.launch_flask(host, port, ros_args.split())
 
-
-
-
 ### TODO : This can be simplified when moving to gunicorn >= 19
+from flask_script import Command
 from gunicorn.app.base import Application
 
 class GunicornServer(Command):
