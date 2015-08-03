@@ -21,6 +21,10 @@ import flask_cors as cors
 import flask_restful as restful
 import flask_login as login
 
+from tornado.wsgi import WSGIContainer
+from tornado.httpserver import HTTPServer
+from tornado.ioloop import IOLoop
+
 from . import db_models
 from .db_models import db
 from .flask_views import FrontEnd, BackEnd, Rostful
@@ -91,7 +95,7 @@ class Server(object):
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
 
-    def launch_flask(self, host='127.0.0.1', port=8080, ros_args=''):
+    def launch(self, host='127.0.0.1', port=8080, ros_args='', serv_type='flask'):
 
          print host, port
 
@@ -110,21 +114,27 @@ class Server(object):
              port_retries = 5
              while port_retries > 0:  # keep trying
                  try:
-                     rostful_server.app.logger.info('Starting Flask server on port %d', port)
-                     # debug is needed to investigate server errors.
-                     # use_reloader set to False => killing the ros node also kills the server child.
-                     rostful_server.app.run(
-                         host=host,
-                         port=port,
-                         debug=True,
-                         use_reloader=False,
-                         threaded=True,  # addressing low performance issues
-                     )
+                     if serv_type == 'flask':
+                         rostful_server.app.logger.info('Starting Flask server on port %d', port)
+                         # debug is needed to investigate server errors.
+                         # use_reloader set to False => killing the ros node also kills the server child.
+                         rostful_server.app.run(
+                             host=host,
+                             port=port,
+                             debug=True,
+                             use_reloader=False,
+                             threaded=True,  # addressing low performance issues
+                         )
+                     elif serv_type == 'tornado':
+                         rostful_server.app.logger.info('Starting Tornado server on port %d', port)
+                         http_server = HTTPServer(WSGIContainer(self.app))
+                         http_server.listen(port)
+                         IOLoop.instance().start()
                      break
                  except socket.error, msg:
                      port_retries -= 1
                      port += 1
-                     rostful_server.app.logger.error('Socker Error : {0}'.format(msg))
+                     rostful_server.app.logger.error('Socket Error : {0}'.format(msg))
                      #TODO: if port = default value, catch the "port already in use" exception and increment port number, and try again
 
 
