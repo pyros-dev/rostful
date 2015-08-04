@@ -228,7 +228,7 @@ class BackEnd(restful.Resource):
                     msg.serialize(output_data)
                 output_data = output_data.getvalue()
             else:  # we default to json
-                self.logger.warning('sending back json')
+                # self.logger.warning('sending back json')
                 content_type = 'application/json'
                 output_data = msgconv.extract_values(msg) if msg is not None else None
                 output_data = json.dumps(output_data)
