@@ -5,6 +5,7 @@ from __future__ import absolute_import
 import os
 import sys
 import click
+import errno
 
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
@@ -68,50 +69,16 @@ def init():
 @click.option('-p', '--port', default=8000)
 @click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
 @click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
-@click.option('-b', '--broker')
-@click.option('-t', '--tasks')
-def run(host, port, server_type, ros_args, broker, tasks):
+def run(host, port, server_type, ros_args):
     if isinstance(port, basestring):
         port = int(port)
 
     rostful_server.app.logger.info('host %r port %r', host, port)
     rostful_server.app.logger.info('ros_args %r', ros_args)
-    
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
     rostful_server.launch(host, port, list(ros_args), server_type)
-        
-@cli.command()
-def test():
-    import rospy
-    # INIT NODE
-    rospy.init_node('rostful', anonymous=True, disable_signals=True)
-
-    def pubfun():
-        # TEST
-        import rospy, time, std_msgs.msg
-        testpub = rospy.Publisher('/foo', std_msgs.msg.String, queue_size=1)
-        time.sleep(1)
-        testpub.publish("testPUB")
-
-    import threading
-    t = threading.Thread(target=pubfun)
-    t.start()
-
-    def subfun():
-        # TEST
-        import rospy, time, std_msgs.msg
-        def cb(data):
-            print data
-
-        testsub = rospy.Subscriber('/foo', std_msgs.msg.String, callback=cb ,queue_size=1)
-        time.sleep(5)
-
-    import multiprocessing
-    p = multiprocessing.Process(target=subfun)
-    p.start()
-    p.join()
 
 if __name__ == '__main__':
     cli()
