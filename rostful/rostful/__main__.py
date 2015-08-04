@@ -4,6 +4,7 @@
 from __future__ import absolute_import
 import os
 import sys
+import click
 
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
@@ -15,24 +16,29 @@ else:
 import logging
 from logging.handlers import RotatingFileHandler
 
-from flask_migrate import Migrate, MigrateCommand
-from flask_script import Manager, Option
-
-#setup migrations
-#python flask.py db migrate
-#python flask.py db upgrade
+# setup migrations
+# python flask.py db migrate
+# python flask.py db upgrade
 # Need help ?
 #python flask.py db --help
 
-migrate = Migrate(rostful_server.app, rostful_server.db)
-manager = Manager(rostful_server.app)
+# TODO: use click to start the db migration (probably impossible)
+# from flask_migrate import Migrate, MigrateCommand
+# from flask_script import Manager
+# migrate = Migrate(rostful_server.app, rostful_server.db)
+# manager.add_command('db', MigrateCommand)
+
+
 #TODO : http://stackoverflow.com/questions/29872867/using-flask-migrate-with-flask-script-and-application-factory/29882346#29882346
 #manager.add_option("-c", "--config", dest="config_module", required=False)
-manager.add_command('db', MigrateCommand)
 
 #TODO : flexible config by command line param ???
 
-@manager.command
+@click.group()
+def cli():
+    pass
+
+@cli.command()
 def init():
     """
     Create useful configuration files and database on first install
@@ -57,101 +63,26 @@ def init():
     rostful_server.user_datastore.create_user(email='admin@yujin.net', password='adminpass')
     rostful_server.db.session.commit()
 
-
-from flask_script import Command
-# TODO : little bit buggy... how about click ?? check https://github.com/smurfix/flask-script/issues/97
-
-@manager.command
-@manager.option('-h', '--host', dest='host', default='')
-@manager.option('-p', '--port', type=int, dest='port', default=8080)
-@manager.option('-r', '--ros_args', dest='ros_args', default='')
-def flask(host='', port=8080, broker_url='', no_worker=False, tasks='', ros_args=''):
-
-    #type=int doesnt see to work
+@cli.command()
+@click.option('-h', '--host', default='')
+@click.option('-p', '--port', default=8000)
+@click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
+@click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
+@click.option('-b', '--broker')
+@click.option('-t', '--tasks')
+def run(host, port, server_type, ros_args, broker, tasks):
     if isinstance(port, basestring):
         port = int(port)
 
     rostful_server.app.logger.info('host %r port %r', host, port)
     rostful_server.app.logger.info('ros_args %r', ros_args)
+    
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch_flask(host, port, ros_args.split())
-
-
-
-
-### TODO : This can be simplified when moving to gunicorn >= 19
-from gunicorn.app.base import Application
-
-class GunicornServer(Command):
-
-    description = 'Run the app within Gunicorn'
-
-    def __init__(self, host='127.0.0.1', port=8000, workers=6):
-
-        self.port = port
-        self.host = host
-        self.workers = workers
-
-    def get_options(self):
-        return (
-            Option('-h', '--host',
-                   dest='host',
-                   default=self.host),
-
-            Option('-p', '--port',
-                   dest='port',
-                   type=int,
-                   default=self.port),
-
-            Option('-w', '--workers',
-                   dest='workers',
-                   type=int,
-                   default=self.workers),
-        )
-
-    def handle(self, app, *args, **kwargs):
-
-        host = kwargs['host']
-        port = kwargs['port']
-        workers = kwargs['workers']
-
-        def remove_non_gunicorn_command_line_args():
-            import sys
-            args_to_remove = ['--port','-p']
-            def args_filter(name_or_value):
-                keep = not args_to_remove.count(name_or_value)
-                if keep:
-                    previous = sys.argv[sys.argv.index(name_or_value) - 1]
-                    keep = not args_to_remove.count(previous)
-                return keep
-            sys.argv = filter(args_filter, sys.argv)
-
-        remove_non_gunicorn_command_line_args()
-
-        from gunicorn import version_info
-        if version_info < (0, 9, 0):
-            from gunicorn.arbiter import Arbiter
-            from gunicorn.config import Config
-            arbiter = Arbiter(Config({'bind': "%s:%d" % (host, int(port)),'workers': workers}), app)
-            arbiter.run()
-        else:
-            class FlaskApplication(Application):
-                def init(self, parser, opts, args):
-                    return {
-                        'bind': '{0}:{1}'.format(host, port),
-                        'workers': workers
-                    }
-
-                def load(self):
-                    return app
-
-            FlaskApplication().run()
-
-manager.add_command('gunicorn', GunicornServer())
-
-@manager.command
+    rostful_server.launch(host, port, list(ros_args), server_type)
+        
+@cli.command()
 def test():
     import rospy
     # INIT NODE
@@ -182,5 +113,5 @@ def test():
     p.start()
     p.join()
 
-#to be able to use Flask-Script directly on this package
-manager.run()
+if __name__ == '__main__':
+    cli()

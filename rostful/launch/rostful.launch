@@ -1,6 +1,7 @@
 <launch>
   <!-- ******************************* Arguments ******************************* -->
   <arg name="rostful_port" default="8080"/>
+  <arg name="rostful_server" default="tornado"/>
   <arg name="topics" default="['turtle1/pose']" />
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
@@ -13,7 +14,7 @@
   <!-- rostful dev server -->
   <!-- TODO : check if better option than a big group if just for one argument ? -->
   <group if="$(arg enable_worker)">
-    <node pkg="rostful" name="rostful" type="devserver" args="-p $(arg rostful_port) --broker-url $(arg broker_url) --worker-tasks $(arg worker_tasks)">
+    <node pkg="rostful" name="rostful" type="devserver" args="-p $(arg rostful_port) -s $(arg rostful_server) --broker-url $(arg broker_url) --worker-tasks $(arg worker_tasks)">
       <param name="topics" value="$(arg topics)" type="str" />
       <param name="services" value="$(arg services)" type="str" />
       <param name="actions" value="$(arg actions)" type="str" />
@@ -22,7 +23,7 @@
     </node>
   </group>
   <group unless="$(arg enable_worker)">
-    <node pkg="rostful" name="rostful" type="devserver" args="-p $(arg rostful_port) --broker-url $(arg broker_url) --worker-tasks $(arg worker_tasks) --no-worker">
+    <node pkg="rostful" name="rostful" type="devserver" args="-p $(arg rostful_port) -s $(arg rostful_server) --broker-url $(arg broker_url) --worker-tasks $(arg worker_tasks) --no-worker">
       <param name="topics" value="$(arg topics)" type="str" />
       <param name="services" value="$(arg services)" type="str" />
       <param name="actions" value="$(arg actions)" type="str" />
