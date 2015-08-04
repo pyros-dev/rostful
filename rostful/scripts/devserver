@@ -34,8 +34,8 @@ case $key in
     shift 2
     ;;
     __*)
-    ROSARGS="${ROSARGS:+$ROSARGS }$key"
-    #ros option
+    ROSARGS="${ROSARGS:+$ROSARGS} --ros-arg=$key"
+    #ros option (multiple)
     shift 1
     ;;
     *)
@@ -51,9 +51,8 @@ PORT=${PORT:+"-p $PORT"}
 SERVER=${SERVER:+"-s $SERVER"}
 BROKER=${BROKER:+"-b $BROKER"}
 TASKS=${TASKS:+"-t $TASKS"}
-ROSARGS=${ROSARGS:+"--ros_args=$ROSARGS"}
 
 set -x
 
-python -tt -m rostful run ${HOST} ${PORT} ${SERVER} ${BROKER} ${WORKER} ${TASKS} "${ROSARGS}"
+python -tt -m rostful run ${HOST} ${PORT} ${SERVER} ${BROKER} ${WORKER} ${TASKS} ${ROSARGS}
 

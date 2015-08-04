@@ -67,7 +67,7 @@ def init():
 @click.option('-h', '--host', default='')
 @click.option('-p', '--port', default=8000)
 @click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
-@click.option('-r', '--ros_args', default='')
+@click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
 @click.option('-b', '--broker')
 @click.option('-t', '--tasks')
 def run(host, port, server_type, ros_args, broker, tasks):
@@ -80,7 +80,7 @@ def run(host, port, server_type, ros_args, broker, tasks):
 
     #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
     #Launch the server
-    rostful_server.launch(host, port, ros_args.split(), server_type)
+    rostful_server.launch(host, port, list(ros_args), server_type)
         
 @cli.command()
 def test():
