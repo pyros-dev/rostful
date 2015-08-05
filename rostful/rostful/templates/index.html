@@ -14,7 +14,7 @@
 </script>
 
 </head>
-<body>
+<div>
 
 {% from 'macros.html' import navbar %}
 
@@ -87,6 +87,42 @@
   </div>
 </div>
 {% endif%}
+
+<div data-role="page" id="ros">
+  <div data-role="header" data-id="mainheader" data-add-back-btn="true">
+    <h1>ROS</h1>
+  </div>
+
+<p>Count numbers: <output id="result"></output></p>
+<button onclick="startWorker()">Start Worker</button>
+<button onclick="stopWorker()">Stop Worker</button>
+<br><br>
+
+  <script type=text/javascript>
+    var w;
+
+    function startWorker() {
+        if(typeof(Worker) !== "undefined") {
+            if(typeof(w) == "undefined") {
+                w = new Worker("{{ url_for('static', filename='js/rosworker.js') }}");
+            }
+            w.onmessage = function(event) {
+                document.getElementById("result").innerHTML = event.data;
+            };
+        } else {
+            document.getElementById("result").innerHTML = "Sorry! No Web Worker support.";
+        }
+    }
+
+    function stopWorker() {
+        w.terminate();
+        w = undefined;
+    }
+  </script>
+
+  <div data-role="footer" data-id="mainfooter" data-position="fixed">
+  </div>
+</div>
 
 </body>
 </html>
