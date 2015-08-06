@@ -172,6 +172,7 @@ class BackEnd(restful.Resource):
     def get(self, rosname):
         self.logger.warning('in BackEnd with rosname: %r', rosname)
 
+        # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()
         parser.add_argument('full', type=bool)
         parser.add_argument('json', type=bool)
