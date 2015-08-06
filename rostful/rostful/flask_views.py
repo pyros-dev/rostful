@@ -65,6 +65,7 @@ class FrontEnd(MethodView):
                                        actions=self.ros_if.actions)
 
         else:
+            rosname = '/' + rosname
             if self.rocon_if and self.rocon_if.interactions.has_key(rosname):
                 mode = 'interaction'
                 interaction = self.rocon_if.interactions[rosname]
@@ -169,7 +170,6 @@ class BackEnd(restful.Resource):
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
-
         self.logger.warning('in BackEnd with rosname: %r', rosname)
 
         parser = reqparse.RequestParser()
@@ -177,7 +177,7 @@ class BackEnd(restful.Resource):
         parser.add_argument('json', type=bool)
         args = parser.parse_args()
 
-        path = rosname
+        path = '/' + rosname
         full = args['full']
 
         json_suffix = '.json'
@@ -301,6 +301,7 @@ class BackEnd(restful.Resource):
     def post(self, rosname):
 
         try:
+            rosname = '/' + rosname
             self.logger.warning('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
