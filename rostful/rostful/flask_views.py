@@ -40,7 +40,7 @@ View for frontend pages
 # TODO: maybe consider http://www.flaskapi.org/
 
 class FrontEnd(MethodView):
-    def __init__(self, ros_node, logger):
+    def __init__(self, ros_node, logger, debug):
         super(FrontEnd, self).__init__()
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
@@ -108,7 +108,7 @@ Additional REST services provided by Rostful itself
 TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
 """
 class Rostful(restful.Resource):
-    def __init__(self, ros_node, logger):
+    def __init__(self, ros_node, logger, debug):
         super(Rostful, self).__init__()
         self.ros_if = ros_node.ros_if  # getting ros interface
         self.rocon_if = ros_node.rocon_if  # getting rocon interface
@@ -165,14 +165,15 @@ View for backend pages
 #TODO : use rostfulnode instead of direct libraries
 #TODO : get worker name and send through celery to support multiple workers
 class BackEnd(restful.Resource):
-    def __init__(self, ros_node, logger):
+    def __init__(self, ros_node, logger, debug):
         super(BackEnd, self).__init__()
         self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
         self.logger = logger
 
-        # add log handler for warnings and more to sys.stderr.
-        self.logger.addHandler(logging.StreamHandler())
-        self.logger.setLevel(logging.WARN)
+        #if not debug:
+            # add log handler for warnings and more to sys.stderr.
+        #    self.logger.addHandler(logging.StreamHandler())
+        #    self.logger.setLevel(logging.WARN)
 
         # adding file logging for everything to help debugging
         file_handler = logging.handlers.RotatingFileHandler('rostful_backend.log', maxBytes=10000, backupCount=1)

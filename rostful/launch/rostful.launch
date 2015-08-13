@@ -1,7 +1,7 @@
 <launch>
   <!-- ******************************* Arguments ******************************* -->
   <arg name="rostful_port" default="8080"/>
-  <arg name="rostful_server" default="flask"/>
+  <arg name="rostful_server" default="tornado"/>
   <arg name="topics" default="['turtle1/pose']" />
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />

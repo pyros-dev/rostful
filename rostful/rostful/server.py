@@ -24,6 +24,7 @@ import flask_login as login
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
+from tornado.log import enable_pretty_logging
 
 from . import db_models
 from .db_models import db
@@ -76,12 +77,12 @@ class Server(object):
     def logger(self):
         return self.app.logger
 
-    def _setup(self, ros_node, ros_node_client):
+    def _setup(self, ros_node, ros_node_client, debug=False):
         self.ros_node = ros_node
 
-        rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger)
-        rostback = BackEnd.as_view('backend', self.ros_node, self.logger)
-        rostful = Rostful.as_view('rostful', self.ros_node, self.logger)
+        rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger, debug)
+        rostback = BackEnd.as_view('backend', self.ros_node, self.logger, debug)
+        rostful = Rostful.as_view('rostful', self.ros_node, self.logger, debug)
 
         # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
@@ -102,7 +103,7 @@ class Server(object):
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
          with rostful_node.RostfulCtx(name='rostful', argv=ros_args) as node_ctx:
-             self._setup(node_ctx.node, node_ctx.client)
+             self._setup(node_ctx.node, node_ctx.client, False if serv_type == 'tornado' else True)
 
              import socket  # just to catch the "Address already in use error"
              port_retries = 5
@@ -120,6 +121,7 @@ class Server(object):
                          )
                      elif serv_type == 'tornado':
                          rostful_server.app.logger.info('Starting Tornado server on port %d', port)
+                         enable_pretty_logging()
                          http_server = HTTPServer(WSGIContainer(self.app))
                          http_server.listen(port)
                          IOLoop.instance().start()
