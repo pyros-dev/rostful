@@ -104,12 +104,6 @@ class Server(object):
          with rostful_node.RostfulCtx(name='rostful', argv=ros_args) as node_ctx:
              self._setup(node_ctx.node, node_ctx.client)
 
-             # Adding a file logger if we are not in debug mode
-             if not rostful_server.app.debug:
-                 file_handler = logging.RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
-                 file_handler.setLevel(logging.INFO)
-                 rostful_server.app.logger.addHandler(file_handler)
-
              import socket  # just to catch the "Address already in use error"
              port_retries = 5
              while port_retries > 0:  # keep trying
@@ -123,7 +117,6 @@ class Server(object):
                              port=port,
                              debug=True,
                              use_reloader=False,
-                             threaded=True,  # addressing low performance issues
                          )
                      elif serv_type == 'tornado':
                          rostful_server.app.logger.info('Starting Tornado server on port %d', port)

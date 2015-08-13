@@ -7,6 +7,8 @@ from rostful_node.ros_interface import get_suffix, CONFIG_PATH, SRV_PATH, MSG_PA
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy
 import json
+import logging
+import logging.handlers
 
 from StringIO import StringIO
 
@@ -46,9 +48,9 @@ class FrontEnd(MethodView):
 
     #TMP @login.login_required
     def get(self, rosname=None):
-        self.logger.warning('in FrontEnd with rosname: %r', rosname)
+        self.logger.debug('in FrontEnd with rosname: %r', rosname)
         if not rosname:
-            self.logger.warning('%r', self.ros_if.topics)
+            self.logger.debug('%r', self.ros_if.topics)
             if self.rocon_if:
                 return render_template('index.html',
                                        pathname2url=urllib.pathname2url,
@@ -73,7 +75,7 @@ class FrontEnd(MethodView):
                 if result.result:
                     if interaction.name.startswith('web_app'):
                         iname = interaction.name[7:].strip("()")
-                        self.logger.warning("Redirecting to WebApp at %r", iname)
+                        self.logger.debug("Redirecting to WebApp at %r", iname)
                         return render_template('interaction.html', interaction=interaction)
                         #return redirect(iname, code=302)
                     else:
@@ -114,7 +116,7 @@ class Rostful(restful.Resource):
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rostful_name=None):
-        self.logger.warning('in Rostful with rostful_name: %r', rostful_name)
+        self.logger.debug('in Rostful with rostful_name: %r', rostful_name)
         if not rostful_name:
             return make_response(jsonify(name="Rostful",
                                          description="REST Services for ROS",
@@ -168,9 +170,18 @@ class BackEnd(restful.Resource):
         self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
         self.logger = logger
 
+        # add log handler for warnings and more to sys.stderr.
+        self.logger.addHandler(logging.StreamHandler())
+        self.logger.setLevel(logging.WARN)
+
+        # adding file logging for everything to help debugging
+        file_handler = logging.handlers.RotatingFileHandler('rostful_backend.log', maxBytes=10000, backupCount=1)
+        file_handler.setLevel(logging.INFO)
+        self.logger.addHandler(file_handler)
+
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
-        self.logger.warning('in BackEnd with rosname: %r', rosname)
+        self.logger.debug('in BackEnd with rosname: %r', rosname)
 
         # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()
@@ -211,16 +222,18 @@ class BackEnd(restful.Resource):
                             msg = action.get(action_suffix)
                             break
                     else:
+                        self.logger.warn('404 : %s', path)
                         return make_response('', 404)
             else:
                 topic = self.ros_if.topics[path]
 
                 if not topic.allow_sub:
+                    self.logger.warn('405 : %s', path)
                     return make_response('', 405)
 
                 msg = topic.get()
 
-            self.logger.warning('mimetypes : %s', request.accept_mimetypes)
+            self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
             if request_wants_ros(request):
                 content_type = ROS_MSG_MIMETYPE
@@ -229,7 +242,7 @@ class BackEnd(restful.Resource):
                     msg.serialize(output_data)
                 output_data = output_data.getvalue()
             else:  # we default to json
-                # self.logger.warning('sending back json')
+                # self.logger.debug('sending back json')
                 content_type = 'application/json'
                 output_data = msgconv.extract_values(msg) if msg is not None else None
                 output_data = json.dumps(output_data)
@@ -296,6 +309,7 @@ class BackEnd(restful.Resource):
                                                      200)  #content_type='text/plain')
                 return make_response('', 404)
         else:
+            self.logger.warn('404 : %s', path)
             return make_response('', 404)
 
     # TODO: think about login rest service before disabling REST services if not logged in
@@ -303,7 +317,7 @@ class BackEnd(restful.Resource):
 
         try:
             rosname = '/' + rosname
-            self.logger.warning('POST')
+            self.logger.debug('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
@@ -316,27 +330,29 @@ class BackEnd(restful.Resource):
                 mode = 'topic'
                 topic = self.ros_if.topics[rosname]
                 if not topic.allow_pub:
+                    self.logger.warn('405 : %s', rosname)
                     return make_response('', 405)
                 input_msg_type = topic.rostype
             else:
-                self.logger.warning('ACTION')
+                self.logger.debug('ACTION')
                 for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix) + 1)]
                     if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
                         mode = 'action'
                         action_mode = suffix
-                        self.logger.warning('MODE:%r', action_mode)
+                        self.logger.debug('MODE:%r', action_mode)
                         action = self.ros_if.actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
-                        self.logger.warning('input_msg_type:%r', input_msg_type)
+                        self.logger.debug('input_msg_type:%r', input_msg_type)
                         break
                 else:
+                    self.logger.warn('404 : %s', rosname)
                     return make_response('', 404)
 
             input_data = request.environ['wsgi.input'].read(length)
 
             input_msg = input_msg_type()
-            self.logger.warning('input_msg:%r', input_msg)
+            self.logger.debug('input_msg:%r', input_msg)
             if use_ros:
                 input_msg.deserialize(input_data)
             else:
@@ -346,14 +362,14 @@ class BackEnd(restful.Resource):
 
             ret_msg = None
             if mode == 'service':
-                self.logger.warning('calling service %s with msg : %s', service.name, input_msg)
+                self.logger.debug('calling service %s with msg : %s', service.name, input_msg)
                 ret_msg = service.call(input_msg)
             elif mode == 'topic':
-                self.logger.warning('publishing \n%s to topic %s', input_msg, topic.name)
+                self.logger.debug('publishing \n%s to topic %s', input_msg, topic.name)
                 topic.publish(input_msg)
                 return make_response('{}', 200)  # content_type='application/json')
             elif mode == 'action':
-                self.logger.warning('publishing %s to action %s', input_msg, action.name)
+                self.logger.debug('publishing %s to action %s', input_msg, action.name)
                 action.publish(action_mode, input_msg)
                 return make_response('{}', 200)  # content_type='application/json')
 
@@ -370,5 +386,5 @@ class BackEnd(restful.Resource):
 
             return make_response(output_data, 200)  #, content_type=content_type)
         except Exception, e:
-            self.logger.error('An exception occurred! %s', e)
+            self.logger.error('An exception occurred! => 500 %s', e)
             return make_response(e, 500)
