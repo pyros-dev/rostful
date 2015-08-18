@@ -77,12 +77,11 @@ class Server(object):
     def logger(self):
         return self.app.logger
 
-    def _setup(self, ros_node, ros_node_client, debug=False):
-        self.ros_node = ros_node
-
-        rostfront = FrontEnd.as_view('frontend', self.ros_node, self.logger, debug)
-        rostback = BackEnd.as_view('backend', self.ros_node, self.logger, debug)
-        rostful = Rostful.as_view('rostful', self.ros_node, self.logger, debug)
+    def _setup(self, ros_node_client, debug=False):
+        self.ros_node_client = ros_node_client
+        rostfront = FrontEnd.as_view('frontend', self.ros_node_client, self.logger, debug)
+        rostback = BackEnd.as_view('backend', self.ros_node_client, self.logger, debug)
+        rostful = Rostful.as_view('rostful', self.ros_node_client, self.logger, debug)
 
         # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
@@ -102,8 +101,9 @@ class Server(object):
 
          #One RostfulNode is needed for Flask.
          #TODO : check if still true with multiple web process
-         with rostful_node.RostfulCtx(name='rostful', argv=ros_args) as node_ctx:
-             self._setup(node_ctx.node, node_ctx.client, False if serv_type == 'tornado' else True)
+         with rostful_node.rostful_ctx(name='rostful', argv=ros_args) as node_ctx:
+             self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
+
 
              import socket  # just to catch the "Address already in use error"
              port_retries = 5

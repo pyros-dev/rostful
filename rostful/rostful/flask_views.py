@@ -40,32 +40,23 @@ View for frontend pages
 # TODO: maybe consider http://www.flaskapi.org/
 
 class FrontEnd(MethodView):
-    def __init__(self, ros_node, logger, debug):
+    def __init__(self, ros_node_client, logger, debug):
         super(FrontEnd, self).__init__()
-        self.ros_if = ros_node.ros_if  # getting ros interface
-        self.rocon_if = ros_node.rocon_if  # getting rocon interface
+        self.node_client = ros_node_client
         self.logger = logger
 
     #TMP @login.login_required
     def get(self, rosname=None):
         self.logger.debug('in FrontEnd with rosname: %r', rosname)
         if not rosname:
-            self.logger.debug('%r', self.ros_if.topics)
-            if self.rocon_if:
-                return render_template('index.html',
-                                       pathname2url=urllib.pathname2url,
-                                       topics=self.ros_if.topics,
-                                       services=self.ros_if.services,
-                                       actions=self.ros_if.actions,
-                                       rapp_namespaces=self.rocon_if.rapps_namespaces,
-                                       interactions=self.rocon_if.interactions)
-            else:
-                return render_template('index.html',
-                                       pathname2url=urllib.pathname2url,
-                                       topics=self.ros_if.topics,
-                                       services=self.ros_if.services,
-                                       actions=self.ros_if.actions)
-
+            self.logger.warning('node client topics %r', self.node_client.listtopics())
+            return render_template('index.html',
+                                   pathname2url=urllib.pathname2url,
+                                   topics=self.node_client.listtopics(),
+                                   services=self.node_client.listsrvs(),
+                                   actions=self.node_client.listacts(),
+                                   rapp_namespaces=self.node_client.namespaces(),
+                                   interactions=self.node_client.interactions())
         else:
             rosname = '/' + rosname
             if self.rocon_if and self.rocon_if.interactions.has_key(rosname):
@@ -87,11 +78,11 @@ class FrontEnd(MethodView):
                 mode = 'rapp_namespace'
                 rapp_ns = self.rocon_if.rapps_namespaces[rosname]
                 return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
-            elif self.ros_if.services.has_key(rosname):
+            elif self.node_client.call(rosname):
                 mode = 'service'
-                service = self.ros_if.services[rosname]
+                service = self.node_client.services[rosname]
                 return render_template('service.html', service=service)
-            elif self.ros_if.topics.has_key(rosname):
+            elif self.node_client.inject(rosname):
                 mode = 'topic'
                 topic = self.ros_if.topics[rosname]
                 return render_template('topic.html', topic=topic)
@@ -108,10 +99,9 @@ Additional REST services provided by Rostful itself
 TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
 """
 class Rostful(restful.Resource):
-    def __init__(self, ros_node, logger, debug):
+    def __init__(self, ros_node_client, logger, debug):
         super(Rostful, self).__init__()
-        self.ros_if = ros_node.ros_if  # getting ros interface
-        self.rocon_if = ros_node.rocon_if  # getting rocon interface
+        self.node_client = ros_node_client
         self.logger = logger
 
     # TODO: think about login rest service before disabling REST services if not logged in
@@ -165,9 +155,9 @@ View for backend pages
 #TODO : use rostfulnode instead of direct libraries
 #TODO : get worker name and send through celery to support multiple workers
 class BackEnd(restful.Resource):
-    def __init__(self, ros_node, logger, debug):
+    def __init__(self, ros_node_client, logger, debug):
         super(BackEnd, self).__init__()
-        self.ros_if = ros_node.ros_if  #getting only ros_if for now in backend (TMP).
+        self.node_client = ros_node_client
         self.logger = logger
 
         #if not debug:
@@ -203,15 +193,15 @@ class BackEnd(restful.Resource):
         suffix = get_suffix(path)
 
         if path == CONFIG_PATH:
-            dfile = definitions.manifest(self.ros_if.services, self.ros_if.topics, self.ros_if.actions, full=full)
+            dfile = definitions.manifest(self.node_client.listsrvs(), self.node_client.listtopics(), self.node_client.listacts, full=full)
             if jsn:
                 return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
             else:
                 return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
 
         if not suffix:
-            if not self.ros_if.topics.has_key(path):
-                if self.ros_if.services.has_key(path):
+            if not self.node_client.inject(path):
+                if self.node_client.call(path):
                     service = self.ros_if.services[path]
 
                     msg = service.call()
