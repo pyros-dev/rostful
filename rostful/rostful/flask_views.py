@@ -59,10 +59,18 @@ class FrontEnd(MethodView):
                                    interactions=self.node_client.interactions())
         else:
             rosname = '/' + rosname
-            if self.rocon_if and self.rocon_if.interactions.has_key(rosname):
+            has_rocon = self.node_client.has_rocon()
+            # TODO: this isn't very efficient, but don't know a better way to do it
+            interactions = self.node_client.interactions()
+            namespaces = self.node_client.namespaces()
+            services = self.node_client.services()
+            topics = self.node_client.topics()
+            actions = self.node_client.actions()
+            
+            if has_rocon and rosname in interactions:
                 mode = 'interaction'
-                interaction = self.rocon_if.interactions[rosname]
-                result = self.rocon_if.request_interaction(rosname)
+                interaction = interactions[rosname]
+                result = self.node_client.interaction(rosname).interaction
                 if result.result:
                     if interaction.name.startswith('web_app'):
                         iname = interaction.name[7:].strip("()")
@@ -73,22 +81,21 @@ class FrontEnd(MethodView):
                         return render_template('interaction.html', interaction=interaction)
                 else:
                     return jsonify(result), 401
-
-            elif self.rocon_if and self.rocon_if.rapps_namespaces.has_key(rosname):
+            elif has_rocon and rosname in namespaces:
                 mode = 'rapp_namespace'
-                rapp_ns = self.rocon_if.rapps_namespaces[rosname]
+                rapp_ns = namespaces[rosname]
                 return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
-            elif self.node_client.call(rosname):
+            elif rosname in services:
                 mode = 'service'
-                service = self.node_client.services[rosname]
+                service = services[rosname]
                 return render_template('service.html', service=service)
-            elif self.node_client.inject(rosname):
+            elif rosname in topics:
                 mode = 'topic'
-                topic = self.ros_if.topics[rosname]
+                topic = topics[rosname]
                 return render_template('topic.html', topic=topic)
-            elif self.ros_if.actions.has_key(rosname):
+            elif rosname in actions:
                 mode = 'action'
-                action = self.ros_if.actions[rosname]
+                action = actions[rosname]
                 return render_template('action.html', action=action)
             else:
                 return '', 404
@@ -113,35 +120,41 @@ class Rostful(restful.Resource):
                                          version="v0.1"))
         else:
             spliturl = rostful_name.split('/')
-            if len(spliturl) > 0 and spliturl[0] == 'interactions' and self.rocon_if:
-                if len(spliturl) > 1 and spliturl[1] in self.rocon_if.interactions:
-                    return make_response(jsonify(self.rocon_if.interactions[spliturl[1]]))
+            has_rocon = self.node_client.has_rocon()
+            if len(spliturl) > 0 and spliturl[0] == 'interactions' and has_rocon:
+                interactions = self.node_client.interactions()
+                if len(spliturl) > 1 and spliturl[1] in interactions:
+                    return make_response(jsonify(self.node_client.interaction(spliturl[1]).interaction))
                 else:
-                    return make_response(jsonify(self.rocon_if.interactions))
+                    return make_response(jsonify(interactions))
 
-            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces' and self.rocon_if:
+            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces' and has_rocon:
+                namespaces = self.node_client.namespaces()
                 if len(spliturl) > 1 and spliturl[1] in self.rocon_if.rapps_namespaces:
-                    return make_response(jsonify(self.rocon_if.rapps_namespaces[spliturl[1]]))
+                    return make_response(jsonify(namespaces[spliturl[1]]))
                 else:
-                    return make_response(jsonify(self.rocon_if.rapps_namespaces))
+                    return make_response(jsonify(namespaces))
 
             if len(spliturl) > 0 and spliturl[0] == 'actions':
-                if len(spliturl) > 1 and spliturl[1] in self.ros_if.actions:
-                    return make_response(jsonify(self.ros_if.actions[spliturl[1]]))
+                actions = self.node_client.listacts()
+                if len(spliturl) > 1 and spliturl[1] in actions:
+                    return make_response(jsonify(actions[spliturl[1]]))
                 else:
-                    return make_response(jsonify(self.ros_if.actions))
+                    return make_response(jsonify(actions))
 
             if len(spliturl) > 0 and spliturl[0] == 'services':
-                if len(spliturl) > 1 and spliturl[1] in self.ros_if.services:
-                    return make_response(jsonify(self.ros_if.services[spliturl[1]]))
+                services = self.node_client.listsrvs()
+                if len(spliturl) > 1 and spliturl[1] in services:
+                    return make_response(jsonify(self.node_client.service(spliturl[1])))
                 else:
-                    return make_response(jsonify(self.ros_if.services))
+                    return make_response(jsonify(services))
 
             if len(spliturl) > 0 and spliturl[0] == 'topics':
-                if len(spliturl) > 1 and spliturl[1] in self.ros_if.topics:
-                    return make_response(jsonify(self.ros_if.topics[spliturl[1]]))
+                topics = self.node_client.listtopics()
+                if len(spliturl) > 1 and spliturl[1] in topics:
+                    return make_response(jsonify(self.node_client.topic(spliturl[1])))
                 else:
-                    return make_response(jsonify(self.ros_if.topics))
+                    return make_response(jsonify(topics))
 
             else:
                 return make_response('', 404)
@@ -200,8 +213,8 @@ class BackEnd(restful.Resource):
                 return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
 
         if not suffix:
-            if not self.node_client.inject(path):
-                if self.node_client.call(path):
+            if not self.node_client.topic(path):
+                if self.node_client.service(path):
                     service = self.ros_if.services[path]
 
                     msg = service.call()
