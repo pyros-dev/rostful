@@ -210,7 +210,7 @@ class BackEnd(restful.Resource):
         actions = self.node_client.listacts()
         
         if path == CONFIG_PATH:
-            dfile = definitions.manifest(services, topcis, actions, full=full)
+            dfile = definitions.manifest(services, topics, actions, full=full)
             if jsn:
                 return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
             else:
@@ -326,13 +326,17 @@ class BackEnd(restful.Resource):
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
 
-            if self.ros_if.services.has_key(rosname):
+            services = self.node_client.listsrvs()
+            topics = self.node_client.listtopics()
+            actions = self.node_client.listacts()
+
+            if rosname in services:
                 mode = 'service'
-                service = self.ros_if.services[rosname]
+                service = services[rosname]
                 input_msg_type = service.rostype_req
-            elif self.ros_if.topics.has_key(rosname):
+            elif rosname in topics:
                 mode = 'topic'
-                topic = self.ros_if.topics[rosname]
+                topic = topics[rosname]
                 if not topic.allow_pub:
                     self.logger.warn('405 : %s', rosname)
                     return make_response('', 405)
@@ -341,11 +345,11 @@ class BackEnd(restful.Resource):
                 self.logger.debug('ACTION')
                 for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix) + 1)]
-                    if rosname.endswith('/' + suffix) and self.ros_if.actions.has_key(action_name):
+                    if rosname.endswith('/' + suffix) and action_name in actions:
                         mode = 'action'
                         action_mode = suffix
                         self.logger.debug('MODE:%r', action_mode)
-                        action = self.ros_if.actions[action_name]
+                        action = actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
                         self.logger.debug('input_msg_type:%r', input_msg_type)
                         break
@@ -353,28 +357,33 @@ class BackEnd(restful.Resource):
                     self.logger.warn('404 : %s', rosname)
                     return make_response('', 404)
 
+            # we are now sending via the client node, which will convert the
+            # received dict into the correct message type for the service (or
+            # break, if it's wrong.)
             input_data = request.environ['wsgi.input'].read(length)
+            input_data = json.loads(input_data)
+            input_data.pop('_format', None)
 
-            input_msg = input_msg_type()
-            self.logger.debug('input_msg:%r', input_msg)
-            if use_ros:
-                input_msg.deserialize(input_data)
-            else:
-                input_data = json.loads(input_data)
-                input_data.pop('_format', None)
-                msgconv.populate_instance(input_data, input_msg)
+            # input_msg = input_msg_type()
+            # self.logger.debug('input_msg:%r', input_msg)
+            # if use_ros:
+            #     input_msg.deserialize(input_data)
+            # else:
+            #     input_data = json.loads(input_data)
+            #     input_data.pop('_format', None)
+            #     msgconv.populate_instance(input_data, input_msg)
 
             ret_msg = None
             if mode == 'service':
-                self.logger.debug('calling service %s with msg : %s', service.name, input_msg)
-                ret_msg = service.call(input_msg)
+                self.logger.debug('calling service %s with msg : %s', service.name, input_data)
+                ret_msg = self.node_client.service(rosname, input_data)
             elif mode == 'topic':
-                self.logger.debug('publishing \n%s to topic %s', input_msg, topic.name)
-                topic.publish(input_msg)
+                self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
+                self.node_client.topic(rosname, input_data)
                 return make_response('{}', 200)  # content_type='application/json')
             elif mode == 'action':
-                self.logger.debug('publishing %s to action %s', input_msg, action.name)
-                action.publish(action_mode, input_msg)
+                self.logger.debug('publishing %s to action %s', input_data, action.name)
+                self.node_client.action(action.name, action_mode, input_data)
                 return make_response('{}', 200)  # content_type='application/json')
 
             if use_ros:
@@ -382,11 +391,13 @@ class BackEnd(restful.Resource):
                 output_data = StringIO()
                 ret_msg.serialize(output_data)
                 output_data = output_data.getvalue()
-            else:
-                output_data = msgconv.extract_values(ret_msg)
+            elif ret_msg:
+                output_data = ret_msg # the returned message is already converted from ros format by the client
                 output_data['_format'] = 'ros'
                 output_data = json.dumps(output_data)
                 content_type = 'application/json'
+            else:
+                output_data = "{}"
 
             return make_response(output_data, 200)  #, content_type=content_type)
         except Exception, e:
