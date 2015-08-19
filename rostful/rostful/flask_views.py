@@ -63,9 +63,9 @@ class FrontEnd(MethodView):
             # TODO: this isn't very efficient, but don't know a better way to do it
             interactions = self.node_client.interactions()
             namespaces = self.node_client.namespaces()
-            services = self.node_client.services()
-            topics = self.node_client.topics()
-            actions = self.node_client.actions()
+            services = self.node_client.listsrvs()
+            topics = self.node_client.listtopics()
+            actions = self.node_client.listacts()
             
             if has_rocon and rosname in interactions:
                 mode = 'interaction'
@@ -205,37 +205,37 @@ class BackEnd(restful.Resource):
 
         suffix = get_suffix(path)
 
+        services = self.node_client.listsrvs()
+        topics = self.node_client.listtopics()
+        actions = self.node_client.listacts()
+        
         if path == CONFIG_PATH:
-            dfile = definitions.manifest(self.node_client.listsrvs(), self.node_client.listtopics(), self.node_client.listacts, full=full)
+            dfile = definitions.manifest(services, topcis, actions, full=full)
             if jsn:
                 return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
             else:
                 return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
 
         if not suffix:
-            if not self.node_client.topic(path):
-                if self.node_client.service(path):
-                    service = self.ros_if.services[path]
-
-                    msg = service.call()
+            if not path in topics:
+                if path in services:
+                    msg = self.node_client.service(path)
                 else:
                     for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
                         action_name = path[:-(len(action_suffix) + 1)]
-                        if path.endswith('/' + action_suffix) and self.ros_if.actions.has_key(action_name):
-                            action = self.ros_if.actions[action_name]
+                        if path.endswith('/' + action_suffix) and action_name in actions:
+                            action = actions[action_name]
                             msg = action.get(action_suffix)
                             break
                     else:
                         self.logger.warn('404 : %s', path)
                         return make_response('', 404)
             else:
-                topic = self.ros_if.topics[path]
-
-                if not topic.allow_sub:
+                if not topics[path].allow_sub:
                     self.logger.warn('405 : %s', path)
                     return make_response('', 405)
 
-                msg = topic.get()
+                msg = self.node_client.topic(path)
 
             self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
@@ -255,30 +255,30 @@ class BackEnd(restful.Resource):
 
         path = path[:-(len(suffix) + 1)]
 
-        if suffix == MSG_PATH and self.ros_if.topics.has_key(path):
-            return make_response(definitions.get_topic_msg(self.ros_if.topics[path]),
+        if suffix == MSG_PATH and path in topics:
+            return make_response(definitions.get_topic_msg(topics[path]),
                                  200)  #, content_type='text/plain')
         elif suffix == SRV_PATH and self.ros_if.services.has_key(path):
-            return make_response(definitions.get_service_srv(self.ros_if.services[path]),
+            return make_response(definitions.get_service_srv(services[path]),
                                  200)  #content_type='text/plain')
         elif suffix == ACTION_PATH and self.ros_if.actions.has_key(path):
-            return make_response(definitions.get_action_action(self.ros_if.actions[path]),
+            return make_response(definitions.get_action_action(actions[path]),
                                  200)  #content_type='text/plain')
         elif suffix == CONFIG_PATH:
-            if self.ros_if.services.has_key(path):
+            if path in services:
                 service_name = path
 
-                service = self.ros_if.services[service_name]
+                service = services[service_name]
                 dfile = definitions.describe_service(service_name, service, full=full)
 
                 if jsn:
                     return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
                 else:
                     return make_response(dfile.tostring(suppress_formats=True), 200)  # content_type='text/plain')
-            elif self.ros_if.topics.has_key(path):
+            elif path in topics:
                 topic_name = path
 
-                topic = self.ros_if.topics[topic_name]
+                topic = topics[topic_name]
                 dfile = definitions.describe_topic(topic_name, topic, full=full)
 
                 if jsn:
@@ -288,7 +288,7 @@ class BackEnd(restful.Resource):
             elif self.ros_if.actions.has_key(path):
                 action_name = path
 
-                action = self.ros_if.actions[action_name]
+                action = actions[action_name]
                 dfile = definitions.describe_action(action_name, action, full=full)
 
                 if jsn:
@@ -300,10 +300,10 @@ class BackEnd(restful.Resource):
                                ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
                     if path.endswith('/' + suffix):
                         path = path[:-(len(suffix) + 1)]
-                        if self.ros_if.actions.has_key(path):
+                        if path in actions:
                             action_name = path
 
-                            action = self.ros_if.actions[action_name]
+                            action = actions[action_name]
                             dfile = definitions.describe_action_topic(action_name, suffix, action, full=full)
 
                             if jsn:
