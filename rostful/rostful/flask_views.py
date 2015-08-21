@@ -145,14 +145,14 @@ class Rostful(restful.Resource):
             if len(spliturl) > 0 and spliturl[0] == 'services':
                 services = self.node_client.listsrvs()
                 if len(spliturl) > 1 and spliturl[1] in services:
-                    return make_response(jsonify(self.node_client.service(spliturl[1])))
+                    return make_response(jsonify(self.node_client.service_call(spliturl[1])))
                 else:
                     return make_response(jsonify(services))
 
             if len(spliturl) > 0 and spliturl[0] == 'topics':
                 topics = self.node_client.listtopics()
                 if len(spliturl) > 1 and spliturl[1] in topics:
-                    return make_response(jsonify(self.node_client.topic(spliturl[1])))
+                    return make_response(jsonify(self.node_client.topic_extract(spliturl[1])))
                 else:
                     return make_response(jsonify(topics))
 
@@ -219,7 +219,7 @@ class BackEnd(restful.Resource):
         if not suffix:
             if not path in topics:
                 if path in services:
-                    msg = self.node_client.service(path)
+                    msg = self.node_client.service_call(path)
                 else:
                     for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
                         action_name = path[:-(len(action_suffix) + 1)]
@@ -235,21 +235,24 @@ class BackEnd(restful.Resource):
                     self.logger.warn('405 : %s', path)
                     return make_response('', 405)
 
-                msg = self.node_client.topic(path)
+                msg = self.node_client.topic_extract(path)
 
             self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
-            if request_wants_ros(request):
-                content_type = ROS_MSG_MIMETYPE
-                output_data = StringIO()
-                if msg is not None:
-                    msg.serialize(output_data)
-                output_data = output_data.getvalue()
-            else:  # we default to json
-                # self.logger.debug('sending back json')
-                content_type = 'application/json'
-                output_data = msgconv.extract_values(msg) if msg is not None else None
-                output_data = json.dumps(output_data)
+            content_type = 'application/json'
+            output_data = json.dumps(msg)
+
+            #if request_wants_ros(request):
+            #    content_type = ROS_MSG_MIMETYPE
+            #    output_data = StringIO()
+            #    if msg is not None:
+            #        msg.serialize(output_data)
+            #    output_data = output_data.getvalue()
+            #else:  # we default to json
+            #    # self.logger.debug('sending back json')
+            #    content_type = 'application/json'
+            #    output_data = msgconv.extract_values(msg) if msg is not None else None
+            #    output_data = json.dumps(output_data)
 
             return make_response(output_data, 200)  #,content_type=content_type)
 
@@ -376,10 +379,10 @@ class BackEnd(restful.Resource):
             ret_msg = None
             if mode == 'service':
                 self.logger.debug('calling service %s with msg : %s', service.name, input_data)
-                ret_msg = self.node_client.service(rosname, input_data)
+                ret_msg = self.node_client.service_call(rosname, input_data)
             elif mode == 'topic':
                 self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
-                self.node_client.topic(rosname, input_data)
+                self.node_client.topic_inject(rosname, input_data)
                 return make_response('{}', 200)  # content_type='application/json')
             elif mode == 'action':
                 self.logger.debug('publishing %s to action %s', input_data, action.name)
