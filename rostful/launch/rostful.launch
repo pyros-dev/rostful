@@ -5,7 +5,7 @@
   <arg name="topics" default="['turtle1/pose']" />
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
-  <arg name="enable_rocon" default="false"/>
+  <arg name="enable_rocon" default="false"/> <!-- NOT WORKING ANYMORE -->
   <arg name="rapps_namespaces" default="[]" /> <!-- TODO : default should be to watch all -> wildcard support needed -->
 
   <!-- rostful dev server -->
