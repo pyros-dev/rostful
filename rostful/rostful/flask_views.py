@@ -165,9 +165,7 @@ class Rostful(restful.Resource):
 View for backend pages
 """
 
-#TODO : use rostfulnode instead of direct libraries
-#TODO : get worker name and send through celery to support multiple workers
-class BackEnd(restful.Resource):
+class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
     def __init__(self, ros_node_client, logger, debug):
         super(BackEnd, self).__init__()
         self.node_client = ros_node_client
