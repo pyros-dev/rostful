@@ -185,7 +185,7 @@ class BackEnd(restful.Resource):
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
-        self.logger.debug('in BackEnd with rosname: %r', rosname)
+        #self.logger.debug('in BackEnd with rosname: %r', rosname)
 
         # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()
@@ -237,7 +237,7 @@ class BackEnd(restful.Resource):
 
                 msg = self.node_client.topic_extract(path)
 
-            self.logger.debug('mimetypes : %s', request.accept_mimetypes)
+            #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
             content_type = 'application/json'
             output_data = json.dumps(msg)
@@ -324,7 +324,7 @@ class BackEnd(restful.Resource):
 
         try:
             rosname = '/' + rosname
-            self.logger.debug('POST')
+            #self.logger.debug('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
             use_ros = content_type == ROS_MSG_MIMETYPE
@@ -345,16 +345,16 @@ class BackEnd(restful.Resource):
                     return make_response('', 405)
                 input_msg_type = topic.rostype
             else:
-                self.logger.debug('ACTION')
+                #self.logger.debug('ACTION')
                 for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
                     action_name = rosname[:-(len(suffix) + 1)]
                     if rosname.endswith('/' + suffix) and action_name in actions:
                         mode = 'action'
                         action_mode = suffix
-                        self.logger.debug('MODE:%r', action_mode)
+                        #self.logger.debug('MODE:%r', action_mode)
                         action = actions[action_name]
                         input_msg_type = action.get_msg_type(suffix)
-                        self.logger.debug('input_msg_type:%r', input_msg_type)
+                        #self.logger.debug('input_msg_type:%r', input_msg_type)
                         break
                 else:
                     self.logger.warn('404 : %s', rosname)
