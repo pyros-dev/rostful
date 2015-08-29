@@ -109,7 +109,13 @@ class Server(object):
              port_retries = 5
              while port_retries > 0:  # keep trying
                  try:
+
                      if serv_type == 'flask':
+
+                         import logging
+                         log = logging.getLogger('werkzeug')
+                         log.setLevel(logging.WARNING)
+
                          rostful_server.app.logger.info('Starting Flask server on port %d', port)
                          # debug is needed to investigate server errors.
                          # use_reloader set to False => killing the ros node also kills the server child.
