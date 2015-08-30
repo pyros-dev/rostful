@@ -123,7 +123,6 @@ class Server(object):
 
                      if serv_type == 'flask':
 
-                         import logging
                          log = logging.getLogger('werkzeug')
                          log.setLevel(logging.WARNING)
 
