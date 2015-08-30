@@ -171,16 +171,6 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         self.node_client = ros_node_client
         self.logger = logger
 
-        #if not debug:
-            # add log handler for warnings and more to sys.stderr.
-        #    self.logger.addHandler(logging.StreamHandler())
-        #    self.logger.setLevel(logging.WARN)
-
-        # adding file logging for everything to help debugging
-        file_handler = logging.handlers.RotatingFileHandler('rostful_backend.log', maxBytes=10000, backupCount=1)
-        file_handler.setLevel(logging.INFO)
-        self.logger.addHandler(file_handler)
-
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
         #self.logger.debug('in BackEnd with rosname: %r', rosname)
