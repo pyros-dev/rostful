@@ -4,6 +4,7 @@ from __future__ import absolute_import
 import os
 import sys
 import logging
+import logging.handlers
 
 try:
     import rostful_node
