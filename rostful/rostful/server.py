@@ -137,7 +137,7 @@ class Server(object):
                          )
                      elif serv_type == 'tornado':
                          rostful_server.app.logger.info('Starting Tornado server on port %d', port)
-                         enable_pretty_logging()
+                         #enable_pretty_logging()  # enable this for debugging during development
                          http_server = HTTPServer(WSGIContainer(self.app))
                          http_server.listen(port)
                          IOLoop.instance().start()
