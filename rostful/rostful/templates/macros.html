@@ -1,4 +1,4 @@
-{% macro navbar(interactions, rapps_namespaces, actions, services, topics, active='interactions') %}
+{% macro navbar(interactions, rapps_namespaces, actions, services, topics, params, active='interactions') %}
     <div data-role="navbar">
       <ul>
         {% if interactions %}
@@ -15,6 +15,9 @@
         {% endif %}
         {% if topics %}
         <li><a href="#topics" {% if 'topics'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Topics</a></li>
+        {% endif %}
+        {% if params %}
+        <li><a href="#params" {% if 'params'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Params</a></li>
         {% endif %}
       </ul>
     </div>

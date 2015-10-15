@@ -49,11 +49,11 @@ class FrontEnd(MethodView):
     def get(self, rosname=None):
         self.logger.debug('in FrontEnd with rosname: %r', rosname)
         if not rosname:
-            self.logger.warning('node client topics %r', self.node_client.listtopics())
             return render_template('index.html',
                                    pathname2url=urllib.pathname2url,
                                    topics=self.node_client.listtopics(),
                                    services=self.node_client.listsrvs(),
+                                   params=self.node_client.listparams(),
                                    actions=self.node_client.listacts(),
                                    rapp_namespaces=self.node_client.namespaces(),
                                    interactions=self.node_client.interactions())
@@ -196,6 +196,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         services = self.node_client.listsrvs()
         topics = self.node_client.listtopics()
         actions = self.node_client.listacts()
+        params = self.node_client.listparams()
         
         if path == CONFIG_PATH:
             dfile = definitions.manifest(services, topics, actions, full=full)
@@ -205,25 +206,26 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
 
         if not suffix:
-            if not path in topics:
-                if path in services:
-                    msg = self.node_client.service_call(path)
-                else:
-                    for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
-                        action_name = path[:-(len(action_suffix) + 1)]
-                        if path.endswith('/' + action_suffix) and action_name in actions:
-                            action = actions[action_name]
-                            msg = action.get(action_suffix)
-                            break
-                    else:
-                        self.logger.warn('404 : %s', path)
-                        return make_response('', 404)
-            else:
+            if path in params:
+                msg = self.node_client.param_get(path)
+            elif path in services:
+                msg = self.node_client.service_call(path)
+            elif path in topics:
                 if not topics[path].allow_sub:
                     self.logger.warn('405 : %s', path)
                     return make_response('', 405)
 
                 msg = self.node_client.topic_extract(path)
+            else:
+                for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
+                    action_name = path[:-(len(action_suffix) + 1)]
+                    if path.endswith('/' + action_suffix) and action_name in actions:
+                        action = actions[action_name]
+                        msg = action.get(action_suffix)
+                        break
+                    else:
+                        self.logger.warn('404 : %s', path)
+                        return make_response('', 404)
 
             #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
@@ -320,6 +322,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             services = self.node_client.listsrvs()
             topics = self.node_client.listtopics()
             actions = self.node_client.listacts()
+            params = self.node_client.listparams()
 
             if rosname in services:
                 mode = 'service'
@@ -332,6 +335,9 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     self.logger.warn('405 : %s', rosname)
                     return make_response('', 405)
                 input_msg_type = topic.rostype
+            elif rosname in params:
+                mode = 'param'
+                param = params[rosname]
             else:
                 #self.logger.debug('ACTION')
                 for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
@@ -371,6 +377,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             elif mode == 'topic':
                 self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
                 self.node_client.topic_inject(rosname, input_data)
+                return make_response('{}', 200)  # content_type='application/json')
+            elif mode == 'param':
+                self.logger.debug('setting \n%s param %s', input_data, param.name)
+                self.node_client.param_set(rosname, input_data)
                 return make_response('{}', 200)  # content_type='application/json')
             elif mode == 'action':
                 self.logger.debug('publishing %s to action %s', input_data, action.name)
