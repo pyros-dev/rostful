@@ -14,7 +14,14 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
+            'rester',
+            'testfixtures',
         ],
+        package_dir={
+            'rostful': '',
+            'rester': 'deps/Rester', # for devel : 'deps/Rester' / for install : 'deps/Rester/rester'. hopefully ros-indigo-catkin will fix this from 0.6.15
+            'testfixtures': 'deps/testfixtures'
+        },
         package_data={
             'rostful': [
                 'static/favicon.ico',
@@ -53,6 +60,7 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
             'Flask-Security==1.7.4',
             'Flask-Restful',
             'Flask-SQLAlchemy==2.0',
+            # python requests...
         ],
         zip_safe=False,  # TODO testing...
     )

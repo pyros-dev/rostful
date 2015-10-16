@@ -199,11 +199,15 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         params = self.node_client.listparams()
         
         if path == CONFIG_PATH:
+            cfg_resp = None
             dfile = definitions.manifest(services, topics, actions, full=full)
             if jsn:
-                return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
+                cfg_resp = make_response(str(dfile.tojson()), 200)
+                cfg_resp.mimetype = 'application/json'
             else:
-                return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
+                cfg_resp = make_response(dfile.tostring(suppress_formats=True), 200)
+                cfg_resp.mimetype='text/plain'
+            return cfg_resp
 
         if not suffix:
             if path in params:
@@ -229,34 +233,36 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
             #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
-            content_type = 'application/json'
             output_data = json.dumps(msg)
+            mime_type = 'application/json'
 
             #if request_wants_ros(request):
-            #    content_type = ROS_MSG_MIMETYPE
+            #    mime_type = ROS_MSG_MIMETYPE
             #    output_data = StringIO()
             #    if msg is not None:
             #        msg.serialize(output_data)
             #    output_data = output_data.getvalue()
             #else:  # we default to json
             #    # self.logger.debug('sending back json')
-            #    content_type = 'application/json'
+            #    mime_type = 'application/json'
             #    output_data = msgconv.extract_values(msg) if msg is not None else None
             #    output_data = json.dumps(output_data)
 
-            return make_response(output_data, 200)  #,content_type=content_type)
+            response = make_response(output_data, 200)
+            response.mimetype = mime_type
+            return response
 
         path = path[:-(len(suffix) + 1)]
-
+        sfx_resp = None
         if suffix == MSG_PATH and path in topics:
-            return make_response(definitions.get_topic_msg(topics[path]),
-                                 200)  #, content_type='text/plain')
-        elif suffix == SRV_PATH and self.ros_if.services.has_key(path):
-            return make_response(definitions.get_service_srv(services[path]),
-                                 200)  #content_type='text/plain')
-        elif suffix == ACTION_PATH and self.ros_if.actions.has_key(path):
-            return make_response(definitions.get_action_action(actions[path]),
-                                 200)  #content_type='text/plain')
+            sfx_resp = make_response(definitions.get_topic_msg(topics[path]), 200)
+            sfx_resp.mimetype ='text/plain'
+        elif suffix == SRV_PATH and path in self.ros_if.services:
+            sfx_resp = make_response(definitions.get_service_srv(services[path]), 200)
+            sfx_resp.mimetype ='text/plain'
+        elif suffix == ACTION_PATH and path in self.ros_if.actions:
+            sfx_resp = make_response(definitions.get_action_action(actions[path]), 200)
+            sfx_resp.mimetype ='text/plain'
         elif suffix == CONFIG_PATH:
             if path in services:
                 service_name = path
@@ -265,9 +271,11 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_service(service_name, service, full=full)
 
                 if jsn:
-                    return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
+                    sfx_resp = make_response(str(dfile.tojson()), 200)
+                    sfx_resp.mimetype='application/json'
                 else:
-                    return make_response(dfile.tostring(suppress_formats=True), 200)  # content_type='text/plain')
+                    sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
+                    sfx_resp.mimetype = 'text/plain'
             elif path in topics:
                 topic_name = path
 
@@ -275,19 +283,23 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_topic(topic_name, topic, full=full)
 
                 if jsn:
-                    return make_response(str(dfile.tojson()), 200)  #content_type='application/json')
+                    sfx_resp = make_response(str(dfile.tojson()), 200)
+                    sfx_resp.mimetype ='application/json'
                 else:
-                    return make_response(dfile.tostring(suppress_formats=True), 200)  #content_type='text/plain')
-            elif self.ros_if.actions.has_key(path):
+                    sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
+                    sfx_resp.mimetype = 'text/plain'
+            elif path in self.ros_if.actions:
                 action_name = path
 
                 action = actions[action_name]
                 dfile = definitions.describe_action(action_name, action, full=full)
 
                 if jsn:
-                    return make_response(str(dfile.tojson()), 200)  #, content_type='application/json')
+                    sfx_resp = make_response(str(dfile.tojson()), 200)
+                    sfx_resp.mimetype ='application/json'
                 else:
-                    return make_response(dfile.tostring(suppress_formats=True), 200)  #, content_type='text/plain')
+                    sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
+                    sfx_resp.mimetype = 'text/plain'
             else:
                 for suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX,
                                ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
@@ -300,14 +312,16 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                             dfile = definitions.describe_action_topic(action_name, suffix, action, full=full)
 
                             if jsn:
-                                return make_response(str(dfile.tojson()), 200)  #content_type='application/json')
+                                sfx_resp = make_response(str(dfile.tojson()), 200)
+                                sfx_resp.mimetype = 'application/json'
                             else:
-                                return make_response(dfile.tostring(suppress_formats=True),
-                                                     200)  #content_type='text/plain')
-                return make_response('', 404)
+                                sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
+                                sfx_resp.mimetype = 'text/plain'
+                sfx_resp = make_response('', 404)
         else:
             self.logger.warn('404 : %s', path)
-            return make_response('', 404)
+            sfx_resp = make_response('', 404)
+        return sfx_resp
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def post(self, rosname):
@@ -377,15 +391,15 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             elif mode == 'topic':
                 self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
                 self.node_client.topic_inject(rosname, input_data)
-                return make_response('{}', 200)  # content_type='application/json')
+                return make_response('{}', 200, content_type='application/json')
             elif mode == 'param':
                 self.logger.debug('setting \n%s param %s', input_data, param.name)
                 self.node_client.param_set(rosname, input_data)
-                return make_response('{}', 200)  # content_type='application/json')
+                return make_response('{}', 200, content_type='application/json')
             elif mode == 'action':
                 self.logger.debug('publishing %s to action %s', input_data, action.name)
                 self.node_client.action(action.name, action_mode, input_data)
-                return make_response('{}', 200)  # content_type='application/json')
+                return make_response('{}', 200, content_type='application/json')
 
             if use_ros:
                 content_type = ROS_MSG_MIMETYPE
@@ -400,7 +414,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             else:
                 output_data = "{}"
 
-            return make_response(output_data, 200)  #, content_type=content_type)
+            return make_response(output_data, 200, content_type=content_type)
         except Exception, e:
             self.logger.error('An exception occurred! => 500 %s', e)
             return make_response(e, 500)

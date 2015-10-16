@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/asmodehn/rostful.svg?branch=indigo-devel)](https://travis-ci.org/asmodehn/rostful)
 # ROSTful
 
 ## Try it now
