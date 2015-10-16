@@ -83,9 +83,12 @@
 {% macro generate_inputs(fielddict) %}
   {% for name, type in fielddict.iteritems() %}
     <div class="ui-field-contain">
-      <label for="{{ name }}">{{ name }}:</label>
+      <label for="{{ name }}">{{ name }}</label>
 
-    {% if type=='float32' %}
+    {% if type=='bool' %}
+      <input type=checkbox name="{{ name }}" id="{{ name }}"/>
+
+    {% elif type=='float32' %}
       <input type=number name="{{ name }}" id="{{ name }}"/>
 
     {% elif type=='int32' %}
@@ -136,7 +139,10 @@
   msgdata = {}
   {% for name, type in fielddict.iteritems() %}
 
-    {% if type=='float32' %}
+    {% if type=='bool' %}
+    msgdata['{{ name }}'] = $('#{{ name }}').is(":checked")
+
+    {% elif type=='float32' %}
     msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
 
     {% elif type=='int32' %}
