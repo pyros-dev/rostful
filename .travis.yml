@@ -16,8 +16,8 @@ install:
   - rosdep install --default-yes --from-paths rostful/ --rosdistro $CI_ROS_DISTRO
 script:
   - source /opt/ros/$CI_ROS_DISTRO/setup.bash
-  - mkdir build
-  - cd build
+  - mkdir rostful/build
+  - cd rostful/build
   - cmake .. -DCMAKE_INSTALL_PREFIX=./install
   - make -j1
   - make -j1 tests
