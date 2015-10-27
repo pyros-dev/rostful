@@ -18,7 +18,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
             'testfixtures',
         ],
         package_dir={
-            'rostful': '',
+            'rostful': 'rostful',  # for devel : '.' / for install : 'rostful'. hopefully ros-indigo-catkin will fix this from 0.6.15
             'rester': 'deps/Rester', # for devel : 'deps/Rester' / for install : 'deps/Rester/rester'. hopefully ros-indigo-catkin will fix this from 0.6.15
             'testfixtures': 'deps/testfixtures'
         },
