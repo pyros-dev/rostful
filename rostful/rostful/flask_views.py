@@ -407,12 +407,13 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 ret_msg.serialize(output_data)
                 output_data = output_data.getvalue()
             elif ret_msg:
-                output_data = ret_msg # the returned message is already converted from ros format by the client
+                output_data = ret_msg  # the returned message is already converted from ros format by the client
                 output_data['_format'] = 'ros'
                 output_data = json.dumps(output_data)
                 content_type = 'application/json'
             else:
                 output_data = "{}"
+                content_type = 'application/json'
 
             return make_response(output_data, 200, content_type=content_type)
         except Exception, e:
