@@ -401,6 +401,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     content_type = 'application/json'
                 else:
                     output_data = "{}"
+                    content_type = 'application/json'
 
                 response = make_response(output_data, 200)
                 response.mimetype = content_type
