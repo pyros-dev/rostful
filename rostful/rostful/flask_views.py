@@ -330,8 +330,8 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             rosname = '/' + rosname
             #self.logger.debug('POST')
             length = int(request.environ['CONTENT_LENGTH'])
-            content_type = request.environ['CONTENT_TYPE'].split(';')[0].strip()
-            use_ros = content_type == ROS_MSG_MIMETYPE
+            use_ros = ('CONTENT_TYPE' in request.environ and
+                       ROS_MSG_MIMETYPE == request.environ['CONTENT_TYPE'].split(';')[0].strip())
 
             services = self.node_client.listsrvs()
             topics = self.node_client.listtopics()
@@ -372,7 +372,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             # received dict into the correct message type for the service (or
             # break, if it's wrong.)
             input_data = request.environ['wsgi.input'].read(length)
-            input_data = json.loads(input_data)
+            input_data = json.loads(input_data or "{}")
             input_data.pop('_format', None)
 
             # input_msg = input_msg_type()
