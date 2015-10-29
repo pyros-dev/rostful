@@ -384,38 +384,45 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             #     input_data.pop('_format', None)
             #     msgconv.populate_instance(input_data, input_msg)
 
-            ret_msg = None
+            response = None
             if mode == 'service':
                 self.logger.debug('calling service %s with msg : %s', service.name, input_data)
                 ret_msg = self.node_client.service_call(rosname, input_data)
+
+                if use_ros:
+                    content_type = ROS_MSG_MIMETYPE
+                    output_data = StringIO()
+                    ret_msg.serialize(output_data)
+                    output_data = output_data.getvalue()
+                elif ret_msg:
+                    output_data = ret_msg  # the returned message is already converted from ros format by the client
+                    output_data['_format'] = 'ros'
+                    output_data = json.dumps(output_data)
+                    content_type = 'application/json'
+                else:
+                    output_data = "{}"
+                    content_type = 'application/json'
+
+                response = make_response(output_data, 200)
+                response.mimetype = content_type
+
             elif mode == 'topic':
                 self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
                 self.node_client.topic_inject(rosname, input_data)
-                return make_response('{}', 200, content_type='application/json')
+                response = make_response('{}', 200)
+                response.mimetype = 'application/json'
             elif mode == 'param':
                 self.logger.debug('setting \n%s param %s', input_data, param.name)
                 self.node_client.param_set(rosname, input_data)
-                return make_response('{}', 200, content_type='application/json')
+                response = make_response('{}', 200)
+                response.mimetype = 'application/json'
             elif mode == 'action':
                 self.logger.debug('publishing %s to action %s', input_data, action.name)
                 self.node_client.action(action.name, action_mode, input_data)
-                return make_response('{}', 200, content_type='application/json')
+                response = make_response('{}', 200)
+                response.mimetype = 'application/json'
+            return response
 
-            if use_ros:
-                content_type = ROS_MSG_MIMETYPE
-                output_data = StringIO()
-                ret_msg.serialize(output_data)
-                output_data = output_data.getvalue()
-            elif ret_msg:
-                output_data = ret_msg  # the returned message is already converted from ros format by the client
-                output_data['_format'] = 'ros'
-                output_data = json.dumps(output_data)
-                content_type = 'application/json'
-            else:
-                output_data = "{}"
-                content_type = 'application/json'
-
-            return make_response(output_data, 200, content_type=content_type)
         except Exception, e:
             self.logger.error('An exception occurred! => 500 %s', e)
             return make_response(e, 500)
