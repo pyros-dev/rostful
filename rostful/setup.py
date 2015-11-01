@@ -14,14 +14,14 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
-            'rester',
-            'testfixtures',
+            #'rester',
+            #'testfixtures',
         ],
         package_dir={
             '': 'src',
             # 'rostful': '',  # for devel : '.' / for install : 'rostful'. hopefully ros-indigo-catkin will fix this from 0.6.15
-            'rester': 'deps/Rester', # for devel : 'deps/Rester' / for install : 'deps/Rester/rester'. hopefully ros-indigo-catkin will fix this from 0.6.15
-            'testfixtures': 'deps/testfixtures'
+            #'rester': 'deps/Rester', # for devel : 'deps/Rester' / for install : 'deps/Rester/rester'. hopefully ros-indigo-catkin will fix this from 0.6.15
+            #'testfixtures': 'deps/testfixtures'
         },
         package_data={
             'rostful': [
