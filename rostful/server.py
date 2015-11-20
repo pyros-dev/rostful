@@ -16,16 +16,17 @@ except Exception, e:
 
 from . import flask_cfg
 
+# external dependencies
 from flask import Flask, request, make_response, render_template, url_for, jsonify, redirect
-import flask_security as security
-import flask_cors as cors
-import flask_restful as restful
-import flask_login as login
-
 from tornado.wsgi import WSGIContainer
 from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
+
+# ros-embedded python package dependencies
+from . import flask_cors as cors
+from . import flask_restful as restful
+from . import flask_security as security
 
 from . import db_models
 from .db_models import db

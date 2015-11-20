@@ -4,3 +4,21 @@
 [submodule "deps/testfixtures"]
 	path = deps/testfixtures
 	url = https://github.com/Simplistix/testfixtures.git
+[submodule "deps/flask-cors"]
+	path = deps/flask-cors
+	url = https://github.com/corydolphin/flask-cors.git
+[submodule "deps/flask-restful"]
+	path = deps/flask-restful
+	url = https://github.com/flask-restful/flask-restful.git
+[submodule "deps/Flask-Migrate"]
+	path = deps/Flask-Migrate
+	url = https://github.com/miguelgrinberg/Flask-Migrate.git
+[submodule "deps/flask-security"]
+	path = deps/flask-security
+	url = https://github.com/asmodehn/flask-security.git
+[submodule "deps/click"]
+	path = deps/click
+	url = https://github.com/mitsuhiko/click.git
+[submodule "deps/webargs"]
+	path = deps/webargs
+	url = https://github.com/sloria/webargs.git

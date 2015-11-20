@@ -16,8 +16,15 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
             'rostful',
             # putting dependencies under rostful to avoid potential conflicts in install space,
             # with other packages using rester.
+            # TODO : use ros package for it ( already existing or build new one )
             'rostful.rester',
             'rostful.testfixtures',
+            'rostful.flask_cors',
+            'rostful.flask_restful', 'rostful.flask_restful.utils', 'rostful.flask_restful.representations', # TODO ROSDEP has pip package
+            'rostful.flask_migrate',
+            'rostful.flask_security',
+            'rostful.click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
+            'rostful.webargs',
         ],
         package_data={
             'rostful': [
