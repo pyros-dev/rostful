@@ -1,4 +1,0 @@
-<launch>
-  <node pkg="turtlesim" type="turtlesim_node" name="turtlesim" required="true"/>
-  <node pkg="rostful_examples" type="turtle_herder.py" name="turtle_herder"/>
-</launch>
