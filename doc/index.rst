@@ -1,8 +1,7 @@
-ROStful
+Rostful
 ========================
 
-This ROS_ package assigns resources within the `Robotics in Concert`_
-framework.
+This ROS_ package allows sending REST request to a ROS system
 
 .. include:: weblinks.rst
 

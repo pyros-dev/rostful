@@ -1,8 +1,8 @@
 Internals
 =========
 
-scheduler_node
+rostful server
 --------------
 
-.. automodule:: concert_simple_scheduler.scheduler_node
+.. automodule:: rostful
    :members:
