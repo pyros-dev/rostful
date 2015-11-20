@@ -8,21 +8,17 @@ try:
 except Exception, e:
     from setuptools import setup
 
-# CAREFUL distutils and setuptools take different argument sand have different behaviors
+# CAREFUL distutils and setuptools take different arguments and have different behaviors
 if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     # fetch values from package.xml
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
-            #'rester',
-            #'testfixtures',
+            # putting dependencies under rostful to avoid potential conflicts in install space,
+            # with other packages using rester.
+            'rostful.rester',
+            'rostful.testfixtures',
         ],
-        package_dir={
-            '': 'src',
-            # 'rostful': '',  # for devel : '.' / for install : 'rostful'. hopefully ros-indigo-catkin will fix this from 0.6.15
-            #'rester': 'deps/Rester', # for devel : 'deps/Rester' / for install : 'deps/Rester/rester'. hopefully ros-indigo-catkin will fix this from 0.6.15
-            #'testfixtures': 'deps/testfixtures'
-        },
         package_data={
             'rostful': [
                 'static/favicon.ico',
