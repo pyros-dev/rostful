@@ -23,10 +23,10 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
 
-# ros-embedded python package dependencies
-from . import flask_cors as cors
-from . import flask_restful as restful
-from . import flask_security as security
+# python package dependencies
+import flask_cors as cors
+import flask_restful as restful
+import flask_security as security
 
 from . import db_models
 from .db_models import db

@@ -14,17 +14,42 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
-            # putting dependencies under rostful to avoid potential conflicts in install space,
-            # with other packages using rester.
-            # TODO : use ros package for it ( already existing or build new one )
-            'rostful.rester',
-            'rostful.testfixtures',
-            'rostful.flask_cors',
-            'rostful.flask_restful', 'rostful.flask_restful.utils', 'rostful.flask_restful.representations', # TODO ROSDEP has pip package
-            'rostful.flask_migrate',
-            'rostful.flask_security',
-            'rostful.click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
-            'rostful.webargs',
+            # This can create potential conflicts in install space,
+            # If another package install the same pthon package dependency.
+            # TODO : The proper solution is to create ThirdPartyRelease for these packages if needed or
+            # TODO : Use existing ros package for these
+            'rester',
+            'testfixtures',
+            'flask_cors',
+            'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
+            'flask_migrate',
+            'flask_security',
+            'flask_wtf', 'flask_wtf.recaptcha',
+            'flask_sqlalchemy',
+            'passlib', 'passlib.ext', 'passlib.ext.django', 'passlib.handlers', 'passlib.tests', 'passlib.utils', 'passlib.utils._blowfish', 'passlib._setup',  # TODO : rosdep has a DEB package for this
+            'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
+            'webargs',
+            'marshmallow',
+        ],
+        package_dir={
+            'rester': 'deps/Rester/rester',
+            'testfixtures': 'deps/testfixtures/testfixtures',
+            'flask_cors': 'deps/flask-cors/flask_cors',
+            'flask_restful': 'deps/flask-restful/flask_restful',
+            'flask_migrate': 'deps/Flask-Migrate/flask_migrate',
+            'flask_security': 'deps/flask-security/flask_security',
+            'flask_wtf': 'deps/flask-wtf/flask_wtf',
+            'flask_sqlalchemy': 'deps/flask-sqlalchemy/flask_sqlalchemy',
+            'passlib': 'deps/passlib/passlib',
+            'click': 'deps/click/click',
+            'webargs': 'deps/webargs/webargs',
+            'marshmallow': 'deps/marshmallow/marshmallow',
+        },
+        # CATKIN doesn't work well with those => symlink workarounds
+        py_modules=[
+            'flask_login',
+            'flask_principal',
+            'flask_mail',
         ],
         package_data={
             'rostful': [
@@ -44,7 +69,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup(**setup_args)
 
 else:  # using setuptools : http://pythonhosted.org/setuptools/
-
+    # TODO : This as a third party package could be the ultimate goal...
     setup(name='rostful',
         version='0.0.7',
         description='REST API for ROS',

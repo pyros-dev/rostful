@@ -22,3 +22,24 @@
 [submodule "deps/webargs"]
 	path = deps/webargs
 	url = https://github.com/sloria/webargs.git
+[submodule "deps/marshmallow"]
+	path = deps/marshmallow
+	url = https://github.com/marshmallow-code/marshmallow.git
+[submodule "deps/flask-login"]
+	path = deps/flask-login
+	url = https://github.com/maxcountryman/flask-login.git
+[submodule "deps/flask-principal"]
+	path = deps/flask-principal
+	url = https://github.com/mattupstate/flask-principal.git
+[submodule "deps/flask-mail"]
+	path = deps/flask-mail
+	url = https://github.com/mattupstate/flask-mail.git
+[submodule "deps/flask-wtf"]
+	path = deps/flask-wtf
+	url = https://github.com/lepture/flask-wtf.git
+[submodule "deps/flask-sqlalchemy"]
+	path = deps/flask-sqlalchemy
+	url = https://github.com/mitsuhiko/flask-sqlalchemy.git
+[submodule "deps/passlib"]
+	path = deps/passlib
+	url = https://github.com/asmodehn/passlib.git

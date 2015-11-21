@@ -28,7 +28,6 @@ import flask_restful as restful
 import flask_login as login
 
 from webargs.flaskparser import FlaskParser, use_kwargs
-from webargs import Arg
 
 parser = FlaskParser()
 
