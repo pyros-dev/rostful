@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 #
-# concert_simple_scheduler documentation build configuration file
+# rostful documentation build configuration file
 #
 # This file is execfile()d with the current directory set to its
 # containing dir.
@@ -49,8 +49,8 @@ source_suffix = '.rst'
 master_doc = 'index'
 
 # General information about the project.
-project = u'concert_simple_scheduler'
-copyright = u'2014, Jack O\'Quin'
+project = u'rostful'
+#copyright = u'2014, AlexV'
 
 # The version info for the project you're documenting, acts as replacement for
 # |version| and |release|, also used in various other places throughout the
@@ -173,7 +173,7 @@ html_theme = 'nature'
 #html_file_suffix = None
 
 # Output file base name for HTML help builder.
-htmlhelp_basename = 'concert_simple_scheduler_pydoc'
+htmlhelp_basename = 'rostful_pydoc'
 
 
 # -- Options for LaTeX output ------------------------------------------------
@@ -193,9 +193,9 @@ latex_elements = {
 # start file, target name, title, author, documentclass
 # [howto/manual]).
 latex_documents = [
-  ('index', 'concert_simple_scheduler.tex',
-   u'Concert Simple Scheduler.',
-   u'Jack O\'Quin', 'manual'),
+  ('index', 'rostful.tex',
+   u'Rostful',
+   u'AlexV', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -224,9 +224,9 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'concert_simple_scheduler',
-     u'Concert Simple Scheduler.',
-     [u'Jack O\'Quin'], 1)
+    ('index', 'rostful',
+     u'Rostful',
+     [u'AlexV'], 1)
 ]
 
 # If true, show URL addresses after external links.
@@ -239,9 +239,9 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'concert_simple_scheduler',
-   u'concert_simple_scheduler Documentation',
-   u'Jack O\'Quin', 'concert_simple_scheduler', 'concert_simple_scheduler.',
+  ('index', 'rostful',
+   u'rostful Documentation',
+   u'AlexV', 'rostful', 'rostful.',
    'Miscellaneous'),
 ]
 
