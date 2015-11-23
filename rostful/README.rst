@@ -1,3 +1,6 @@
+.. image:: https://travis-ci.org/asmodehn/rostful.svg?branch=indigo-devel
+    :target: https://travis-ci.org/asmodehn/rostful
+
 Overview
 ========
 

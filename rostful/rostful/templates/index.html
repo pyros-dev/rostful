@@ -27,7 +27,7 @@
       <a href="{{ pathname2url(name) }}" class="ui-btn">{{ interact.display_name }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
-  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'interact') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'interact') }}
   </div>
 </div>
 {% endif%}
@@ -41,7 +41,7 @@
       <a href="{{ name }}" class="ui-btn">{{ name }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
-  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'rapp_ns') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'rapp_ns') }}
   </div>
 </div>
 {% endif %}
@@ -55,7 +55,7 @@
       <a href="{{ action.fullname }}" class="ui-btn">{{ action.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
-  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'actions') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'actions') }}
   </div>
 </div>
 {% endif%}
@@ -69,7 +69,7 @@
       <a href="{{ service.fullname }}" class="ui-btn">{{ service.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
-  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'services') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'services') }}
   </div>
 </div>
 {% endif%}
@@ -83,7 +83,21 @@
       <a href="{{ topic.fullname }}" class="ui-btn">{{ topic.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
-  {{ navbar(interactions, rapp_namespaces, actions, services, topics, 'topics') }}
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'topics') }}
+  </div>
+</div>
+{% endif%}
+
+{% if params %}
+<div data-role="page" id="params">
+  <div data-role="header" data-id="mainheader">
+    <h1>Params</h1>
+  </div>
+    {% for name, param  in params.iteritems() %}
+      <a href="{{ param.fullname }}" class="ui-btn">{{ param.fullname }}</a>
+    {% endfor%}
+  <div data-role="footer" data-id="mainfooter" data-position="fixed">
+  {{ navbar(interactions, rapp_namespaces, actions, services, topics, params, 'params') }}
   </div>
 </div>
 {% endif%}

@@ -1,0 +1,6 @@
+[submodule "rostful/deps/Rester"]
+	path = rostful/deps/Rester
+	url = https://github.com/asmodehn/Rester.git
+[submodule "rostful/deps/testfixtures"]
+	path = rostful/deps/testfixtures
+	url = https://github.com/Simplistix/testfixtures.git

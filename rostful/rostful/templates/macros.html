@@ -1,4 +1,4 @@
-{% macro navbar(interactions, rapps_namespaces, actions, services, topics, active='interactions') %}
+{% macro navbar(interactions, rapps_namespaces, actions, services, topics, params, active='interactions') %}
     <div data-role="navbar">
       <ul>
         {% if interactions %}
@@ -15,6 +15,9 @@
         {% endif %}
         {% if topics %}
         <li><a href="#topics" {% if 'topics'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Topics</a></li>
+        {% endif %}
+        {% if params %}
+        <li><a href="#params" {% if 'params'==active %} class="ui-btn-active ui-state-persist" {% else %} class="" {% endif %} >Params</a></li>
         {% endif %}
       </ul>
     </div>
@@ -80,9 +83,12 @@
 {% macro generate_inputs(fielddict) %}
   {% for name, type in fielddict.iteritems() %}
     <div class="ui-field-contain">
-      <label for="{{ name }}">{{ name }}:</label>
+      <label for="{{ name }}">{{ name }}</label>
 
-    {% if type=='float32' %}
+    {% if type=='bool' %}
+      <input type=checkbox name="{{ name }}" id="{{ name }}"/>
+
+    {% elif type=='float32' %}
       <input type=number name="{{ name }}" id="{{ name }}"/>
 
     {% elif type=='int32' %}
@@ -133,7 +139,10 @@
   msgdata = {}
   {% for name, type in fielddict.iteritems() %}
 
-    {% if type=='float32' %}
+    {% if type=='bool' %}
+    msgdata['{{ name }}'] = $('#{{ name }}').is(":checked")
+
+    {% elif type=='float32' %}
     msgdata['{{ name }}'] = parseInt($('#{{ name }}').val())
 
     {% elif type=='int32' %}
