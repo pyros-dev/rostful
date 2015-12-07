@@ -19,6 +19,12 @@ As such this should be launched either :
 
 so that users from both world can use it efficiently.
 
+What will not be in Rostful
+===========================
+ - Security related stuff ( Authentication/Authorization ) implementation.
+ We will not provide here any Authentication/Authorization mechanisms without ROS providing one first.
+ And even after that, the implications of such an implementation would probably fit better in another specific microservice, that we would rely on in rostful.
+
 PYTHON VIRTUALENV SETUP
 =======================
 

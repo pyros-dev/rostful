@@ -1,8 +1,9 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-from rosinterface import ActionBack
-from rostful_node.ros_interface import get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+# IS Action really worth having here ?
+from pyros.rosinterface import ActionBack
+from pyros.rosinterface.ros_interface import get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy
@@ -12,10 +13,9 @@ import logging.handlers
 
 from StringIO import StringIO
 
-from rosinterface import message_conversion as msgconv
-from rosinterface import definitions
+from pyros.rosinterface import definitions
 
-from rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
+from pyros.rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
 
 import os
 import urlparse
@@ -50,21 +50,22 @@ class FrontEnd(MethodView):
         if not rosname:
             return render_template('index.html',
                                    pathname2url=urllib.pathname2url,
-                                   topics=self.node_client.listtopics(),
-                                   services=self.node_client.listsrvs(),
-                                   params=self.node_client.listparams(),
-                                   actions=self.node_client.listacts(),
-                                   rapp_namespaces=self.node_client.namespaces(),
-                                   interactions=self.node_client.interactions())
+                                   topics=self.node_client.topics(),
+                                   services=self.node_client.services(),
+                                   params=self.node_client.params(),
+                                   actions=[],  #self.node_client.listacts(),
+                                   rapp_namespaces=[],  #self.node_client.namespaces(),
+                                   interactions=[],  #self.node_client.interactions()
+            )
         else:
             rosname = '/' + rosname
-            has_rocon = self.node_client.has_rocon()
+            has_rocon = False #self.node_client.has_rocon()
             # TODO: this isn't very efficient, but don't know a better way to do it
-            interactions = self.node_client.interactions()
-            namespaces = self.node_client.namespaces()
-            services = self.node_client.listsrvs()
-            topics = self.node_client.listtopics()
-            actions = self.node_client.listacts()
+            interactions = [] #self.node_client.interactions()
+            namespaces = [] #self.node_client.namespaces()
+            services = self.node_client.services()
+            topics = self.node_client.topics()
+            actions = [] #self.node_client.listacts()
             
             if has_rocon and rosname in interactions:
                 mode = 'interaction'
@@ -192,10 +193,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         suffix = get_suffix(path)
 
-        services = self.node_client.listsrvs()
-        topics = self.node_client.listtopics()
-        actions = self.node_client.listacts()
-        params = self.node_client.listparams()
+        services = self.node_client.services()
+        topics = self.node_client.topics()
+        actions = [] #self.node_client.listacts()
+        params = self.node_client.params()
         
         if path == CONFIG_PATH:
             cfg_resp = None

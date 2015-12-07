@@ -7,9 +7,9 @@ import logging
 import logging.handlers
 
 try:
-    import rostful_node
+    from pyros import pyros_ctx, PyrosClient
 except Exception, e:
-    print "rostful_node module is not accessible in sys.path. It is required to run rostful."
+    print "pyros module is not accessible in sys.path. It is required to run rostful."
     print "Exception caught : ", e
     print "sys.path = %r", sys.path
     raise
@@ -101,9 +101,9 @@ class Server(object):
 
          print host, port
 
-         #One RostfulNode is needed for Flask.
+         #One PyrosNode is needed for Flask.
          #TODO : check if still true with multiple web process
-         with rostful_node.rostful_ctx(name='rostful', argv=ros_args) as node_ctx:
+         with pyros_ctx(name='rostful', argv=ros_args) as node_ctx:
              self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
 
                 # configure logger
