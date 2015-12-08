@@ -1,9 +1,17 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-# IS Action really worth having here ?
-from pyros.rosinterface import ActionBack
-from pyros.rosinterface.ros_interface import get_suffix, CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH
+import re
+
+CONFIG_PATH = '_rosdef'
+SRV_PATH = '_srv'
+MSG_PATH = '_msg'
+ACTION_PATH = '_action'
+
+def get_suffix(path):
+    suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH,SRV_PATH,MSG_PATH,ACTION_PATH]])
+    match = re.search(r'/(%s)$' % suffixes, path)
+    return match.group(1) if match else ''
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 import rospy
@@ -15,11 +23,34 @@ from StringIO import StringIO
 
 from pyros.rosinterface import definitions
 
-from pyros.rosinterface.util import ROS_MSG_MIMETYPE, request_wants_ros, get_query_bool
 
-import os
-import urlparse
-####
+ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
+def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
+    if isinstance(rostype,type):
+        name = rostype.__name__
+        module = rostype.__module__.split('.')[0]
+        rostype = module + '/' + name
+    return 'application/vnd.ros.msg; type=%s' % rostype
+
+
+#req should be a flask request
+#TODO : improve package design...
+def request_wants_ros(req):
+    best = req.accept_mimetypes.best_match([ROS_MSG_MIMETYPE,'application/json'])
+    return best == ROS_MSG_MIMETYPE and req.accept_mimetypes[best] > req.accept_mimetypes['application/json']
+#implementation ref : http://flask.pocoo.org/snippets/45/
+
+
+def get_json_bool(b):
+    if b:
+        return 'true'
+    else:
+        return 'false'
+
+
+def get_query_bool(query_string, param_name):
+    return re.search(r'(^|&)%s((=(true|1))|&|$)' % param_name,query_string,re.IGNORECASE)
+
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
@@ -53,7 +84,6 @@ class FrontEnd(MethodView):
                                    topics=self.node_client.topics(),
                                    services=self.node_client.services(),
                                    params=self.node_client.params(),
-                                   actions=[],  #self.node_client.listacts(),
                                    rapp_namespaces=[],  #self.node_client.namespaces(),
                                    interactions=[],  #self.node_client.interactions()
             )
@@ -65,7 +95,6 @@ class FrontEnd(MethodView):
             namespaces = [] #self.node_client.namespaces()
             services = self.node_client.services()
             topics = self.node_client.topics()
-            actions = [] #self.node_client.listacts()
             
             if has_rocon and rosname in interactions:
                 mode = 'interaction'
@@ -93,19 +122,16 @@ class FrontEnd(MethodView):
                 mode = 'topic'
                 topic = topics[rosname]
                 return render_template('topic.html', topic=topic)
-            elif rosname in actions:
-                mode = 'action'
-                action = actions[rosname]
-                return render_template('action.html', action=action)
             else:
                 return '', 404
 
 
-"""
-Additional REST services provided by Rostful itself
-TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
-"""
+
 class Rostful(restful.Resource):
+    """
+    Additional REST services provided by Rostful itself
+    TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
+    """
     def __init__(self, ros_node_client, logger, debug):
         super(Rostful, self).__init__()
         self.node_client = ros_node_client
@@ -135,22 +161,15 @@ class Rostful(restful.Resource):
                 else:
                     return make_response(jsonify(namespaces))
 
-            if len(spliturl) > 0 and spliturl[0] == 'actions':
-                actions = self.node_client.listacts()
-                if len(spliturl) > 1 and spliturl[1] in actions:
-                    return make_response(jsonify(actions[spliturl[1]]))
-                else:
-                    return make_response(jsonify(actions))
-
             if len(spliturl) > 0 and spliturl[0] == 'services':
-                services = self.node_client.listsrvs()
+                services = self.node_client.services()
                 if len(spliturl) > 1 and spliturl[1] in services:
                     return make_response(jsonify(self.node_client.service_call(spliturl[1])))
                 else:
                     return make_response(jsonify(services))
 
             if len(spliturl) > 0 and spliturl[0] == 'topics':
-                topics = self.node_client.listtopics()
+                topics = self.node_client.topics()
                 if len(spliturl) > 1 and spliturl[1] in topics:
                     return make_response(jsonify(self.node_client.topic_extract(spliturl[1])))
                 else:
@@ -160,12 +179,10 @@ class Rostful(restful.Resource):
                 return make_response('', 404)
 
 
-
-"""
-View for backend pages
-"""
-
 class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
+    """
+    View for backend pages
+    """
     def __init__(self, ros_node_client, logger, debug):
         super(BackEnd, self).__init__()
         self.node_client = ros_node_client
@@ -210,26 +227,19 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             return cfg_resp
 
         if not suffix:
-            if path in params:
+            if params is not None and path in params:
                 msg = self.node_client.param_get(path)
-            elif path in services:
+            elif services is not None and path in services:
                 msg = self.node_client.service_call(path)
-            elif path in topics:
-                if not topics[path].allow_sub:
+            elif topics is not None and path in topics:
+                if topics[path].get('allow_sub', None) is None:
                     self.logger.warn('405 : %s', path)
                     return make_response('', 405)
 
                 msg = self.node_client.topic_extract(path)
             else:
-                for action_suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX]:
-                    action_name = path[:-(len(action_suffix) + 1)]
-                    if path.endswith('/' + action_suffix) and action_name in actions:
-                        action = actions[action_name]
-                        msg = action.get(action_suffix)
-                        break
-                    else:
-                        self.logger.warn('404 : %s', path)
-                        return make_response('', 404)
+                self.logger.warn('404 : %s', path)
+                return make_response('', 404)
 
             #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
@@ -260,9 +270,6 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         elif suffix == SRV_PATH and path in self.ros_if.services:
             sfx_resp = make_response(definitions.get_service_srv(services[path]), 200)
             sfx_resp.mimetype ='text/plain'
-        elif suffix == ACTION_PATH and path in self.ros_if.actions:
-            sfx_resp = make_response(definitions.get_action_action(actions[path]), 200)
-            sfx_resp.mimetype ='text/plain'
         elif suffix == CONFIG_PATH:
             if path in services:
                 service_name = path
@@ -288,35 +295,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 else:
                     sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
                     sfx_resp.mimetype = 'text/plain'
-            elif path in self.ros_if.actions:
-                action_name = path
-
-                action = actions[action_name]
-                dfile = definitions.describe_action(action_name, action, full=full)
-
-                if jsn:
-                    sfx_resp = make_response(str(dfile.tojson()), 200)
-                    sfx_resp.mimetype ='application/json'
-                else:
-                    sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
-                    sfx_resp.mimetype = 'text/plain'
             else:
-                for suffix in [ActionBack.STATUS_SUFFIX, ActionBack.RESULT_SUFFIX, ActionBack.FEEDBACK_SUFFIX,
-                               ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
-                    if path.endswith('/' + suffix):
-                        path = path[:-(len(suffix) + 1)]
-                        if path in actions:
-                            action_name = path
-
-                            action = actions[action_name]
-                            dfile = definitions.describe_action_topic(action_name, suffix, action, full=full)
-
-                            if jsn:
-                                sfx_resp = make_response(str(dfile.tojson()), 200)
-                                sfx_resp.mimetype = 'application/json'
-                            else:
-                                sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
-                                sfx_resp.mimetype = 'text/plain'
                 sfx_resp = make_response('', 404)
         else:
             self.logger.warn('404 : %s', path)
@@ -333,40 +312,25 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             use_ros = ('CONTENT_TYPE' in request.environ and
                        ROS_MSG_MIMETYPE == request.environ['CONTENT_TYPE'].split(';')[0].strip())
 
-            services = self.node_client.listsrvs()
-            topics = self.node_client.listtopics()
-            actions = self.node_client.listacts()
-            params = self.node_client.listparams()
+            services = self.node_client.services()
+            topics = self.node_client.topics()
+            params = self.node_client.params()
 
             if rosname in services:
                 mode = 'service'
                 service = services[rosname]
-                input_msg_type = service.rostype_req
             elif rosname in topics:
                 mode = 'topic'
                 topic = topics[rosname]
-                if not topic.allow_pub:
+                if topic.get('allow_pub', None) is None:
                     self.logger.warn('405 : %s', rosname)
                     return make_response('', 405)
-                input_msg_type = topic.rostype
             elif rosname in params:
                 mode = 'param'
                 param = params[rosname]
             else:
-                #self.logger.debug('ACTION')
-                for suffix in [ActionBack.GOAL_SUFFIX, ActionBack.CANCEL_SUFFIX]:
-                    action_name = rosname[:-(len(suffix) + 1)]
-                    if rosname.endswith('/' + suffix) and action_name in actions:
-                        mode = 'action'
-                        action_mode = suffix
-                        #self.logger.debug('MODE:%r', action_mode)
-                        action = actions[action_name]
-                        input_msg_type = action.get_msg_type(suffix)
-                        #self.logger.debug('input_msg_type:%r', input_msg_type)
-                        break
-                else:
-                    self.logger.warn('404 : %s', rosname)
-                    return make_response('', 404)
+                self.logger.warn('404 : %s', rosname)
+                return make_response('', 404)
 
             # we are now sending via the client node, which will convert the
             # received dict into the correct message type for the service (or
@@ -375,7 +339,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             input_data = json.loads(input_data or "{}")
             input_data.pop('_format', None)
 
-            # input_msg = input_msg_type()
+            # input_msg = input_msg_type()  # was topic.rostype but we dont have it her ( cant serialize and transfer easily )
             # self.logger.debug('input_msg:%r', input_msg)
             # if use_ros:
             #     input_msg.deserialize(input_data)
@@ -386,7 +350,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
             response = None
             if mode == 'service':
-                self.logger.debug('calling service %s with msg : %s', service.name, input_data)
+                self.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
                 ret_msg = self.node_client.service_call(rosname, input_data)
 
                 if use_ros:
@@ -407,18 +371,13 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 response.mimetype = content_type
 
             elif mode == 'topic':
-                self.logger.debug('publishing \n%s to topic %s', input_data, topic.name)
+                self.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name', None))
                 self.node_client.topic_inject(rosname, input_data)
                 response = make_response('{}', 200)
                 response.mimetype = 'application/json'
             elif mode == 'param':
-                self.logger.debug('setting \n%s param %s', input_data, param.name)
+                self.logger.debug('setting \n%s param %s', input_data, param.get('name', None))
                 self.node_client.param_set(rosname, input_data)
-                response = make_response('{}', 200)
-                response.mimetype = 'application/json'
-            elif mode == 'action':
-                self.logger.debug('publishing %s to action %s', input_data, action.name)
-                self.node_client.action(action.name, action_mode, input_data)
                 response = make_response('{}', 200)
                 response.mimetype = 'application/json'
             return response
