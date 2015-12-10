@@ -232,10 +232,6 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             elif services is not None and path in services:
                 msg = self.node_client.service_call(path)
             elif topics is not None and path in topics:
-                if topics[path].get('allow_sub', None) is None:
-                    self.logger.warn('405 : %s', path)
-                    return make_response('', 405)
-
                 msg = self.node_client.topic_extract(path)
             else:
                 self.logger.warn('404 : %s', path)
@@ -322,9 +318,6 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             elif rosname in topics:
                 mode = 'topic'
                 topic = topics[rosname]
-                if topic.get('allow_pub', None) is None:
-                    self.logger.warn('405 : %s', rosname)
-                    return make_response('', 405)
             elif rosname in params:
                 mode = 'param'
                 param = params[rosname]
