@@ -3,6 +3,10 @@ from __future__ import absolute_import
 
 import re
 
+import sys
+
+import collections
+
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
 MSG_PATH = '_msg'
@@ -18,11 +22,12 @@ import rospy
 import json
 import logging
 import logging.handlers
+import tblib
 
 from StringIO import StringIO
 
 from pyros.rosinterface import definitions
-
+from pyros.rosinterface.message_conversion import InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
 def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
@@ -63,6 +68,24 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
+from pyros.baseinterface import PyrosException
+
+### EXCEPTION CLASSES
+class WrongMessageFormat(Exception):
+    status_code = 400
+
+    def __init__(self, message, status_code=None, traceback=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.traceback = traceback
+
+    def to_dict(self):
+        rv = dict({})
+        rv['message'] = self.message
+        rv['traceback'] = self.traceback
+        return rv
 
 """
 View for frontend pages
@@ -328,9 +351,18 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             # we are now sending via the client node, which will convert the
             # received dict into the correct message type for the service (or
             # break, if it's wrong.)
-            input_data = request.environ['wsgi.input'].read(length)
-            input_data = json.loads(input_data or "{}")
-            input_data.pop('_format', None)
+
+            # Trying to parse the input
+            try:
+                input_data = request.environ['wsgi.input'].read(length)
+                input_data = json.loads(input_data or "{}")
+                input_data.pop('_format', None)
+            except ValueError as exc_value:
+                raise WrongMessageFormat(
+                    message=str(exc_value),
+                    traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
+                )
+
 
             # input_msg = input_msg_type()  # was topic.rostype but we dont have it her ( cant serialize and transfer easily )
             # self.logger.debug('input_msg:%r', input_msg)
@@ -342,39 +374,64 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             #     msgconv.populate_instance(input_data, input_msg)
 
             response = None
-            if mode == 'service':
-                self.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
-                ret_msg = self.node_client.service_call(rosname, input_data)
+            try :
+                if mode == 'service':
+                    self.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
+                    ret_msg = self.node_client.service_call(rosname, input_data)
 
-                if use_ros:
-                    content_type = ROS_MSG_MIMETYPE
-                    output_data = StringIO()
-                    ret_msg.serialize(output_data)
-                    output_data = output_data.getvalue()
-                elif ret_msg:
-                    output_data = ret_msg  # the returned message is already converted from ros format by the client
-                    output_data['_format'] = 'ros'
-                    output_data = json.dumps(output_data)
-                    content_type = 'application/json'
-                else:
-                    output_data = "{}"
-                    content_type = 'application/json'
+                    if use_ros:
+                        content_type = ROS_MSG_MIMETYPE
+                        output_data = StringIO()
+                        ret_msg.serialize(output_data)
+                        output_data = output_data.getvalue()
+                    elif ret_msg:
+                        output_data = ret_msg  # the returned message is already converted from ros format by the client
+                        output_data['_format'] = 'ros'
+                        output_data = json.dumps(output_data)
+                        content_type = 'application/json'
+                    else:
+                        output_data = "{}"
+                        content_type = 'application/json'
 
-                response = make_response(output_data, 200)
-                response.mimetype = content_type
+                    response = make_response(output_data, 200)
+                    response.mimetype = content_type
 
-            elif mode == 'topic':
-                self.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name', None))
-                self.node_client.topic_inject(rosname, input_data)
-                response = make_response('{}', 200)
-                response.mimetype = 'application/json'
-            elif mode == 'param':
-                self.logger.debug('setting \n%s param %s', input_data, param.get('name', None))
-                self.node_client.param_set(rosname, input_data)
-                response = make_response('{}', 200)
-                response.mimetype = 'application/json'
-            return response
+                elif mode == 'topic':
+                    self.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name', None))
+                    self.node_client.topic_inject(rosname, input_data)
+                    response = make_response('{}', 200)
+                    response.mimetype = 'application/json'
+                elif mode == 'param':
+                    self.logger.debug('setting \n%s param %s', input_data, param.get('name', None))
+                    self.node_client.param_set(rosname, input_data)
+                    response = make_response('{}', 200)
+                    response.mimetype = 'application/json'
+                return response
 
-        except Exception, e:
-            self.logger.error('An exception occurred! => 500 %s', e)
-            return make_response(e, 500)
+            # converting pyros exceptions to proper rostful exceptions
+            except (InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException) as exc_value:
+                raise WrongMessageFormat(
+                    message=str(exc_value.message),
+                    traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
+                )
+
+        # returning local exceptions
+        except WrongMessageFormat, wmf:
+            self.logger.error('Wrong message format! => {status} \n{exc}'.format(
+                status=wmf.status_code,
+                exc=wmf.message
+            ))
+            return make_response(json.dumps(wmf.to_dict()), wmf.status_code)
+        # Generic way to return Exceptions we don't know how to handle
+        # But we can do a tiny bit better if it s a PyrosException
+        except Exception as exc_value:
+            exc_type, exc_value, tb = sys.exc_info()
+            tb = tblib.Traceback(tb)
+            exc_dict = {
+                    'exc_type': str(exc_type),
+                    'exc_value': str(exc_value.message) if isinstance(exc_value, PyrosException) else str(exc_value),
+                    'traceback': tb.to_dict()
+                 }
+            self.logger.error('An exception occurred! => 500 \n{exc}'.format(exc=exc_dict))
+            return make_response(json.dumps(exc_dict), 500)
+            # return make_response(e, 500)
