@@ -357,14 +357,14 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 input_data = request.environ['wsgi.input'].read(length)
                 input_data = json.loads(input_data or "{}")
                 input_data.pop('_format', None)
+                #TODO : We get the message structure via the topic, can we already use it for checking before calling rospy ?
             except ValueError as exc_value:
                 raise WrongMessageFormat(
-                    message=str(exc_value),
+                    message="Your request payload was incorrect: {exc_value}".format(exc_value=exc_value),
                     traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
                 )
 
-
-            # input_msg = input_msg_type()  # was topic.rostype but we dont have it her ( cant serialize and transfer easily )
+            # input_msg = input_msg_type() # was topic.rostype but we dont have it here ( cant serialize and transfer easily )
             # self.logger.debug('input_msg:%r', input_msg)
             # if use_ros:
             #     input_msg.deserialize(input_data)
@@ -429,6 +429,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             tb = tblib.Traceback(tb)
             exc_dict = {
                     'exc_type': str(exc_type),
+                    # TODO : it would be nice if pyros exception wouldnt need such a check...
                     'exc_value': str(exc_value.message) if isinstance(exc_value, PyrosException) else str(exc_value),
                     'traceback': tb.to_dict()
                  }
