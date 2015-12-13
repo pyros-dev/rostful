@@ -4,8 +4,7 @@
 {% block GET %}
 
   <h2>Receive message</h2>
-  <!-- Topic allow_sub : {{ topic.allow_sub }} -->
-  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_sub }} id="get_latest{{topic.fullname|replace('/','_')}}">
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_latest{{topic.fullname|replace('/','_')}}">
     GET LATEST MSG
   </button>
   <pre id="get_result{{topic.fullname|replace('/','_')}}"></pre>
@@ -48,11 +47,9 @@ $(document).on('pageinit', '#mainlayout', function(){
 
   <!-- Topic msgtype : {{topic.msgtype}} -->
 
-  <!-- Topic allow_pub : {{ topic.allow_pub }} -->
-
   <form action="" method=post data-ajax=false>
       {{ generate_inputs(topic.msgtype) }}
-      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" {{ 'disabled="disabled"' if not topic.allow_pub }} type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit{{topic.fullname|replace('/','_')}}" value="POST NEW MSG">
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit{{topic.fullname|replace('/','_')}}" value="POST NEW MSG">
   </form>
   <pre id="post_request{{topic.fullname|replace('/','_')}}"></pre>
   <pre id="post_result{{topic.fullname|replace('/','_')}}"></pre>
