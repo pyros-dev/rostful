@@ -262,6 +262,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
             #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
+            if msg is None:
+                return make_response('', 204)  # returning no content if the message is not there
+                # different than empty {} message
+
             output_data = json.dumps(msg)
             mime_type = 'application/json'
 

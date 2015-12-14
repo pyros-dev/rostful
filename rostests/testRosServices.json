@@ -3,7 +3,7 @@
     "testSteps": [
         {
             "name": "trigger",
-            "apiUrl": "http://localhost:8000/ros/test/trgsrv'",
+            "apiUrl": "http://localhost:8000/ros/test/trgsrv",
             "method": "post",
             "asserts": {
                 "headers": {
@@ -16,7 +16,7 @@
         },
         {
             "name": "empty",
-            "apiUrl": "http://localhost:8000/ros/test/empsrv'",
+            "apiUrl": "http://localhost:8000/ros/test/empsrv",
             "method": "post",
             "asserts": {
                 "headers": {
@@ -28,7 +28,7 @@
         },
         {
             "name": "absent",
-            "apiUrl": "http://localhost:8000/ros/test/absent'",
+            "apiUrl": "http://localhost:8000/ros/test/absent",
             "method": "post",
             "asserts": {
                 "headers": {
@@ -38,7 +38,7 @@
         },
         {
             "name": "slow",
-            "apiUrl": "http://localhost:8000/ros/test/slowsrv'",
+            "apiUrl": "http://localhost:8000/ros/test/slowsrv",
             "method": "post",
             "asserts": {
                 "headers": {
