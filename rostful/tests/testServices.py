@@ -19,9 +19,7 @@ class TestServices(object):
 
         # Start Server with default config
         rostful_server = rostful.server(testing=True)
-
-        rostful.server.config['TESTING'] = True
-        self.app = flask
+        self.app = rostful_server.app
 
     def tearDown(self):
         pass

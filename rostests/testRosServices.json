@@ -1,0 +1,51 @@
+{
+    "name": "RosServices",
+    "testSteps": [
+        {
+            "name": "trigger",
+            "apiUrl": "http://localhost:8000/ros/test/trgsrv'",
+            "method": "post",
+            "asserts": {
+                "headers": {
+                    "content-type": "exec \"application/json\" in value"
+                },
+                "payload": {
+                    "success" : true
+                }
+            }
+        },
+        {
+            "name": "empty",
+            "apiUrl": "http://localhost:8000/ros/test/empsrv'",
+            "method": "post",
+            "asserts": {
+                "headers": {
+                    "content-type": "exec \"application/json\" in value"
+                },
+                "payload": {
+                }
+            }
+        },
+        {
+            "name": "absent",
+            "apiUrl": "http://localhost:8000/ros/test/absent'",
+            "method": "post",
+            "asserts": {
+                "headers": {
+                    "status": 404
+                }
+            }
+        },
+        {
+            "name": "slow",
+            "apiUrl": "http://localhost:8000/ros/test/slowsrv'",
+            "method": "post",
+            "asserts": {
+                "headers": {
+                    "status": 504
+                }
+            }
+        }
+
+    ]
+}
