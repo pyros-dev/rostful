@@ -4,7 +4,7 @@
         {
             "name": "string_pub_topic",
             "apiUrl": "http://localhost:8000/ros/string_pub_topic",
-            "method": "post",
+            "method": "get",
             "asserts": {
                 "headers": {
                     "content-type": "exec \"application/json\" in value"
@@ -16,8 +16,8 @@
         },
         {
             "name": "string_pubnot_topic",
-            "apiUrl": "http://localhost:8000/ros/string_pubnot_topic'",
-            "method": "post",
+            "apiUrl": "http://localhost:8000/ros/string_pubnot_topic",
+            "method": "get",
             "asserts": {
                 "headers": {
                     "status": 204
@@ -26,8 +26,8 @@
         },
         {
             "name": "absent",
-            "apiUrl": "http://localhost:8000/ros/testtopic/absent'",
-            "method": "post",
+            "apiUrl": "http://localhost:8000/ros/testtopic/absent",
+            "method": "get",
             "asserts": {
                 "headers": {
                     "status": 404
