@@ -28,6 +28,7 @@ from StringIO import StringIO
 
 from pyros.rosinterface import definitions
 from pyros.rosinterface.message_conversion import InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException
+from pyros import PyrosServiceTimeout, PyrosServiceNotFound
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
 def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
@@ -71,8 +72,41 @@ import urllib
 from pyros import PyrosException
 
 ### EXCEPTION CLASSES
+# should be used to return anything that is not 2xx, python style.
 class WrongMessageFormat(Exception):
     status_code = 400
+
+    def __init__(self, message, status_code=None, traceback=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.traceback = traceback
+
+    def to_dict(self):
+        rv = dict({})
+        rv['message'] = self.message
+        rv['traceback'] = self.traceback
+        return rv
+
+class ServiceTimeout(Exception):
+    status_code = 504
+
+    def __init__(self, message, status_code=None, traceback=None):
+        Exception.__init__(self)
+        self.message = message
+        if status_code is not None:
+            self.status_code = status_code
+        self.traceback = traceback
+
+    def to_dict(self):
+        rv = dict({})
+        rv['message'] = self.message
+        rv['traceback'] = self.traceback
+        return rv
+
+class ServiceNotFound(Exception):
+    status_code = 404
 
     def __init__(self, message, status_code=None, traceback=None):
         Exception.__init__(self)
@@ -418,6 +452,16 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     message=str(exc_value.message),
                     traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
                 )
+            except PyrosServiceTimeout as exc_value:
+                raise ServiceTimeout(
+                    message=str(exc_value.message),
+                    traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
+                )
+            except PyrosServiceNotFound as exc_value:
+                raise ServiceNotFound(
+                    message=str(exc_value.message),
+                    traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
+                )
 
         # returning local exceptions
         except WrongMessageFormat, wmf:
@@ -426,6 +470,21 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 exc=wmf.message
             ))
             return make_response(json.dumps(wmf.to_dict()), wmf.status_code)
+
+        except ServiceTimeout, st:
+            self.logger.error('Service Timeout! => {status} \n{exc}'.format(
+                status=st.status_code,
+                exc=st.message
+            ))
+            return make_response(json.dumps(st.to_dict()), st.status_code)
+
+        except ServiceNotFound, snf:
+            self.logger.error('Service Not Found! => {status} \n{exc}'.format(
+                status=snf.status_code,
+                exc=snf.message
+            ))
+            return make_response(json.dumps(snf.to_dict()), snf.status_code)
+
         # Generic way to return Exceptions we don't know how to handle
         # But we can do a tiny bit better if it s a PyrosException
         except Exception as exc_value:
