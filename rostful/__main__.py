@@ -10,9 +10,9 @@ import errno
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from rostful import rostful_server
+    from rostful import Server
 else:
-    from . import rostful_server
+    from .server import Server
 
 import logging
 from logging.handlers import RotatingFileHandler
@@ -44,7 +44,9 @@ def init():
     """
     Create useful configuration files and database on first install
     """
-    #Create instance config file name, to make it easy to modify when deploying
+    # Start Server with default config
+    rostful_server = Server()
+    # Create instance config file name, to make it easy to modify when deploying
     filename = os.path.join(rostful_server.app.instance_path, 'flask_config.py')
     if not os.path.isfile(filename) :
         #this will create the directories if needed
@@ -72,6 +74,9 @@ def init():
 def run(host, port, server_type, ros_args):
     if isinstance(port, basestring):
         port = int(port)
+
+    # Start Server with default config
+    rostful_server = Server()
 
     rostful_server.app.logger.info('host %r port %r', host, port)
     rostful_server.app.logger.info('ros_args %r', ros_args)

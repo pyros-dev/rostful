@@ -1,13 +1,25 @@
+from __future__ import absolute_import
+
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+
+
 import os
 import flask
 import tempfile
 
+import nose
 
-class FlaskTestCase(object):
+import rostful
+
+class TestServices(object):
 
     def setUp(self):
-        flask.app.config['TESTING'] = True
-        self.app = flask.app.test_client()
+
+        # Start Server with default config
+        rostful_server = rostful.server(testing=True)
+        self.app = rostful_server.app
 
     def tearDown(self):
         pass

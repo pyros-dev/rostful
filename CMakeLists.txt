@@ -37,5 +37,10 @@ install(DIRECTORY launch/
 
 ## Unit tests
 if (CATKIN_ENABLE_TESTING)
-  add_subdirectory(tests)
+
+# Unit tests using nose, but needing a running ROS core.
+find_package(catkin REQUIRED COMPONENTS rostest)
+#TODO add_rostest(rostful.test)
+
+
 endif()

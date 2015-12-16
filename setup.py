@@ -14,6 +14,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
+            'rostful.tests',
             # This can create potential conflicts in install space,
             # If another package install the same pthon package dependency.
             # TODO : The proper solution is to create ThirdPartyRelease for these packages if needed or
