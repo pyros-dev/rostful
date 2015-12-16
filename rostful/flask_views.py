@@ -68,7 +68,7 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
-from pyros.baseinterface import PyrosException
+from pyros import PyrosException
 
 ### EXCEPTION CLASSES
 class WrongMessageFormat(Exception):
