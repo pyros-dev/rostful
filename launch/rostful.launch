@@ -6,6 +6,9 @@
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
   <arg name="params" default="[]" />
+  <arg name="connection_cache_list" default="/rocon/connection_cache/list"/>
+  <arg name="connection_cache_diff" default="/rocon/connection_cache/diff"/>
+
   <arg name="enable_rocon" default="false"/> <!-- NOT WORKING ANYMORE -->
   <arg name="rapps_namespaces" default="[]" /> <!-- TODO : default should be to watch all -> wildcard support needed -->
 
@@ -17,6 +20,9 @@
     <param name="params" value="$(arg params)" type="str" />
     <param name="enable_rocon" value="$(arg enable_rocon)" type="bool" />
     <param name="rapps_namespaces" value="$(arg rapps_namespaces)" type="str"/>
+    <!-- remapping subscriber to plug into connection cache -->
+    <remap from="~connections_list" to="$(arg connection_cache_list)"/>
+    <remap from="~connections_diff" to="$(arg connection_cache_diff)"/>
   </node>
 
 </launch>

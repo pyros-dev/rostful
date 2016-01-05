@@ -21,7 +21,12 @@ case $key in
     SERVER="$2"
     shift 2
     ;;
-    __*)
+    __*)  # matching basic ros args
+    ROSARGS="${ROSARGS:+$ROSARGS} --ros-arg=$key"
+    #ros option (multiple)
+    shift 1
+    ;;
+    ~*)  # matching relative remapping ros args
     ROSARGS="${ROSARGS:+$ROSARGS} --ros-arg=$key"
     #ros option (multiple)
     shift 1
