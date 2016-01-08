@@ -6,6 +6,7 @@
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
   <arg name="params" default="[]" />
+  <arg name="enable_cache" default="true"/>
   <arg name="connection_cache_list" default="/rocon/connection_cache/list"/>
   <arg name="connection_cache_diff" default="/rocon/connection_cache/diff"/>
 
@@ -18,6 +19,7 @@
     <param name="services" value="$(arg services)" type="str" />
     <param name="actions" value="$(arg actions)" type="str" />
     <param name="params" value="$(arg params)" type="str" />
+    <param name="enable_cache" value="$(arg enable_cache)" type="bool" />
     <param name="enable_rocon" value="$(arg enable_rocon)" type="bool" />
     <param name="rapps_namespaces" value="$(arg rapps_namespaces)" type="str"/>
     <!-- remapping subscriber to plug into connection cache -->
