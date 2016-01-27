@@ -109,7 +109,7 @@ class Server(object):
 
         #One PyrosNode is needed for Flask.
         #TODO : check if still true with multiple web process
-        with pyros_ctx(name='rostful', argv=ros_args, mock=mock) as node_ctx:
+        with pyros_ctx(name='rostful', argv=ros_args, mock=mock, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
             self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
 
                # configure logger
