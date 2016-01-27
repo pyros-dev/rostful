@@ -6,7 +6,7 @@
   <arg name="services" default="[]" />
   <arg name="actions" default="[]" />
   <arg name="params" default="[]" />
-  <arg name="enable_cache" default="true"/>
+  <arg name="enable_cache" default="false"/>
   <arg name="connection_cache_list" default="/rocon/connection_cache/list" doc="topic to listen for connection cache list of connections"/>
   <arg name="connection_cache_diff" default="/rocon/connection_cache/diff" doc="topic to listen for differences in connection cache list of connections"/>
 
