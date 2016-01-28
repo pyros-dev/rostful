@@ -1,7 +1,0 @@
-#!/usr/bin/env python
-import rester
-import argparse
-
-if __name__ == '__main__':
-    rester.apirunner.run()
-
