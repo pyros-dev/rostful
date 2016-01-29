@@ -1,4 +1,4 @@
-udo: required
+sudo: required
 dist: trusty
 language: generic
 install:
@@ -13,11 +13,11 @@ install:
   - sudo `which rosdep` init
   - rosdep update
 # Use rosdep to install rostful-node's dependencies
-  - rosdep install --default-yes --from-paths rostful/ --rosdistro $CI_ROS_DISTRO
+  - rosdep install --default-yes --from-paths ./ --rosdistro $CI_ROS_DISTRO
 script:
   - source /opt/ros/$CI_ROS_DISTRO/setup.bash
-  - mkdir rostful/build
-  - cd rostful/build
+  - mkdir build
+  - cd build
   - cmake .. -DCMAKE_INSTALL_PREFIX=./install
   - make -j1
   - make -j1 tests

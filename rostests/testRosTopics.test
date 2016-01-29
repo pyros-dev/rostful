@@ -1,0 +1,21 @@
+<launch>
+
+  <node pkg="pyros" type="string_pub_node.py" name="string_pub_node">
+    <param name="topic_name" value="string_pub_topic" type="str" />
+    <param name="test_message" value="string_pub message" type="str" />
+  </node>
+
+  <node pkg="pyros" type="string_pubnot_node.py" name="string_pubnot_node">
+    <param name="topic_name" value="string_pubnot_topic" type="str" />
+    <param name="test_message" value="string_pubnot message" type="str" />
+  </node>
+
+  <node pkg="rostful" type="devserver" name="rostful" args="-s flask">
+    <param name="topics" value="['/string_pub_topic','/string_pubnot_topic']" type="str" />
+    <param name="services" value="[]" type="str" />
+    <param name="params" value="[]" type="str" />
+    <param name="enable_rocon" value="False" type="bool" />
+  </node>
+
+  <test test-name="RosTopics" pkg="rostful" type="roster" cwd="node" args="--tc=/home/alexv/ROS/rostful_ws/src/rostful/rostests/testRosTopics.json"/>
+</launch>

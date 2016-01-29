@@ -1,0 +1,100 @@
+{% extends "layout.html" %}
+{% block title %}Topic {{ topic.fullname }}{% endblock %}
+{% block header %}Topic {{ topic.fullname }}{% endblock %}
+{% block GET %}
+
+  <h2>Receive message</h2>
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_latest{{topic.fullname|replace('/','_')}}">
+    GET LATEST MSG
+  </button>
+  <pre id="get_result{{topic.fullname|replace('/','_')}}"></pre>
+{% endblock %}
+
+{% block GET_ajax %}
+<script type=text/javascript>
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#get_latest{{topic.fullname|replace('/','_')}}', function(e){
+    $.ajax({
+      url: $SCRIPT_ROOT + '/ros{{ topic.fullname }}',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_result{{topic.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+});
+</script>
+{% endblock %}
+
+
+{% from 'macros.html' import generate_inputs, generate_msgdata %}
+
+{% block POST %}
+  <h2>Send message</h2>
+
+  <!-- Topic msgtype : {{topic.msgtype}} -->
+
+  <form action="" method=post data-ajax=false>
+      {{ generate_inputs(topic.msgtype) }}
+      <input class="ui-btn ui-corner-all ui-btn-inline ui-shadow" type="button" name="submit{{topic.fullname|replace('/','_')}}" id="submit{{topic.fullname|replace('/','_')}}" value="POST NEW MSG">
+  </form>
+  <pre id="post_request{{topic.fullname|replace('/','_')}}"></pre>
+  <pre id="post_result{{topic.fullname|replace('/','_')}}"></pre>
+
+{% endblock %}
+
+{% block POST_ajax %}
+<script type=text/javascript>
+
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#submit{{topic.fullname|replace('/','_')}}', function() { // catch the form's submit event
+    {{ generate_msgdata(topic.msgtype) }}
+
+    //alert ( ' sending ' + JSON.stringify(msgdata) );
+    // Send data to Rostful backend through the Ajax call
+    $.ajax({
+        url: $SCRIPT_ROOT + '/ros{{ topic.fullname }}',
+        data: JSON.stringify(msgdata),
+        method: 'POST',
+        dataType: 'json',
+        beforeSend: function(jqXHR, settings) {
+            // This callback function will trigger before data is sent
+            $("#post_request{{topic.fullname|replace('/','_')}}").text(JSON.stringify(msgdata,null,2));
+          $.mobile.loading('show');// This will show ajax spinner
+        },
+        complete: function() {
+            // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will show ajax spinner
+        },
+        success: function (result) {
+            $("#post_result{{topic.fullname|replace('/','_')}}").text(JSON.stringify(result,null,2));
+        },
+        error: function (request,error) {
+            // This callback function will trigger on unsuccessful action
+            alert('Network error has occurred please try again!');
+        }
+    });
+    return false; // cancel original event to prevent form submitting
+  });
+});
+</script>
+{% endblock %}
+
+
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
+
+
