@@ -32,6 +32,7 @@
   <run_depend>rospy</run_depend>
   <run_depend>python-redis</run_depend>
   <run_depend>python-requests</run_depend>
+  <run_depend>python-wtforms</run_depend>
 
   <!-- these dependencies are only for testing -->
   <run_depend>python-yaml</run_depend>
