@@ -23,16 +23,82 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
 
+# python package dependencies
+import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
+import flask_restful as restful
+import flask_security as security
 
-from .app import app
+from . import db_models
+from .db_models import db
+from .flask_views import FrontEnd, BackEnd, Rostful
+
+app = Flask(
+    'rostful',
+    static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
+    template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
+    instance_relative_config=True
+)
+
+# initializes DB (needed here to allow migrations without launching flask server)
+db.init_app(app)
+
+# Adding CORS middleware
+app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')
+
+# Setup Flask-Security
+user_datastore = security.SQLAlchemyUserDatastore(db, db_models.User, db_models.Role)
+security = security.Security(app, user_datastore)
 
 
-# TODO : move this into main. we probably dont need any specific server class here...
-# TODO : check serving rostful with other web servers (nginx, etc.)
+# REST API extended to render exceptions as json
+# https://gist.github.com/grampajoe/6529609
+# http://www.wiredmonk.me/error-handling-and-logging-in-flask-restful.html
+class Api(restful.Api):
+    def handle_error(self, e):
+        # Attach the exception to itself so Flask-Restful's error handler
+        # tries to render it.
+        if not hasattr(e, 'data'):  # TODO : fix/improve this
+            e.data = e
+        return super(Api, self).handle_error(e)
+
+api = restful.Api(app)
+
+
+# Setting up error handlers
+# TODO : HOW ??
+@app.errorhandler(404)
+def page_not_found(error):
+    app.logger.error('Web Request ERROR 404 : %r', error)
+    return render_template('error.html', error=error), 404
+
+
+def setup_pyros_client(self, ros_node_client, debug=False):
+    rostfront = FrontEnd.as_view('frontend', ros_node_client, self.logger, debug)
+    rostback = BackEnd.as_view('backend', ros_node_client, self.logger, debug)
+    rostful = Rostful.as_view('rostful', ros_node_client, self.logger, debug)
+
+    # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
+    # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
+    self.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+
+    # TODO : put everything under robot/worker name here ( so we can evolve to support multiple workers )
+    self.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
+    self.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
+
+    # TMP -> replace by using rosapi
+    self.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
+    self.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
+
+
+# FIXME : currently patching app ( waiting for proper middleware implementation )
+import types
+app.setup_pyros_client = types.MethodType(setup_pyros_client, app)
+
+
+# TODO : extract WSGI app from this. server and WSGI app sould be separate (allows separate testing)
 class Server(object):
     # TODO : pass config file from command line here
     def __init__(self, testing=True):
-        self.app = app
 
         if testing:
             self.app.config.from_object(config.Development)
@@ -41,13 +107,6 @@ class Server(object):
         # TODO : flexible config by chosing file
         # TODO : flexible config by getting file from instance folder
         # TODO : flexible config by getting env var
-
-    @property
-    def logger(self):
-        return self.app.logger
-
-    def test_client(self, use_cookies=True):
-        return self.app.test_client(use_cookies)
 
     def launch(self, host='127.0.0.1', port=8080, ros_args='', serv_type='flask', pyros_ctx_impl=None):
         """
@@ -70,7 +129,7 @@ class Server(object):
         #One PyrosNode is needed for Flask.
         #TODO : check if still true with multiple web process
         with pyros_ctx_impl(name='rostful', argv=ros_args, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
-            self.app.setup_pyros_client(node_ctx.client, False if serv_type == 'tornado' else True)
+            self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
 
                # configure logger
             #if not debug:
@@ -114,5 +173,4 @@ class Server(object):
                     port_retries -= 1
                     port += 1
                     self.app.logger.error('Socket Error : {0}'.format(msg))
-
 

@@ -12,13 +12,14 @@ SRV_PATH = '_srv'
 MSG_PATH = '_msg'
 ACTION_PATH = '_action'
 
+
 def get_suffix(path):
     suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH,SRV_PATH,MSG_PATH,ACTION_PATH]])
     match = re.search(r'/(%s)$' % suffixes, path)
     return match.group(1) if match else ''
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
-import rospy
+
 import json
 import logging
 import logging.handlers
@@ -27,7 +28,7 @@ import tblib
 from StringIO import StringIO
 
 from pyros.rosinterface import definitions
-from pyros.rosinterface.message_conversion import InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException
+# from pyros.rosinterface.message_conversion import InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException
 from pyros import PyrosServiceTimeout, PyrosServiceNotFound
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
@@ -269,7 +270,6 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         services = self.node_client.services()
         topics = self.node_client.topics()
-        actions = [] #self.node_client.listacts()
         params = self.node_client.params()
         
         if path == CONFIG_PATH:
@@ -447,11 +447,11 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 return response
 
             # converting pyros exceptions to proper rostful exceptions
-            except (InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException) as exc_value:
-                raise WrongMessageFormat(
-                    message=str(exc_value.message),
-                    traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
-                )
+            # except (InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException) as exc_value:
+            #     raise WrongMessageFormat(
+            #         message=str(exc_value.message),
+            #         traceback=tblib.Traceback(sys.exc_info()[2]).to_dict()
+            #     )
             except PyrosServiceTimeout as exc_value:
                 raise ServiceTimeout(
                     message=str(exc_value.message),
