@@ -95,11 +95,11 @@ class Server(object):
         # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
         self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
 
-        # TODO : put everything under robot/worker name here ( so we can evolve to support multiple workers )
         self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
         self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
 
-        # TMP -> replace by using rosapi
+        # TODO : merge with the rest of API.
+        # TODO : probably requires listing children services/topics names from parent on GET first.
         self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
         self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
 
@@ -107,8 +107,8 @@ class Server(object):
 
         print host, port
 
-        #One PyrosNode is needed for Flask.
-        #TODO : check if still true with multiple web process
+        # One PyrosNode is needed for Flask.
+        # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
         with pyros_ctx(name='rostful', argv=ros_args, mock=mock, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
             self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
 

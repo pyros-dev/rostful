@@ -7,6 +7,10 @@ import sys
 
 import collections
 
+import time
+
+import pyros
+
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
 MSG_PATH = '_msg'
@@ -121,10 +125,32 @@ class ServiceNotFound(Exception):
         rv['traceback'] = self.traceback
         return rv
 
+
+class Timeout(object):
+    """
+    Small useful timeout class
+    """
+    def __init__(self, seconds):
+        self.seconds = seconds
+
+    def __enter__(self):
+        self.die_after = time.time() + self.seconds
+        return self
+
+    def __exit__(self, type, value, traceback):
+        pass
+
+    @property
+    def timed_out(self):
+        return time.time() > self.die_after
+
+
 """
 View for frontend pages
 """
 # TODO: maybe consider http://www.flaskapi.org/
+# TODO: or maybe better https://github.com/OAI/OpenAPI-Specification
+
 
 class FrontEnd(MethodView):
     def __init__(self, ros_node_client, logger, debug):
@@ -146,32 +172,24 @@ class FrontEnd(MethodView):
             )
         else:
             rosname = '/' + rosname
-            has_rocon = False #self.node_client.has_rocon()
-            # TODO: this isn't very efficient, but don't know a better way to do it
-            interactions = [] #self.node_client.interactions()
-            namespaces = [] #self.node_client.namespaces()
-            services = self.node_client.services()
-            topics = self.node_client.topics()
-            
-            if has_rocon and rosname in interactions:
-                mode = 'interaction'
-                interaction = interactions[rosname]
-                result = self.node_client.interaction(rosname).interaction
-                if result.result:
-                    if interaction.name.startswith('web_app'):
-                        iname = interaction.name[7:].strip("()")
-                        self.logger.debug("Redirecting to WebApp at %r", iname)
-                        return render_template('interaction.html', interaction=interaction)
-                        #return redirect(iname, code=302)
-                    else:
-                        return render_template('interaction.html', interaction=interaction)
-                else:
-                    return jsonify(result), 401
-            elif has_rocon and rosname in namespaces:
-                mode = 'rapp_namespace'
-                rapp_ns = namespaces[rosname]
-                return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
-            elif rosname in services:
+
+            services = None
+            topics = None
+            with Timeout(30) as t:
+                while not t.timed_out and (services is None or topics is None):
+                    try:
+                        services = self.node_client.services()
+                    except pyros.PyrosServiceTimeout:
+                        services = None
+                    try:
+                        topics = self.node_client.topics()
+                    except pyros.PyrosServiceTimeout:
+                        topics = None
+
+            if t.timed_out:
+                raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
+
+            if rosname in services:
                 mode = 'service'
                 service = services[rosname]
                 return render_template('service.html', service=service)
@@ -180,8 +198,7 @@ class FrontEnd(MethodView):
                 topic = topics[rosname]
                 return render_template('topic.html', topic=topic)
             else:
-                return '', 404
-
+                raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
 
 
 class Rostful(restful.Resource):
@@ -203,32 +220,38 @@ class Rostful(restful.Resource):
                                          version="v0.1"))
         else:
             spliturl = rostful_name.split('/')
-            has_rocon = self.node_client.has_rocon()
-            if len(spliturl) > 0 and spliturl[0] == 'interactions' and has_rocon:
-                interactions = self.node_client.interactions()
-                if len(spliturl) > 1 and spliturl[1] in interactions:
-                    return make_response(jsonify(self.node_client.interaction(spliturl[1]).interaction))
-                else:
-                    return make_response(jsonify(interactions))
-
-            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces' and has_rocon:
-                namespaces = self.node_client.namespaces()
-                if len(spliturl) > 1 and spliturl[1] in self.rocon_if.rapps_namespaces:
-                    return make_response(jsonify(namespaces[spliturl[1]]))
-                else:
-                    return make_response(jsonify(namespaces))
 
             if len(spliturl) > 0 and spliturl[0] == 'services':
                 services = self.node_client.services()
                 if len(spliturl) > 1 and spliturl[1] in services:
-                    return make_response(jsonify(self.node_client.service_call(spliturl[1])))
+                    svc_resp = None
+                    with Timeout(30) as t:
+                        while not t.timed_out and svc_resp is None:
+                            try:
+                                svc_resp = self.node_client.service_call(spliturl[1])
+                            except pyros.PyrosServiceTimeout:
+                                svc_resp = None
+                    if t.timed_out or svc_resp is None:
+                        raise ServiceNotFound("No response from pyros service interface.")
+                    else:
+                        return make_response(jsonify(svc_resp))
                 else:
                     return make_response(jsonify(services))
 
             if len(spliturl) > 0 and spliturl[0] == 'topics':
                 topics = self.node_client.topics()
                 if len(spliturl) > 1 and spliturl[1] in topics:
-                    return make_response(jsonify(self.node_client.topic_extract(spliturl[1])))
+                    tpc_resp = None
+                    with Timeout(30) as t:
+                        while not t.timed_out and tpc_resp is None:
+                            try:
+                                tpc_resp = self.node_client.topic_extract(spliturl[1])
+                            except pyros.PyrosServiceTimeout:
+                                tpc_resp = None
+                    if t.timed_out or tpc_resp is None:
+                        raise ServiceNotFound("No response from pyros topic interface.")
+                    else:
+                        return make_response(jsonify(tpc_resp))
                 else:
                     return make_response(jsonify(topics))
 
@@ -412,7 +435,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             #     msgconv.populate_instance(input_data, input_msg)
 
             response = None
-            try :
+            try:
                 if mode == 'service':
                     self.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
                     ret_msg = self.node_client.service_call(rosname, input_data)
