@@ -2,19 +2,21 @@
 from __future__ import absolute_import
 
 import re
-
 import sys
+
+# Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
+from rostful import app
+from rostful import context
 
 import collections
 
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
 MSG_PATH = '_msg'
-ACTION_PATH = '_action'
 
 
 def get_suffix(path):
-    suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH,SRV_PATH,MSG_PATH,ACTION_PATH]])
+    suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH]])
     match = re.search(r'/(%s)$' % suffixes, path)
     return match.group(1) if match else ''
 
@@ -28,7 +30,6 @@ import tblib
 from StringIO import StringIO
 
 from pyros.rosinterface import definitions
-# from pyros.rosinterface.message_conversion import InvalidMessageException, NonexistentFieldException, FieldTypeMismatchException
 from pyros import PyrosServiceTimeout, PyrosServiceNotFound
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
@@ -56,7 +57,7 @@ def get_json_bool(b):
 
 
 def get_query_bool(query_string, param_name):
-    return re.search(r'(^|&)%s((=(true|1))|&|$)' % param_name,query_string,re.IGNORECASE)
+    return re.search(r'(^|&)%s((=(true|1))|&|$)' % param_name, query_string, re.IGNORECASE)
 
 
 from flask import Flask, request, make_response, render_template, jsonify, redirect
@@ -71,6 +72,7 @@ parser = FlaskParser()
 
 import urllib
 from pyros import PyrosException
+
 
 ### EXCEPTION CLASSES
 # should be used to return anything that is not 2xx, python style.
@@ -122,57 +124,51 @@ class ServiceNotFound(Exception):
         rv['traceback'] = self.traceback
         return rv
 
+
+
 """
 View for frontend pages
 """
 # TODO: maybe consider http://www.flaskapi.org/
+# TODO: check swagger, openAPI standard and tools
 
 class FrontEnd(MethodView):
-    def __init__(self, ros_node_client, logger, debug):
+    def __init__(self, logger):
         super(FrontEnd, self).__init__()
-        self.node_client = ros_node_client
         self.logger = logger
+        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
     #TMP @login.login_required
     def get(self, rosname=None):
         self.logger.debug('in FrontEnd with rosname: %r', rosname)
-        if not rosname:
+
+        if self.node_client is None and not rosname:
+            return render_template('index.html',
+                                   pathname2url=urllib.pathname2url,
+                                   topics=[],
+                                   services=[],
+                                   params=[],
+            )
+        elif self.node_client is not None and not rosname:
             return render_template('index.html',
                                    pathname2url=urllib.pathname2url,
                                    topics=self.node_client.topics(),
                                    services=self.node_client.services(),
                                    params=self.node_client.params(),
-                                   rapp_namespaces=[],  #self.node_client.namespaces(),
-                                   interactions=[],  #self.node_client.interactions()
             )
         else:
+
+            # fail early if no pyros client
+            if self.node_client is None:
+                self.logger.warn('404 : %s', rosname)
+                return make_response('', 404)
+
             rosname = '/' + rosname
-            has_rocon = False #self.node_client.has_rocon()
-            # TODO: this isn't very efficient, but don't know a better way to do it
-            interactions = [] #self.node_client.interactions()
-            namespaces = [] #self.node_client.namespaces()
+
             services = self.node_client.services()
             topics = self.node_client.topics()
-            
-            if has_rocon and rosname in interactions:
-                mode = 'interaction'
-                interaction = interactions[rosname]
-                result = self.node_client.interaction(rosname).interaction
-                if result.result:
-                    if interaction.name.startswith('web_app'):
-                        iname = interaction.name[7:].strip("()")
-                        self.logger.debug("Redirecting to WebApp at %r", iname)
-                        return render_template('interaction.html', interaction=interaction)
-                        #return redirect(iname, code=302)
-                    else:
-                        return render_template('interaction.html', interaction=interaction)
-                else:
-                    return jsonify(result), 401
-            elif has_rocon and rosname in namespaces:
-                mode = 'rapp_namespace'
-                rapp_ns = namespaces[rosname]
-                return render_template('rapp_namespace.html', rapp_ns=rapp_ns)
-            elif rosname in services:
+
+            if rosname in services:
                 mode = 'service'
                 service = services[rosname]
                 return render_template('service.html', service=service)
@@ -184,16 +180,15 @@ class FrontEnd(MethodView):
                 return '', 404
 
 
-
 class Rostful(restful.Resource):
     """
     Additional REST services provided by Rostful itself
     TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
     """
-    def __init__(self, ros_node_client, logger, debug):
+    def __init__(self, logger):
         super(Rostful, self).__init__()
-        self.node_client = ros_node_client
         self.logger = logger
+        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rostful_name=None):
@@ -204,20 +199,11 @@ class Rostful(restful.Resource):
                                          version="v0.1"))
         else:
             spliturl = rostful_name.split('/')
-            has_rocon = self.node_client.has_rocon()
-            if len(spliturl) > 0 and spliturl[0] == 'interactions' and has_rocon:
-                interactions = self.node_client.interactions()
-                if len(spliturl) > 1 and spliturl[1] in interactions:
-                    return make_response(jsonify(self.node_client.interaction(spliturl[1]).interaction))
-                else:
-                    return make_response(jsonify(interactions))
 
-            if len(spliturl) > 0 and spliturl[0] == 'rapp_namespaces' and has_rocon:
-                namespaces = self.node_client.namespaces()
-                if len(spliturl) > 1 and spliturl[1] in self.rocon_if.rapps_namespaces:
-                    return make_response(jsonify(namespaces[spliturl[1]]))
-                else:
-                    return make_response(jsonify(namespaces))
+            # fail early if no pyros client
+            if self.node_client is None:
+                return make_response('', 404)
+
 
             if len(spliturl) > 0 and spliturl[0] == 'services':
                 services = self.node_client.services()
@@ -241,10 +227,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
     """
     View for backend pages
     """
-    def __init__(self, ros_node_client, logger, debug):
+    def __init__(self, logger):
         super(BackEnd, self).__init__()
-        self.node_client = ros_node_client
         self.logger = logger
+        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname):
@@ -268,13 +254,18 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         suffix = get_suffix(path)
 
+        # fail early if no pyros client
+        if self.node_client is None:
+            self.logger.warn('404 : %s', path)
+            return make_response('', 404)
+
         services = self.node_client.services()
         topics = self.node_client.topics()
         params = self.node_client.params()
         
         if path == CONFIG_PATH:
             cfg_resp = None
-            dfile = definitions.manifest(services, topics, actions, full=full)
+            dfile = definitions.manifest(services, topics, full=full)
             if jsn:
                 cfg_resp = make_response(str(dfile.tojson()), 200)
                 cfg_resp.mimetype = 'application/json'
@@ -361,6 +352,11 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def post(self, rosname):
+
+        # fail early if no pyros client
+        if self.node_client is None:
+            self.logger.warn('404 : %s', rosname)
+            return make_response('', 404)
 
         try:
             rosname = '/' + rosname
@@ -499,3 +495,22 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             self.logger.error('An exception occurred! => 500 \n{exc}'.format(exc=exc_dict))
             return make_response(json.dumps(exc_dict), 500)
             # return make_response(e, 500)
+
+
+### Setting up routes here for now
+
+# Follow pluggable views design : http://flask.pocoo.org/docs/0.10/views/
+rostfront = FrontEnd.as_view('frontend', app.logger)
+rostback = BackEnd.as_view('backend', app.logger)
+rostful = Rostful.as_view('rostful', app.logger)
+
+# self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
+# TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
+app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+
+app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
+app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
+
+# TODO : find a better way than reimplementing the thing here...
+app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
+app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])

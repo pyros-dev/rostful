@@ -24,7 +24,7 @@ from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
 
 
-from .app import app
+from rostful import app, set_pyros_client
 
 
 # TODO : move this into main. we probably dont need any specific server class here...
@@ -70,7 +70,7 @@ class Server(object):
         #One PyrosNode is needed for Flask.
         #TODO : check if still true with multiple web process
         with pyros_ctx_impl(name='rostful', argv=ros_args, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
-            self.app.setup_pyros_client(node_ctx.client, False if serv_type == 'tornado' else True)
+            set_pyros_client(node_ctx.client)
 
                # configure logger
             #if not debug:
