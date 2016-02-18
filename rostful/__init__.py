@@ -1,24 +1,75 @@
-### This package contains a Server ( instanciated once here to allow easy setup procedure, but not started )
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import sys
 import os
-
-try:
-    import pyros
-except ImportError:
-    # try again, in case we want to run from source and pyros is just there
-    # usecase : running tests
-    # TODO : make that better somehow... (needs pyros to detect pyros ???)
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pyros', 'src')))
-    import pyros
-
 from . import config
-from .server import Server
+
+# Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
+
+# external dependencies
+from flask import Flask
+
+# python package dependencies
+import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
+import flask_security as security  # TODO : get rid of this )
+
+from . import db_models
+from .db_models import db
+
+app = Flask(
+    'rostful',
+    static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
+    template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
+    instance_relative_config=True
+)
+
+# initializes DB (needed here to allow migrations without launching flask server)
+db.init_app(app)
+
+# Adding CORS middleware
+app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')
+
+# Setup Flask-Security
+user_datastore = security.SQLAlchemyUserDatastore(db, db_models.User, db_models.Role)
+security = security.Security(app, user_datastore)
+
+# Temporary disabled until we can confirm if it s useful or not
+#
+# # REST API extended to render exceptions as json
+# # https://gist.github.com/grampajoe/6529609
+# # http://www.wiredmonk.me/error-handling-and-logging-in-flask-restful.html
+# class Api(restful.Api):
+#     def handle_error(self, e):
+#         # Attach the exception to itself so Flask-Restful's error handler
+#         # tries to render it.
+#         if not hasattr(e, 'data'):  # TODO : fix/improve this
+#             e.data = e
+#         return super(Api, self).handle_error(e)
+#
+# api = restful.Api(app)
+
+
+# TODO : improve that into using app context.
+# Creating pyros client should be simple and fast to be created everytime a request arrives.
+# Pyros should also be able to support multiple client at the same time...
+
+app.pyros_client = None
+
+def set_pyros_client(pyros_client):
+    app.pyros_client = pyros_client
+
+
+def get_pyros_client():
+    return app.pyros_client
+
+# Following http://flask.pocoo.org/docs/0.10/patterns/packages/ with circular late import
+import rostful.flask_views
+
 
 ### TODO This package also contains a Client
 
 __all__ = [
     'config',
+    'app',
     'Server',
 ]

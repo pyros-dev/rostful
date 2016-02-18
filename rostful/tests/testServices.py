@@ -4,6 +4,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+import mock
+import unittest
 
 import os
 import flask
@@ -13,7 +15,8 @@ import nose
 
 import rostful
 
-class TestServices(object):
+
+class TestServices(unittest.TestCase):
 
     def setUp(self):
 
@@ -24,14 +27,18 @@ class TestServices(object):
     def tearDown(self):
         pass
 
-    def login(self, username, password):
+    @mock.patch()
+    def test_list(self, username, password):
         return self.app.post('/login', data=dict(
             username=username,
             password=password
         ), follow_redirects=True)
 
-    def logout(self):
-        return self.app.get('/logout', follow_redirects=True)
+    def test_call(self):
+        return self.app.post('/login', data=dict(
+            username=username,
+            password=password
+        ), follow_redirects=True)
 
     def test_empty_db(self):
         rv = self.app.get('/')
