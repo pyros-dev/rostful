@@ -96,6 +96,7 @@ class WrongMessageFormat(Exception):
         rv['traceback'] = self.traceback
         return rv
 
+
 class ServiceTimeout(Exception):
     status_code = 504
 
@@ -111,6 +112,7 @@ class ServiceTimeout(Exception):
         rv['message'] = self.message
         rv['traceback'] = self.traceback
         return rv
+
 
 class ServiceNotFound(Exception):
     status_code = 404
@@ -165,48 +167,55 @@ class FrontEnd(MethodView):
     def get(self, rosname=None):
         self.logger.debug('in FrontEnd with rosname: %r', rosname)
 
-        if self.node_client is None and not rosname:
-            return render_template('index.html',
-                                   pathname2url=urllib.pathname2url,
-                                   topics=[],
-                                   services=[],
-                                   params=[],
-            )
-        elif self.node_client is not None and not rosname:
-            return render_template('index.html',
-                                   pathname2url=urllib.pathname2url,
-                                   topics=self.node_client.topics(),
-                                   services=self.node_client.services(),
-                                   params=self.node_client.params(),
-            )
-        else:
-
-            services = None
-            topics = None
-            with Timeout(30) as t:
-                while not t.timed_out and (services is None or topics is None):
-                    try:
-                        services = self.node_client.services()
-                    except pyros.PyrosServiceTimeout:
-                        services = None
-                    try:
-                        topics = self.node_client.topics()
-                    except pyros.PyrosServiceTimeout:
-                        topics = None
-
-            if t.timed_out:
-                raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
-
-            if rosname in services:
-                mode = 'service'
-                service = services[rosname]
-                return render_template('service.html', service=service)
-            elif rosname in topics:
-                mode = 'topic'
-                topic = topics[rosname]
-                return render_template('topic.html', topic=topic)
+        if self.node_client is None:
+            if rosname:
+                raise ServiceNotFound("{0} not found: Pyros Client not initialized.")
             else:
-                raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
+                # TODO : return error instead ?
+                return render_template('index.html',
+                                       pathname2url=urllib.pathname2url,
+                                       topics=[],
+                                       services=[],
+                                       params=[],
+                )
+        else:
+            if not rosname:
+                return render_template('index.html',
+                                       pathname2url=urllib.pathname2url,
+                                       topics=self.node_client.topics(),
+                                       services=self.node_client.services(),
+                                       params=self.node_client.params(),
+                )
+
+            else:
+
+                services = None
+                topics = None
+                with Timeout(30) as t:
+                    while not t.timed_out and (services is None or topics is None):
+                        try:
+                            services = self.node_client.services()
+                        except pyros.PyrosServiceTimeout:
+                            services = None
+                        try:
+                            topics = self.node_client.topics()
+                        except pyros.PyrosServiceTimeout:
+                            topics = None
+
+                if t.timed_out:
+                    raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
+
+                if rosname in services:
+                    mode = 'service'
+                    service = services[rosname]
+                    return render_template('service.html', service=service)
+                elif rosname in topics:
+                    mode = 'topic'
+                    topic = topics[rosname]
+                    return render_template('topic.html', topic=topic)
+                else:
+                    raise ServiceNotFound("{0} not found among Pyros exposed services and topics".format(rosname))
+
 
 class Rostful(restful.Resource):
     """

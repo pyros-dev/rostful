@@ -12,7 +12,7 @@ import nose
 import pyros
 
 
-from rostful import app, set_pyros_client
+from rostful import app, set_pyros_client, ServiceNotFound
 
 
 # Basic Test class for an simple Flask wsgi app
@@ -52,8 +52,9 @@ class TestAppNoPyros(unittest.TestCase):
 
     def test_error(self):
          with app.test_client() as client:
-            res = client.get('/non-existent')
-            nose.tools.assert_equals(res.status_code, 404)
+            with nose.tools.assert_raises(ServiceNotFound) as not_found:
+                res = client.get('/non-existent')
+                nose.tools.assert_equal(not_found.code, 404)
 
 
 class TestAppPyros(TestAppNoPyros):
@@ -83,15 +84,25 @@ class TestAppPyros(TestAppNoPyros):
 
     def test_index_root(self):
         super(TestAppPyros, self).test_index_root()
+        # verify pyros mock client was actually called
         self.node_ctx.client.topics.assert_called_once_with()
         self.node_ctx.client.services.assert_called_once_with()
         self.node_ctx.client.params.assert_called_once_with()
 
     def test_crossdomain(self):
         super(TestAppPyros, self).test_crossdomain()
+        # verify pyros mock client was actually called
+        self.node_ctx.client.topics.assert_called_once_with()
+        self.node_ctx.client.services.assert_called_once_with()
+        self.node_ctx.client.params.assert_called_once_with()
 
     def test_error(self):
         super(TestAppPyros, self).test_error()
+        # verify pyros mock client was actually called
+        self.node_ctx.client.topics.assert_called_once_with()
+        self.node_ctx.client.services.assert_called_once_with()
+        # This is not implemented yet
+        #self.node_ctx.client.params.assert_called_once_with()
 
 
 if __name__ == '__main__':
