@@ -20,7 +20,7 @@ MSG_PATH = '_msg'
 
 
 def get_suffix(path):
-    suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH, SRV_PATH, MSG_PATH, ACTION_PATH]])
+    suffixes = '|'.join([re.escape(s) for s in [CONFIG_PATH, SRV_PATH, MSG_PATH]])
     match = re.search(r'/(%s)$' % suffixes, path)
     return match.group(1) if match else ''
 
@@ -188,6 +188,10 @@ class FrontEnd(MethodView):
                 )
 
             else:
+
+                # we need to add "/" to rosname passed as url to match absolute service/topics names listed
+                if not rosname.startswith("/"):
+                    rosname = "/" + rosname
 
                 services = None
                 topics = None
