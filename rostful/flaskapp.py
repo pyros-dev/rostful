@@ -15,9 +15,6 @@ from flask import Flask
 import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
 import flask_security as security  # TODO : get rid of this )
 
-from . import db_models
-from .db_models import db
-
 app = Flask(
     'rostful',
     static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
@@ -25,15 +22,9 @@ app = Flask(
     instance_relative_config=True
 )
 
-# initializes DB (needed here to allow migrations without launching flask server)
-db.init_app(app)
-
 # Adding CORS middleware
 app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')
 
-# Setup Flask-Security
-user_datastore = security.SQLAlchemyUserDatastore(db, db_models.User, db_models.Role)
-security = security.Security(app, user_datastore)
 
 # Temporary disabled until we can confirm if it s useful or not
 #
