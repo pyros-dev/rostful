@@ -23,24 +23,16 @@ from tornado.httpserver import HTTPServer
 from tornado.ioloop import IOLoop
 from tornado.log import enable_pretty_logging
 
-# python package dependencies
-import flask_cors as cors
-import flask_restful as restful
-import flask_security as security
 
-from . import db_models
-from .db_models import db
-from .flask_views import FrontEnd, BackEnd, Rostful
+from rostful import app, set_pyros_client
 
 
+# TODO : move this into main. we probably dont need any specific server class here...
+# TODO : check serving rostful with other web servers (nginx, etc.)
 class Server(object):
     # TODO : pass config file from command line here
     def __init__(self, testing=True):
-        self.app = Flask('rostful',
-                         static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
-                         template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
-                         instance_relative_config=True
-                         )
+        self.app = app
 
         if testing:
             self.app.config.from_object(config.Development)
@@ -50,34 +42,6 @@ class Server(object):
         # TODO : flexible config by getting file from instance folder
         # TODO : flexible config by getting env var
 
-        # initializes DB (needed here to allow migrations without launching flask server)
-        db.init_app(self.app)
-        self.db = db
-
-        # Setup Flask-Security
-        self.user_datastore = security.SQLAlchemyUserDatastore(self.db, db_models.User, db_models.Role)
-        self.security = security.Security(self.app, self.user_datastore)
-
-        # One of the simplest configurations. Exposes all resources matching /* to
-        # CORS and allows the Content-Type header, which is necessary to POST JSON
-        # cross origin.
-        self.cors = cors.CORS(self.app, resources=r'/*', allow_headers='*')
-
-        # REST API extended to render exceptions as json
-        # https://gist.github.com/grampajoe/6529609
-        # http://www.wiredmonk.me/error-handling-and-logging-in-flask-restful.html
-        class Api(restful.Api):
-            def handle_error(self, e):
-                # Attach the exception to itself so Flask-Restful's error handler
-                # tries to render it.
-                if not hasattr(e, 'data'):  # TODO : fix/improve this
-                    e.data = e
-                return super(Api, self).handle_error(e)
-
-        # TMP not sure which one is best
-        self.api = restful.Api(self.app)
-        #self.api = Api(self.app)
-
     @property
     def logger(self):
         return self.app.logger
@@ -85,32 +49,28 @@ class Server(object):
     def test_client(self, use_cookies=True):
         return self.app.test_client(use_cookies)
 
-    def _setup(self, ros_node_client, debug=False):
-        self.ros_node_client = ros_node_client
-        rostfront = FrontEnd.as_view('frontend', self.ros_node_client, self.logger, debug)
-        rostback = BackEnd.as_view('backend', self.ros_node_client, self.logger, debug)
-        rostful = Rostful.as_view('rostful', self.ros_node_client, self.logger, debug)
+    def launch(self, host='127.0.0.1', port=8080, ros_args='', serv_type='flask', pyros_ctx_impl=None):
+        """
+        Launch the current WSGI app in a web server (tornado or flask simple server)
+        Will block until server is killed.
 
-        # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
-        # TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
-        self.app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
-
-        # TODO : put everything under robot/worker name here ( so we can evolve to support multiple workers )
-        self.app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
-        self.app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
-
-        # TMP -> replace by using rosapi
-        self.app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
-        self.app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
-
-    def launch(self, host='127.0.0.1', port=8080, ros_args='', serv_type='flask', mock=False):
-
+        :param host: the local ip to listen for connection on
+        :param port: the local port to listen for connection on
+        :param ros_args: the provided ros arguments that will be passed onto pyros node
+        :param serv_type: the server type (tornado or flask)
+        :param pyros_ctx_impl: the implementation of pyros context manager ( if different from normal module ).
+                               This is useful for mocking it.
+        :return: None
+        """
         print host, port
 
-        #One PyrosNode is needed for Flask.
-        #TODO : check if still true with multiple web process
-        with pyros_ctx(name='rostful', argv=ros_args, mock=mock, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
-            self._setup(node_ctx.client, False if serv_type == 'tornado' else True)
+        # default to real module, if no other implementation passed as parameter (used for mock)
+        pyros_ctx_impl = pyros_ctx_impl or pyros_ctx
+
+        # One PyrosNode is needed for Flask.
+        # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
+        with pyros_ctx_impl(name='rostful', argv=ros_args, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
+            set_pyros_client(node_ctx.client)
 
                # configure logger
             #if not debug:
@@ -148,16 +108,11 @@ class Server(object):
                         http_server = HTTPServer(WSGIContainer(self.app))
                         http_server.listen(port)
                         IOLoop.instance().start()
+                    # TODO : support more wsgi server setup : http://www.markjberger.com/flask-with-virtualenv-uwsgi-nginx/
                     break
                 except socket.error, msg:
                     port_retries -= 1
                     port += 1
                     self.app.logger.error('Socket Error : {0}'.format(msg))
 
-# Setting up error handlers
-# TODO : HOW ??
-#@rostful_server.app.errorhandler(404)
-#def page_not_found(error):
-#    rostful_server.app.logger.error('Web Request ERROR 404 : %r', error)
-#    return render_template('error.html', error=error), 404
 

@@ -6,6 +6,7 @@ celery==3.1.18
 flower==0.8.2
 futures==3.0.2
 gunicorn==19.3.0
+tornado==4.0.2
 
 Flask==0.10.1
 Flask-Celery-Helper

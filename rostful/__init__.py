@@ -1,24 +1,44 @@
-### This package contains a Server ( instanciated once here to allow easy setup procedure, but not started )
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
-import sys
 import os
-
-try:
-    import pyros
-except ImportError:
-    # try again, in case we want to run from source and pyros is just there
-    # usecase : running tests
-    # TODO : make that better somehow... (needs pyros to detect pyros ???)
-    sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'pyros', 'src')))
-    import pyros
-
 from . import config
-from .server import Server
+
+# Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
+
+# HACK for ROS
+from .flaskapp import app
+
+
+# TODO : improve that into using app context.
+# Creating pyros client should be simple and fast to be created everytime a request arrives.
+# Pyros should also be able to support multiple client at the same time...
+
+app.pyros_client = None
+
+
+def set_pyros_client(pyros_client):
+    app.pyros_client = pyros_client
+
+
+def get_pyros_client():
+    return app.pyros_client
+
+# Following http://flask.pocoo.org/docs/0.10/patterns/packages/ with circular late import
+from rostful.flask_views import WrongMessageFormat, ServiceNotFound, ServiceTimeout
+
 
 ### TODO This package also contains a Client
 
 __all__ = [
+    'WrongMessageFormat',
+    'ServiceNotFound',
+    'ServiceTimeout',
+
     'config',
+    'app',
+
+
+
     'Server',
 ]

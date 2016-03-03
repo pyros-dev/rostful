@@ -4,6 +4,8 @@ import sys
 import os
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
+import mock
+import unittest
 
 import os
 import flask
@@ -11,31 +13,53 @@ import tempfile
 
 import nose
 
-import rostful
+import pyros
+from rostful import app, set_pyros_client, ServiceNotFound
 
-class TestServices(object):
+
+class TestServicesNoPyros(unittest.TestCase):
+
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
 
     def setUp(self):
-
-        # Start Server with default config
-        rostful_server = rostful.server(testing=True)
-        self.app = rostful_server.app
+        app.config['TESTING'] = True
+        app.testing = True  # required to check for exceptions
+        self.client = app.test_client()
 
     def tearDown(self):
         pass
 
-    def login(self, username, password):
-        return self.app.post('/login', data=dict(
-            username=username,
-            password=password
-        ), follow_redirects=True)
 
-    def logout(self):
-        return self.app.get('/logout', follow_redirects=True)
+class TestServicesPyros(TestServicesNoPyros):
 
-    def test_empty_db(self):
-        rv = self.app.get('/')
-        assert 'No entries here so far' in rv.data
+    @classmethod
+    def setUpClass(cls):
+        pass
+
+    @classmethod
+    def tearDownClass(cls):
+        pass
+
+    # overloading run to instantiate the pyros context manager
+    # this will call setup and teardown
+    def run(self, result=None):
+        # argv is rosargs but these have no effect on client, so no need to pass anything here
+        with pyros.pyros_ctx(name='rostful', argv=[], mock_client=True, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
+            self.node_ctx = node_ctx
+            set_pyros_client(self.node_ctx.client)
+            super(TestServicesPyros, self).run(result)
+
+    def setUp(self):
+        super(TestServicesPyros, self).setUp()
+
+    def tearDown(self):
+        super(TestServicesPyros, self).tearDown()
 
 if __name__ == '__main__':
 
