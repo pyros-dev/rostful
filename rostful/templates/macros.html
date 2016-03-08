@@ -88,6 +88,24 @@
     {% elif type=='uint8' %}
       <input type=number name="{{ name }}" id="{{ name }}"/>
 
+    {% elif type=='std_msgs/Header' %}
+      <div class="ui-field-contain">
+        <label for="{{ name }}.stamp.secs">{{ name }}.stamp.secs:</label>
+        <input type=number name="{{ name }}_stamp_secs" id="{{ name }}_stamp_secs"/>
+      </div>
+      <div class="ui-field-contain">
+        <label for="{{ name }}.stamp.nsecs">{{ name }}.stamp.nsecs:</label>
+        <input type=number name="{{ name }}_stamp_nsecs" id="{{ name }}_stamp_nsecs"/>
+      </div>
+      <div class="ui-field-contain">
+        <label for="{{ name }}.frame_id">{{ name }}.frame_id:</label>
+        <input type=number name="{{ name }}_frameid" id="{{ name }}_frameid"/>
+      </div>
+      <div class="ui-field-contain">
+        <label for="{{ name }}.seq">{{ name }}.seq:</label>
+        <input type=number name="{{ name }}_seq" id="{{ name }}_seq"/>
+      </div>
+
     {% elif type=='geometry_msgs/Vector3' %}
       <div class="ui-field-contain">
         <label for="{{ name }}.x">{{ name }}.x:</label>
