@@ -13,7 +13,6 @@ from flask import Flask
 
 # python package dependencies
 import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
-import flask_security as security  # TODO : get rid of this )
 
 app = Flask(
     'rostful',
