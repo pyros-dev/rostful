@@ -4,9 +4,14 @@ from __future__ import absolute_import
 import re
 import sys
 
+from flask import Flask, request, make_response, render_template, jsonify, redirect, views, url_for
+import flask_restful as restful
+
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
 from rostful import app
 from rostful import context
+
+api = restful.Api(app)
 
 import collections
 
@@ -38,7 +43,7 @@ from pyros import PyrosServiceTimeout, PyrosServiceNotFound
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
 def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
-    if isinstance(rostype,type):
+    if isinstance(rostype, type):
         name = rostype.__name__
         module = rostype.__module__.split('.')[0]
         rostype = module + '/' + name
@@ -560,18 +565,17 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
 ### Setting up routes here for now
 
-# Follow pluggable views design : http://flask.pocoo.org/docs/0.10/views/
-rostfront = FrontEnd.as_view('frontend', app.logger)
-rostback = BackEnd.as_view('backend', app.logger)
-rostful = Rostful.as_view('rostful', app.logger)
-
+# Usual Flask : This is not REST
 # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
-# TODO : improve with https://github.com/flask-restful/flask-restful/issues/429
-app.add_url_rule('/', 'rostfront', view_func=rostfront, methods=['GET'])
+# Follow pluggable views design : http://flask.pocoo.org/docs/0.10/views/
+frontend = FrontEnd.as_view('frontend', app.logger)
+app.add_url_rule('/', 'rostfront', view_func=frontend, methods=['GET'])
+app.add_url_rule('/<path:rosname>', 'rostfront', view_func=frontend, methods=['GET'])
 
-app.add_url_rule('/<path:rosname>', 'rostfront', view_func=rostfront, methods=['GET'])
-app.add_url_rule('/ros/<path:rosname>', 'rostback', view_func=rostback, methods=['GET', 'POST'])
+#
+# RESTful
+#
+api.add_resource(BackEnd, '/ros/<path:rosname>', resource_class_args=(app.logger,), methods=['GET', 'POST'])
 
 # TODO : find a better way than reimplementing the thing here...
-app.add_url_rule('/rostful', 'rostful', view_func=rostful, methods=['GET'])
-app.add_url_rule('/rostful/<path:rostful_name>', 'rostful', view_func=rostful, methods=['GET'])
+api.add_resource(Rostful, '/rostful', '/rostful/<path:rostful_name>', resource_class_args=(app.logger,), methods=['GET'])

@@ -21,6 +21,10 @@ case $key in
     SERVER="$2"
     shift 2
     ;;
+    -c|--config)
+    CONFIG="$2"
+    shift 2
+    ;;
     __*)  # matching basic ros args
     ROSARGS="${ROSARGS:+$ROSARGS} --ros-arg=$key"
     #ros option (multiple)
@@ -42,8 +46,9 @@ done
 HOST=${HOST:+"-h $HOST"}
 PORT=${PORT:+"-p $PORT"}
 SERVER=${SERVER:+"-s $SERVER"}
+CONFIG=${CONFIG:+"-c CONFIG"}
 
 set -x
 
-python -tt -m rostful run ${HOST} ${PORT} ${SERVER} ${ROSARGS}
+python -tt -m rostful run ${HOST} ${PORT} ${SERVER} ${CONFIG} ${ROSARGS}
 

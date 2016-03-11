@@ -31,13 +31,10 @@ from rostful import app, set_pyros_client
 # TODO : check serving rostful with other web servers (nginx, etc.)
 class Server(object):
     # TODO : pass config file from command line here
-    def __init__(self, testing=True):
+    def __init__(self, config):
         self.app = app
 
-        if testing:
-            self.app.config.from_object(config.Development)
-        else:
-            self.app.config.from_object(config.Testing)
+        self.app.config.from_object(config)
         # TODO : flexible config by chosing file
         # TODO : flexible config by getting file from instance folder
         # TODO : flexible config by getting env var
@@ -62,7 +59,6 @@ class Server(object):
                                This is useful for mocking it.
         :return: None
         """
-        print host, port
 
         # default to real module, if no other implementation passed as parameter (used for mock)
         pyros_ctx_impl = pyros_ctx_impl or pyros_ctx

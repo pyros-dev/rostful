@@ -64,5 +64,4 @@ def get_pyros_client():
 __all__ = [
     'config',
     'app',
-    'Server',
 ]
