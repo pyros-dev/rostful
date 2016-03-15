@@ -37,8 +37,5 @@ __all__ = [
 
     'config',
     'app',
-
-
-
-    'Server',
+    'set_pyros_client',
 ]
