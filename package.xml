@@ -13,7 +13,8 @@
   <author email="benkehoe@somewhere.net">Ben Kehoe</author>
   <maintainer email="asmodehn@gmail.com">AlexV</maintainer>
 
-  <buildtool_depend>catkin</buildtool_depend>
+  <buildtool_depend>cmake</buildtool_depend>
+  <build_depend>catkin_pure_python</build_depend>
 
   <build_depend>dynamic_reconfigure</build_depend>
   <build_depend>roslint</build_depend>
