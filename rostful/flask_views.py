@@ -73,7 +73,6 @@ from flask import Flask, request, make_response, render_template, jsonify, redir
 from flask.views import MethodView
 from flask_restful import reqparse
 import flask_restful as restful
-import flask_login as login
 
 from webargs.flaskparser import FlaskParser, use_kwargs
 

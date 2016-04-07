@@ -10,7 +10,7 @@ import errno
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from rostful import Server
+    from rostful.server import Server
 else:
     from .server import Server
 
@@ -26,12 +26,13 @@ def cli():
 @cli.command()
 def init():
     """
-    Create useful configuration files and database on first install
+    Create missing configuration files.
+    Useful just after install
     """
     # Start Server with default config
     rostful_server = Server()
     # Create instance config file name, to make it easy to modify when deploying
-    filename = os.path.join(rostful_server.app.instance_path, 'flask_config.py')
+    filename = os.path.join(rostful_server.app.instance_path, 'rostful.cfg')
     if not os.path.isfile(filename) :
         #this will create the directories if needed
         try:
@@ -40,17 +41,20 @@ def init():
             if exception.errno != errno.EEXIST:
                 raise
         #this will create the file
-        rostful_server.app.open_instance_resource('flask_config.py', 'w')
+        rostful_server.app.open_instance_resource('rostful.cfg', 'w')
 
 
 @cli.command()
 @click.option('-h', '--host', default='')
 @click.option('-p', '--port', default=8000)
 @click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
-@click.option('-c', '--config', default='rostful.config')
+@click.option('-c', '--config', default='rostful.cfg')
 @click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
 def run(host, port, server_type, config, ros_args):
-    if isinstance(port, basestring):
+    """
+    Start rostful.
+    """
+    if isinstance(port, (str, unicode)):
         port = int(port)
 
     # Start Server with config passed as param

@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+from ._version import __version__
+
 import os
 from . import config
 
@@ -31,6 +33,7 @@ from rostful.flask_views import WrongMessageFormat, ServiceNotFound, ServiceTime
 ### TODO This package also contains a Client
 
 __all__ = [
+    '__version__',
     'WrongMessageFormat',
     'ServiceNotFound',
     'ServiceTimeout',

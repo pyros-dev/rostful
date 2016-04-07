@@ -20,6 +20,8 @@ app = Flask(
     template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
     instance_relative_config=True
 )
+# Implementing rostful default config as early as possible.
+app.config.from_object(config)
 
 # Adding CORS middleware
 app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')

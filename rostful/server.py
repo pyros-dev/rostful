@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 
 import os
+import six
 import sys
 import logging
 import logging.handlers
@@ -31,13 +32,12 @@ from rostful import app, set_pyros_client
 # TODO : check serving rostful with other web servers (nginx, etc.)
 class Server(object):
     # TODO : pass config file from command line here
-    def __init__(self, config):
+    def __init__(self, config=None):
         self.app = app
 
-        self.app.config.from_object(config)
-        # TODO : flexible config by chosing file
-        # TODO : flexible config by getting file from instance folder
-        # TODO : flexible config by getting env var
+        if config:
+            self.app.config.from_pyfile(config)
+            # TODO : flexible config by getting env var
 
     @property
     def logger(self):
@@ -63,9 +63,27 @@ class Server(object):
         # default to real module, if no other implementation passed as parameter (used for mock)
         pyros_ctx_impl = pyros_ctx_impl or pyros_ctx
 
+        # implementing Config.get_namespace() for flask version < 1.0:
+        namespace = 'PYROS_'
+        trim_namespace = True
+        lowercase = False
+        rv = {}
+        for k, v in six.iteritems(self.app.config):
+            if not k.startswith(namespace):
+                continue
+            if trim_namespace:
+                key = k[len(namespace):]
+            else:
+                key = k
+            if lowercase:
+                key = key.lower()
+            rv[key] = v
+        # rv should now contain a dictionary of namespaced key:value from self.app.config
+
+
         # One PyrosNode is needed for Flask.
         # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
-        with pyros_ctx_impl(name='rostful', argv=ros_args, base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..')) as node_ctx:
+        with pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv) as node_ctx:
             set_pyros_client(node_ctx.client)
 
                # configure logger
