@@ -3,3 +3,12 @@
 
 nose
 
+# To divert/prevent uninstalling attempt from tornado dependencies
+# since pip requirements install is ignoring already installed packages for catkin_pure_python
+# and these will be seen before by the installer for dependencies
+futures
+tornado
+
+# adds dependency packages for development only
+-e git+https://github.com/asmodehn/pyros-setup.git@config_refactor#egg=pyros_setup
+-e git+https://github.com/asmodehn/pyros.git@config_refactor#egg=pyros
