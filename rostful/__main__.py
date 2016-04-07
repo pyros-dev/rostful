@@ -44,29 +44,31 @@ def init():
         rostful_server.app.open_instance_resource('rostful.cfg', 'w')
 
 
+#
+# Arguments' default value is None here
+# to use default values from config file if one is provided.
+# If no config file is provided, internal defaults are used.
+#
 @cli.command()
-@click.option('-h', '--host', default='')
-@click.option('-p', '--port', default=8000)
-@click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
-@click.option('-c', '--config', default='rostful.cfg')
+@click.option('-h', '--host', default=None)
+@click.option('-p', '--port', default=None)
+@click.option('-s', '--server', default=None, type=click.Choice(['flask', 'tornado']))
+@click.option('-c', '--config', default=None)
 @click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
-def run(host, port, server_type, config, ros_args):
+def run(host, port, server, config, ros_args):
     """
     Start rostful.
     """
-    if isinstance(port, (str, unicode)):
-        port = int(port)
 
     # Start Server with config passed as param
     rostful_server = Server(config)
 
-    rostful_server.app.logger.info('host %r port %r', host, port)
-    rostful_server.app.logger.info('config %r', config)
-    rostful_server.app.logger.info('ros_args %r', ros_args)
+    rostful_server.app.logger.info(
+        'arguments passed : host {host} port {port} config {config} ros_args {ros_args}'.format(
+            host=host, port=port, config=config, ros_args=ros_args))
 
-    #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
-    #Launch the server
-    rostful_server.launch(host, port, list(ros_args), server_type)
+    # Launch the server
+    rostful_server.launch(host, port, list(ros_args), server)
 
 if __name__ == '__main__':
     cli()

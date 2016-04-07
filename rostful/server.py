@@ -46,7 +46,8 @@ class Server(object):
     def test_client(self, use_cookies=True):
         return self.app.test_client(use_cookies)
 
-    def launch(self, host='127.0.0.1', port=8080, ros_args='', serv_type='flask', pyros_ctx_impl=None):
+    # Default value should be secure and production ready to avoid unintentional bad setup.
+    def launch(self, host=None, port=None, ros_args='', serv_type='tornado', pyros_ctx_impl=None):
         """
         Launch the current WSGI app in a web server (tornado or flask simple server)
         Will block until server is killed.
@@ -62,6 +63,9 @@ class Server(object):
 
         # default to real module, if no other implementation passed as parameter (used for mock)
         pyros_ctx_impl = pyros_ctx_impl or pyros_ctx
+
+        if port and isinstance(port, (str, unicode)):
+            port = int(port)
 
         # implementing Config.get_namespace() for flask version < 1.0:
         namespace = 'PYROS_'
@@ -86,14 +90,14 @@ class Server(object):
         with pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv) as node_ctx:
             set_pyros_client(node_ctx.client)
 
-               # configure logger
+            # configure logger
             #if not debug:
             # add log handler for warnings and more to sys.stderr.
             #    self.logger.addHandler(logging.StreamHandler())
             #    self.logger.setLevel(logging.WARN)
 
             # adding file logging for everything to help debugging
-            file_handler = logging.handlers.RotatingFileHandler('rostful.log', maxBytes=10000, backupCount=1)
+            file_handler = logging.handlers.RotatingFileHandler(os.path.join(self.app.instance_path, 'rostful.log'), maxBytes=10000, backupCount=1)
             file_handler.setLevel(logging.INFO)
             self.app.logger.addHandler(file_handler)
 
@@ -101,13 +105,14 @@ class Server(object):
             port_retries = 5
             while port_retries > 0:  # keep trying
                 try:
-
+                    # default server should be solid and production ready
+                    serv_type = serv_type or self.app.config.get('SERVER_TYPE', 'tornado')
                     if serv_type == 'flask':
 
                         log = logging.getLogger('werkzeug')
                         log.setLevel(logging.WARNING)
 
-                        self.app.logger.info('Starting Flask server on port %d', port)
+                        self.app.logger.info('Starting Flask server on port {0}'.format(port))
                         # debug is needed to investigate server errors.
                         # use_reloader set to False => killing the ros node also kills the server child.
                         self.app.run(
@@ -117,7 +122,13 @@ class Server(object):
                             use_reloader=False,
                         )
                     elif serv_type == 'tornado':
-                        self.app.logger.info('Starting Tornado server on port %d', port)
+                        # we need to read our config for tornado :
+                        servername = self.app.config.get('SERVER_NAME', '127.0.0.1:5000')  # same default as flask
+                        port = port or servername.split(':')[1] if servername else '5000'
+                        host = host or servername.split(':')[0] if servername else '127.0.0.1'
+                        if isinstance(port, (str, unicode)):
+                            port = int(port)
+                        self.app.logger.info('Starting Tornado server on port {0}'.format(port))
                         # enable_pretty_logging()  # enable this for debugging during development
                         http_server = HTTPServer(WSGIContainer(self.app))
                         http_server.listen(port)
