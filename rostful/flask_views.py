@@ -304,19 +304,14 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()
-        parser.add_argument('full', type=bool)
-        parser.add_argument('json', type=bool)
+        # somehow this breaks requests now... disabling for now.
+        # parser.add_argument('full', type=bool)
+        # parser.add_argument('json', type=bool)
         args = parser.parse_args()
 
         path = '/' + rosname
-        full = args['full']
-
-        json_suffix = '.json'
-        if path.endswith(json_suffix):
-            path = path[:-len(json_suffix)]
-            jsn = True
-        else:
-            jsn = args['json']
+        full = args.get('full', False)
+        jsn = args.get('json', True)
 
         suffix = get_suffix(path)
 
@@ -328,7 +323,8 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         services = self.node_client.services()
         topics = self.node_client.topics()
         params = self.node_client.params()
-        
+
+        # To get rosdef of all services and topics
         if path == CONFIG_PATH:
             cfg_resp = None
             dfile = definitions.manifest(services, topics, full=full)
@@ -392,7 +388,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_service(service_name, service, full=full)
 
                 if jsn:
-                    sfx_resp = make_response(str(dfile.tojson()), 200)
+                    sfx_resp = make_response(json.dumps(dfile.tojson()), 200)
                     sfx_resp.mimetype='application/json'
                 else:
                     sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
@@ -404,7 +400,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_topic(topic_name, topic, full=full)
 
                 if jsn:
-                    sfx_resp = make_response(str(dfile.tojson()), 200)
+                    sfx_resp = make_response(json.dumps(dfile.tojson()), 200)
                     sfx_resp.mimetype ='application/json'
                 else:
                     sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
@@ -526,21 +522,21 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 )
 
         # returning local exceptions
-        except WrongMessageFormat, wmf:
+        except WrongMessageFormat as wmf:
             self.logger.error('Wrong message format! => {status} \n{exc}'.format(
                 status=wmf.status_code,
                 exc=wmf.message
             ))
             return make_response(json.dumps(wmf.to_dict()), wmf.status_code)
 
-        except ServiceTimeout, st:
+        except ServiceTimeout as st:
             self.logger.error('Service Timeout! => {status} \n{exc}'.format(
                 status=st.status_code,
                 exc=st.message
             ))
             return make_response(json.dumps(st.to_dict()), st.status_code)
 
-        except ServiceNotFound, snf:
+        except ServiceNotFound as snf:
             self.logger.error('Service Not Found! => {status} \n{exc}'.format(
                 status=snf.status_code,
                 exc=snf.message
