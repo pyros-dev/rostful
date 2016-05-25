@@ -310,7 +310,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         args = parser.parse_args()
 
         path = '/' + rosname
-        full = args.get('full', False)
+        full = args.get('full', True)
         jsn = args.get('json', True)
 
         suffix = get_suffix(path)
@@ -324,7 +324,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         topics = self.node_client.topics()
         params = self.node_client.params()
 
-        # To get rosdef of all services and topics
+        # special case to get rosdef of all services and topics
         if path == CONFIG_PATH:
             cfg_resp = None
             dfile = definitions.manifest(services, topics, full=full)
@@ -375,11 +375,29 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         path = path[:-(len(suffix) + 1)]
         sfx_resp = None
         if suffix == MSG_PATH and path in topics:
-            sfx_resp = make_response(definitions.get_topic_msg(topics[path]), 200)
-            sfx_resp.mimetype ='text/plain'
-        elif suffix == SRV_PATH and path in self.ros_if.services:
-            sfx_resp = make_response(definitions.get_service_srv(services[path]), 200)
-            sfx_resp.mimetype ='text/plain'
+            if jsn:
+                # TODO : find a better way to interface here...
+                sfx_resp = make_response(json.dumps(topics[path].get('msgtype', None)), 200)
+                sfx_resp.mimetype = 'application/json'
+            else:
+                # broken now, cannot access pyros.rosinterface.topic.get_topic_msg
+                # TODO : check if we still need that feature ? JSON first -> maybe not...
+                # Or we do it in another way (without needing to import that module)
+                #sfx_resp = make_response(definitions.get_topic_msg(topics[path]), 200)
+                sfx_resp = make_response('Deprecated feature. use _rosdef instead', 200)
+                sfx_resp.mimetype = 'text/plain'
+                pass
+        elif suffix == SRV_PATH and path in services:
+            if jsn:
+                sfx_resp = make_response(json.dumps(services[path].get('srvtype', None)), 200)
+                sfx_resp.mimetype = 'application/json'
+            else:
+                # broken now, cannot access pyros.rosinterface.service.get_service_srv
+                # TODO : check if we still need that feature ? JSON first -> maybe not...
+                # Or we do it in another way (without needing to import that module)
+                #sfx_resp = make_response(definitions.get_service_srv(services[path]), 200)
+                sfx_resp = make_response('Deprecated feature. use _rosdef instead', 200)
+                sfx_resp.mimetype = 'text/plain'
         elif suffix == CONFIG_PATH:
             if path in services:
                 service_name = path
