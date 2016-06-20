@@ -23,14 +23,6 @@ file(GLOB_RECURSE ${PROJECT_NAME}_PY_SRCS
 roslint_python(${${PROJECT_NAME}_PY_SCRIPTS}
                ${${PROJECT_NAME}_PY_SRCS})
 
-install(DIRECTORY migrations/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/migrations
-)
-
-install(DIRECTORY interactions/
-  DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/interactions
-)
-
 install(DIRECTORY launch/
   DESTINATION ${CATKIN_PACKAGE_SHARE_DESTINATION}/launch
 )
@@ -38,9 +30,10 @@ install(DIRECTORY launch/
 ## Unit tests
 if (CATKIN_ENABLE_TESTING)
 
-# Unit tests using nose, but needing a running ROS core.
-find_package(catkin REQUIRED COMPONENTS rostest)
-#TODO add_rostest(rostful.test)
+    ##############################################################################
+    # Nose Tests
+    ##############################################################################
 
+    catkin_add_nosetests(rostful/tests)
 
 endif()
