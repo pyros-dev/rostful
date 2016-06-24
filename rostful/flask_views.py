@@ -391,7 +391,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 pass
         elif suffix == SRV_PATH and path in services:
             if jsn:
-                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype', None)), 200)
+                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype', None), ignore_nan=True), 200)
                 sfx_resp.mimetype = 'application/json'
             else:
                 # broken now, cannot access pyros.rosinterface.service.get_service_srv
@@ -408,7 +408,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_service(service_name, service, full=full)
 
                 if jsn:
-                    sfx_resp = make_response(simplejson.dumps(dfile.tojson()), 200)
+                    sfx_resp = make_response(simplejson.dumps(dfile.tojson(), ignore_nan=True), 200)
                     sfx_resp.mimetype='application/json'
                 else:
                     sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
@@ -420,7 +420,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 dfile = definitions.describe_topic(topic_name, topic, full=full)
 
                 if jsn:
-                    sfx_resp = make_response(simplejson.dumps(dfile.tojson()), 200)
+                    sfx_resp = make_response(simplejson.dumps(dfile.tojson(), ignore_nan=True), 200)
                     sfx_resp.mimetype ='application/json'
                 else:
                     sfx_resp = make_response(dfile.tostring(suppress_formats=True), 200)
@@ -503,7 +503,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     elif ret_msg:
                         output_data = ret_msg  # the returned message is already converted from ros format by the client
                         output_data['_format'] = 'ros'
-                        output_data = simplejson.dumps(output_data)
+                        output_data = simplejson.dumps(output_data, ignore_nan=True)
                         content_type = 'application/json'
                     else:
                         output_data = "{}"
@@ -547,21 +547,21 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 status=wmf.status_code,
                 exc=wmf.message
             ))
-            return make_response(simplejson.dumps(wmf.to_dict()), wmf.status_code)
+            return make_response(simplejson.dumps(wmf.to_dict(), ignore_nan=True), wmf.status_code)
 
         except ServiceTimeout as st:
             self.logger.error('Service Timeout! => {status} \n{exc}'.format(
                 status=st.status_code,
                 exc=st.message
             ))
-            return make_response(simplejson.dumps(st.to_dict()), st.status_code)
+            return make_response(simplejson.dumps(st.to_dict(), ignore_nan=True), st.status_code)
 
         except ServiceNotFound as snf:
             self.logger.error('Service Not Found! => {status} \n{exc}'.format(
                 status=snf.status_code,
                 exc=snf.message
             ))
-            return make_response(simplejson.dumps(snf.to_dict()), snf.status_code)
+            return make_response(simplejson.dumps(snf.to_dict(), ignore_nan=True), snf.status_code)
 
         # Generic way to return Exceptions we don't know how to handle
         # But we can do a tiny bit better if it s a PyrosException
@@ -575,7 +575,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     'traceback': tb.to_dict()
                  }
             self.logger.error('An exception occurred! => 500 \n{exc}'.format(exc=exc_dict))
-            return make_response(simplejson.dumps(exc_dict), 500)
+            return make_response(simplejson.dumps(exc_dict, ignore_nan=True), 500)
             # return make_response(e, 500)
 
 
