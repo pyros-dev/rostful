@@ -10,5 +10,4 @@ futures
 tornado
 
 # adds dependency packages for development only
--e git+https://github.com/asmodehn/pyros-setup.git@config_refactor#egg=pyros_setup
--e git+https://github.com/asmodehn/pyros.git@config_refactor#egg=pyros
+# -e git+https://github.com/asmodehn/pyros.git@config_refactor#egg=pyros
