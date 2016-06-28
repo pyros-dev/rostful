@@ -4,7 +4,7 @@
 nose
 
 # To divert/prevent uninstalling attempt from tornado dependencies
-# since pip requirements install is ignoring already installed packages for catkin_pure_python
+# since pip requirements install is ignoring already installed packages for catkin_pip
 # and these will be seen before by the installer for dependencies
 futures
 tornado

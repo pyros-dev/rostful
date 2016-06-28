@@ -53,11 +53,16 @@ def init():
 @click.option('-h', '--host', default=None)
 @click.option('-p', '--port', default=None)
 @click.option('-s', '--server', default=None, type=click.Choice(['flask', 'tornado']))
-@click.option('-c', '--config', default=None)
+@click.option('-c', '--config', default=None)  # this is the last possible config override, and has to be explicit.
 @click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
 def run(host, port, server, config, ros_args):
     """
-    Start rostful.
+    Start rostful server.
+    :param host: the local IP on which to serve rostful (0.0.0.0 for all)
+    :param port: the local port on which to serve rostful
+    :param server: the server to run our WSGI app (flask or tornado)
+    :param config: the config file path, relative to the instance folder
+    :param ros_args: the ros arguments (useful to absorb additional args when launched with roslaunch)
     """
 
     # Start Server with config passed as param
@@ -67,7 +72,7 @@ def run(host, port, server, config, ros_args):
         'arguments passed : host {host} port {port} config {config} ros_args {ros_args}'.format(
             host=host, port=port, config=config, ros_args=ros_args))
 
-    # Launch the server
+    # Launch the server, potentially overriding host, port and server from config settings.
     rostful_server.launch(host, port, list(ros_args), server)
 
 if __name__ == '__main__':
