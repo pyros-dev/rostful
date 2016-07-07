@@ -13,6 +13,7 @@ from flask import Flask
 
 # python package dependencies
 import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
+from flask_reverse_proxy import FlaskReverseProxied
 
 app = Flask(
     'rostful',
@@ -24,6 +25,8 @@ app = Flask(
 # Adding CORS middleware
 app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')
 
+# Adding Reverse proxy middleware
+app.reverse_proxied = FlaskReverseProxied(app)
 
 # Temporary disabled until we can confirm if it s useful or not
 #

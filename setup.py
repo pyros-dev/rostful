@@ -23,6 +23,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
             'testfixtures',
             'flask_cors',
             'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
+            'flask_reverse_proxy',
             'passlib', 'passlib.ext', 'passlib.ext.django', 'passlib.handlers', 'passlib.tests', 'passlib.utils', 'passlib.utils._blowfish', 'passlib._setup',  # TODO : rosdep has a DEB package for this
             'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
             'webargs',
@@ -33,6 +34,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
             'testfixtures': 'deps/testfixtures/testfixtures',
             'flask_cors': 'deps/flask-cors/flask_cors',
             'flask_restful': 'deps/flask-restful/flask_restful',
+            'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
             'passlib': 'deps/passlib/passlib',
             'click': 'deps/click/click',
             'webargs': 'deps/webargs/webargs',
