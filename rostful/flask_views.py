@@ -289,6 +289,8 @@ class Rostful(restful.Resource):
                 return make_response('', 404)
 
 
+# TODO : check if we can simplify this by dynamically generating usual simple flask route (one for each service/topic)
+# this way we could use url_for simply and rely on flask url build scheme...
 class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
     """
     View for backend pages
