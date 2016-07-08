@@ -25,6 +25,7 @@ setup(
         'Flask-Cors==2.0.1',
         'Flask-Script',
         'Flask-Restful',
+        'Flask-reverse-proxy',
         'Rester',
         'click',
         'webargs',

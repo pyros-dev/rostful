@@ -25,3 +25,6 @@
 [submodule "deps/passlib"]
 	path = deps/passlib
 	url = https://github.com/asmodehn/passlib.git
+[submodule "deps/flask-reverse-proxy"]
+	path = deps/flask-reverse-proxy
+	url = https://github.com/wilbertom/flask-reverse-proxy.git

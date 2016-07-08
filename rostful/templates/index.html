@@ -24,7 +24,8 @@
     <h1>Services</h1>
   </div>
     {% for name, service in services.iteritems() %}
-      <a href="{{ service.fullname }}" class="ui-btn">{{ service.fullname }}</a>
+      <!-- This is BAD BAD : we should use flask URL routing instead ! //-->
+      <a href="{{ request.url + service.fullname[1:] }}" class="ui-btn">{{ service.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
   {{ navbar(services, topics, params, 'services') }}
@@ -38,7 +39,8 @@
     <h1>Topics</h1>
   </div>
     {% for name, topic  in topics.iteritems() %}
-      <a href="{{ topic.fullname }}" class="ui-btn">{{ topic.fullname }}</a>
+      <!-- This is BAD BAD : we should use flask URL routing instead ! //-->
+      <a href="{{ request.url + topic.fullname[1:]  }}" class="ui-btn">{{ topic.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
   {{ navbar(services, topics, params, 'topics') }}
@@ -52,7 +54,8 @@
     <h1>Params</h1>
   </div>
     {% for name, param  in params.iteritems() %}
-      <a href="{{ param.fullname }}" class="ui-btn">{{ param.fullname }}</a>
+      <!-- This is BAD BAD : we should use flask URL routing instead ! //-->
+      <a href="{{ request.url + param.fullname[1:]  }}" class="ui-btn">{{ param.fullname }}</a>
     {% endfor%}
   <div data-role="footer" data-id="mainfooter" data-position="fixed">
   {{ navbar(services, topics, params, 'params') }}
