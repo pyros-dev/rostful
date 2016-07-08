@@ -29,7 +29,7 @@ setup(
         'Rester',
         'click',
         'webargs',
-        'pyros',
+        'pyros==0.1.0',
         'tornado == 4.0.2',
     ],
     test_suite="nose.collector",
