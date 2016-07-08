@@ -85,7 +85,15 @@ class Server(object):
 
         # One PyrosNode is needed for Flask.
         # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
-        with pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv) as node_ctx:
+
+        try:
+            node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv)
+        except TypeError as te:
+            # bwcompat trick
+            node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args,
+                                base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+
+        with node_ctx_gen as node_ctx:
             set_pyros_client(node_ctx.client)
 
             # configure logger
