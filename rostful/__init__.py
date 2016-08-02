@@ -10,7 +10,7 @@ from . import config
 
 # HACK for ROS
 from .flaskapp import create_app
-from .exceptions import WrongMessageFormat, ServiceNotFound, ServiceTimeout
+from .exceptions import WrongMessageFormat, ServiceNotFound, ServiceTimeout, NoPyrosClient
 from .context import set_pyros_client, get_pyros_client
 
 
@@ -21,6 +21,7 @@ __all__ = [
     'WrongMessageFormat',
     'ServiceNotFound',
     'ServiceTimeout',
+    'NoPyrosClient',
 
     'config',
     'create_app',

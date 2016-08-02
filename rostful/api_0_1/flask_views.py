@@ -4,9 +4,6 @@ from __future__ import absolute_import
 import re
 import sys
 
-from flask import Flask, request, make_response, render_template, jsonify, redirect, views, url_for
-import flask_restful as restful
-
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
 from rostful import context
 
@@ -27,8 +24,6 @@ def get_suffix(path):
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 
 import simplejson
-import logging
-import logging.handlers
 import tblib
 
 from StringIO import StringIO
@@ -202,7 +197,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         if suffix == MSG_PATH and path in topics:
             if jsn:
                 # TODO : find a better way to interface here...
-                sfx_resp = make_response(simplejson.dumps(topics[path].get('msgtype', None)), 200)
+                sfx_resp = make_response(simplejson.dumps(topics[path].get('msgtype')), 200)
                 sfx_resp.mimetype = 'application/json'
             else:
                 # broken now, cannot access pyros.rosinterface.topic.get_topic_msg
@@ -214,7 +209,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 pass
         elif suffix == SRV_PATH and path in services:
             if jsn:
-                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype', None), ignore_nan=True), 200)
+                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype'), ignore_nan=True), 200)
                 sfx_resp.mimetype = 'application/json'
             else:
                 # broken now, cannot access pyros.rosinterface.service.get_service_srv

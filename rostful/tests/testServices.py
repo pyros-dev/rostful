@@ -7,12 +7,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 import mock
 import unittest
 
-import os
-import flask
-import tempfile
-
-import nose
-
 import pyros
 from rostful import create_app, set_pyros_client, ServiceNotFound
 

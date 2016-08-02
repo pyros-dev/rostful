@@ -12,7 +12,7 @@ import nose
 import pyros
 
 
-from rostful import create_app, set_pyros_client, ServiceNotFound
+from rostful import create_app, set_pyros_client, ServiceNotFound, NoPyrosClient
 
 
 # Basic Test class for an simple Flask wsgi app
@@ -57,10 +57,10 @@ class TestAppNoPyros(unittest.TestCase):
 
     def test_error(self):
          with self.app.test_client() as client:
-            with nose.tools.assert_raises(ServiceNotFound) as not_found:
+            with nose.tools.assert_raises(NoPyrosClient) as not_found:
                 res = client.get('/api/v0.1/non-existent')
             ex = not_found.exception  # raised exception is available through exception property of context
-            nose.tools.assert_equal(ex.status_code, 404)
+            nose.tools.assert_equal(ex.status_code, 500)
 
 
 class TestAppPyros(TestAppNoPyros):
@@ -103,7 +103,11 @@ class TestAppPyros(TestAppNoPyros):
         self.node_ctx.client.params.assert_called_once_with()
 
     def test_error(self):
-        super(TestAppPyros, self).test_error()
+        with self.app.test_client() as client:
+            with nose.tools.assert_raises(ServiceNotFound) as not_found:
+                res = client.get('/api/v0.1/non-existent')
+            ex = not_found.exception  # raised exception is available through exception property of context
+            nose.tools.assert_equal(ex.status_code, 404)
         # verify pyros mock client was actually called
         self.node_ctx.client.topics.assert_called_once_with()
         self.node_ctx.client.services.assert_called_once_with()

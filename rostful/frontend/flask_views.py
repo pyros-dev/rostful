@@ -2,10 +2,6 @@
 from __future__ import absolute_import
 
 import re
-import sys
-
-from flask import Flask, request, make_response, render_template, jsonify, redirect, views, url_for
-import flask_restful as restful
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
 from rostful import context
@@ -25,13 +21,6 @@ def get_suffix(path):
     return match.group(1) if match else ''
 
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
-
-import simplejson
-import logging
-import logging.handlers
-import tblib
-
-from StringIO import StringIO
 
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
