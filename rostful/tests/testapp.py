@@ -12,7 +12,7 @@ import nose
 import pyros
 
 
-from rostful import app, set_pyros_client, ServiceNotFound
+from rostful import create_app, set_pyros_client, ServiceNotFound
 
 
 # Basic Test class for an simple Flask wsgi app
@@ -27,21 +27,26 @@ class TestAppNoPyros(unittest.TestCase):
         pass
 
     def setUp(self):
-        app.config['TESTING'] = True
-        app.testing = True  # required to check for exceptions
-        self.client = app.test_client()
+        self.app = create_app()
+        self.app.config['TESTING'] = True
+        self.app.testing = True  # required to check for exceptions
 
     def tearDown(self):
         pass
 
     def test_index_root(self):
-        with app.test_client() as client:
-            res = self.client.get('/', follow_redirects=True)
+        with self.app.test_client() as client:
+            res = client.get('/', follow_redirects=True)
+            nose.tools.assert_equals(res.status_code, 200)
+
+    def test_frontend_root(self):
+        with self.app.test_client() as client:
+            res = client.get('/frontend')
             nose.tools.assert_equals(res.status_code, 200)
 
     def test_crossdomain(self):
-        with app.test_client() as client:
-            res = client.get('/')
+        with self.app.test_client() as client:
+            res = client.get('/', follow_redirects=True)
             nose.tools.assert_equals(res.status_code, 200)
             # Not working. TODO : recheck after switching to WSGI Cors
             #nose.tools.assert_equals(res.headers['Access-Control-Allow-Origin'], '*')
@@ -51,10 +56,11 @@ class TestAppNoPyros(unittest.TestCase):
             #nose.tools.assert_true('GET' in res.headers['Access-Control-Allow-Methods'])
 
     def test_error(self):
-         with app.test_client() as client:
+         with self.app.test_client() as client:
             with nose.tools.assert_raises(ServiceNotFound) as not_found:
-                res = client.get('/non-existent')
-                nose.tools.assert_equal(not_found.code, 404)
+                res = client.get('/api/v0.1/non-existent')
+            ex = not_found.exception  # raised exception is available through exception property of context
+            nose.tools.assert_equal(ex.status_code, 404)
 
 
 class TestAppPyros(TestAppNoPyros):
@@ -73,11 +79,11 @@ class TestAppPyros(TestAppNoPyros):
         # argv is rosargs but these have no effect on client, so no need to pass anything here
         with pyros.pyros_ctx(name='rostful', argv=[], mock_client=True) as node_ctx:
             self.node_ctx = node_ctx
-            set_pyros_client(self.node_ctx.client)
             super(TestAppPyros, self).run(result)
 
     def setUp(self):
         super(TestAppPyros, self).setUp()
+        set_pyros_client(self.app, self.node_ctx.client)
 
     def tearDown(self):
         super(TestAppPyros, self).tearDown()

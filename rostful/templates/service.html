@@ -43,7 +43,7 @@ $(document).on('pageinit', '#mainlayout', function(){
 
     // Send data to Rostful backend through the Ajax call
     $.ajax({
-        url: $SCRIPT_ROOT + '/ros{{ service.fullname }}',
+        url: $SCRIPT_ROOT + '{{ url_for('api_0_1.backend', rosname=service.fullname[1:]) }}',
         data: JSON.stringify(msgdata),
         method: 'POST',
         dataType: 'json',

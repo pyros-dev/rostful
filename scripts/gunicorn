@@ -1,5 +1,0 @@
-#!/bin/bash
-
-DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-
-gunicorn -c $DIR/../cfg/gunicorn.cfg 'rostful.app'

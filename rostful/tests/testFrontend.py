@@ -18,7 +18,7 @@ import tempfile
 import nose
 
 import pyros
-from rostful import app, set_pyros_client, ServiceNotFound
+from rostful import create_app, set_pyros_client, ServiceNotFound
 
 
 class TestFrontendNoPyros(unittest.TestCase):
@@ -32,6 +32,7 @@ class TestFrontendNoPyros(unittest.TestCase):
         pass
 
     def setUp(self):
+        app = create_app()
         app.config['TESTING'] = True
         app.testing = True  # required to check for exceptions
         self.client = app.test_client()

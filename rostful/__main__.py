@@ -4,44 +4,69 @@
 from __future__ import absolute_import
 import os
 import sys
-import click
-import errno
 
-#importing current package if needed ( solving relative package import from __main__ problem )
+import six
+
+import click
+import logging
+
+
+# importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from rostful.server import Server
+    from rostful import create_app, set_pyros_client
 else:
-    from .server import Server
-
-import logging
-from logging.handlers import RotatingFileHandler
+    from . import create_app, set_pyros_client
 
 
+# Change that into something cleaner and related with the app itself (not server)
+# Middleware ? app context ? Tricky with dynamic imports...
+# middleware ref : https://github.com/miguelgrinberg/python-engineio/blob/master/engineio/middleware.py#L49
+def pyros_start(config, ros_args='', pyros_ctx_impl=None):
+
+    # implementing Config.get_namespace() for flask version < 1.0:
+    namespace = 'PYROS_'
+    trim_namespace = True
+    lowercase = False
+    rv = {}
+    for k, v in six.iteritems(config):
+        if not k.startswith(namespace):
+            continue
+        if trim_namespace:
+            key = k[len(namespace):]
+        else:
+            key = k
+        if lowercase:
+            key = key.lower()
+        rv[key] = v
+    # rv should now contain a dictionary of namespaced key:value from config
+
+    try:
+        from pyros import pyros_ctx, PyrosClient
+    except Exception as e:
+        logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
+        logging.error("sys.path = {0}".format(sys.path))
+        raise
+
+    # default to real module, if no other implementation passed as parameter (used for mock)
+    pyros_ctx_impl = pyros_ctx_impl or pyros_ctx
+
+    # One PyrosNode is needed for Flask.
+    # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
+
+    try:
+        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv)
+    except TypeError as te:
+        # bwcompat trick
+        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args,
+                            base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..'))
+    return node_ctx_gen
+
+# TODO : handle ros arguments here
+# http://click.pocoo.org/5/commands/#group-invocation-without-command
 @click.group()
 def cli():
     pass
-
-
-@cli.command()
-def init():
-    """
-    Create missing configuration files.
-    Useful just after install
-    """
-    # Start Server with default config
-    rostful_server = Server()
-    # Create instance config file name, to make it easy to modify when deploying
-    filename = os.path.join(rostful_server.app.instance_path, 'rostful.cfg')
-    if not os.path.isfile(filename) :
-        #this will create the directories if needed
-        try:
-            os.makedirs(os.path.dirname(filename))
-        except OSError as exception: #preventing race condition just in case
-            if exception.errno != errno.EEXIST:
-                raise
-        #this will create the file
-        rostful_server.app.open_instance_resource('rostful.cfg', 'w')
 
 
 #
@@ -63,17 +88,83 @@ def run(host, port, server, config, ros_args):
     :param server: the server to run our WSGI app (flask or tornado)
     :param config: the config file path, relative to the instance folder
     :param ros_args: the ros arguments (useful to absorb additional args when launched with roslaunch)
+    TODO : get doctests to work here
+    >>> run('127.0.0.1', '8888', False, 'flask', None, None)
+    []
+    >>> run('127.0.0.1', '8888', True, 'flask', None, None)
+    >>> run('127.0.0.1', '4444', False, 'tornado', None, None)
+    >>> run()
+
     """
+    if port and isinstance(port, (str, unicode)):
+        port = int(port)
 
-    # Start Server with config passed as param
-    rostful_server = Server(config)
+    app = create_app()
 
-    rostful_server.app.logger.info(
-        'arguments passed : host {host} port {port} config {config} ros_args {ros_args}'.format(
+    # Setup app with config passed as param
+    if config:
+        app.config.from_pyfile(config)
+
+    # Some logic for defaults value (might depend on config)
+    server = server or app.config.get('SERVER_TYPE', 'tornado')
+
+    app.logger.info(
+        'rostful started with : host {host} port {port} config {config} ros_args {ros_args}'.format(
             host=host, port=port, config=config, ros_args=ros_args))
 
-    # Launch the server, potentially overriding host, port and server from config settings.
-    rostful_server.launch(host, port, list(ros_args), server)
+    # Starting pyros with latest config
+    with pyros_start(config=app.config, ros_args=ros_args) as node_ctx:
+
+        set_pyros_client(app, node_ctx.client)
+
+        # configure logger
+
+        # add log handler for warnings and more to sys.stderr.
+        app.logger.addHandler(logging.StreamHandler())
+        app.logger.setLevel(logging.WARN)
+
+        import socket  # just to catch the "Address already in use" error
+        port_retries = 5
+        while port_retries > 0:  # keep trying
+            try:
+                # default server should be solid and production ready
+                if server == 'flask':
+
+                    log = logging.getLogger('werkzeug')
+                    log.setLevel(logging.DEBUG)
+
+                    app.logger.info('Starting Flask server on port {0}'.format(port))
+                    # debug is needed to investigate server errors.
+                    # use_reloader set to False => killing the ros node also kills the server child.
+                    app.run(
+                        host=host,
+                        port=port,
+                        debug=True,
+                        use_reloader=False,
+                    )
+                elif server == 'tornado':
+
+                    # Only import if needed
+                    from tornado.wsgi import WSGIContainer
+                    from tornado.httpserver import HTTPServer
+                    from tornado.ioloop import IOLoop
+                    from tornado.log import enable_pretty_logging
+
+                    port = port or '5000'  # same default as flask
+                    host = host or '127.0.0.1'  # same default as flask
+
+                    app.logger.info('Starting Tornado server on {0}:{1}'.format(host, port))
+                    # enable_pretty_logging()  # enable this for debugging during development
+                    http_server = HTTPServer(WSGIContainer(app))
+                    http_server.listen(port)
+                    IOLoop.instance().start()
+                # TODO : support more wsgi server setup : http://www.markjberger.com/flask-with-virtualenv-uwsgi-nginx/
+                break
+            except socket.error as msg:
+                port_retries -= 1
+                port += 1
+                app.logger.error('Socket Error : {0}'.format(msg))
+
 
 if __name__ == '__main__':
-    cli()
+   cli()
