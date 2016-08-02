@@ -74,6 +74,11 @@ def create_app(logfile=None):
         maxBytes=100 * 131072,
         backupCount=10)
     file_handler.setLevel(logging.DEBUG)
+
+    # create a formatter to have useful extra fields
+    formatter = logging.Formatter('[%(levelname)s] [%(asctime)s] [%(name)s] : %(message)s', )
+    file_handler.setFormatter(formatter)
+
     app.logger.addHandler(file_handler)
 
     # Config Workflow
