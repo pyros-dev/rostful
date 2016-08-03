@@ -57,7 +57,7 @@ def get_query_bool(query_string, param_name):
     return re.search(r'(^|&)%s((=(true|1))|&|$)' % param_name, query_string, re.IGNORECASE)
 
 
-from flask import current_app, request, make_response, render_template, jsonify, redirect
+from flask import request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
 from flask_restful import reqparse
 import flask_restful as restful
@@ -310,7 +310,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             response = None
             try:
                 if mode == 'service':
-                    current_app.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
+                    current_app.logger.debug('calling service %s with msg : %s', service.get('name'), input_data)
                     ret_msg = self.node_client.service_call(rosname, input_data)
 
                     if use_ros:
@@ -331,12 +331,12 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     response.mimetype = content_type
 
                 elif mode == 'topic':
-                    current_app.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name', None))
+                    current_app.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name'))
                     self.node_client.topic_inject(rosname, input_data)
                     response = make_response('{}', 200)
                     response.mimetype = 'application/json'
                 elif mode == 'param':
-                    current_app.logger.debug('setting \n%s param %s', input_data, param.get('name', None))
+                    current_app.logger.debug('setting \n%s param %s', input_data, param.get('name'))
                     self.node_client.param_set(rosname, input_data)
                     response = make_response('{}', 200)
                     response.mimetype = 'application/json'
