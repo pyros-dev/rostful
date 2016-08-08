@@ -6,7 +6,18 @@ Overview
 
 ROStful - A REST API for ROS.
 
-Rstful is intended to be the outside layer of a ros system. meaning it will interface other software systems with ros.
+This repository has a few main branches:
+
+- master : main branch, python dev workflow, releasing version tags into a pip package.
+- indigo-devel : current indigo-based ongoing development. catkin dev workflow.
+- indigo : current indigo-based release (ROS pkg - tags attempting to match)
+- <ros_distro> : current <ros_distro>-based release (ROS pkg)
+
+Apart from these we follow a `feature branching workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow>`_
+
+WARNING: This repository structure is currently being implemented...
+
+Rostful is intended to be the outside layer of a ros system. meaning it will interface other software systems with ros.
 As such this should be launched either :
 * as a python code with the de facto python standard behaviors ( venv, pip requirements, etc. ),
 
