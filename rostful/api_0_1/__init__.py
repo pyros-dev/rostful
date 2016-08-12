@@ -11,6 +11,7 @@ api_blueprint = Blueprint('api_0_1', __name__)
 
 api = flask_restful.Api(api_blueprint)
 
+# TODO : check https://github.com/jmcarp/flask-apispec
 
 # TODO : double check if needed or already in flask-restful
 def api_route(self, *args, **kwargs):
