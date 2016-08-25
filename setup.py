@@ -65,7 +65,7 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
     # TODO : Use the bdist_wheel setuptools extension available from the wheel project to create wheels.
     # TODO : This as a third party package could be the ultimate goal...
     setup(name='rostful',
-        version='0.0.7',
+        version='0.0.10',
         description='REST API for ROS',
         url='http://github.com/asmodehn/rostful',
         author='AlexV',
