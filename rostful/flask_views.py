@@ -73,7 +73,6 @@ from flask import Flask, request, make_response, render_template, jsonify, redir
 from flask.views import MethodView
 from flask_restful import reqparse
 import flask_restful as restful
-import flask_login as login
 
 from webargs.flaskparser import FlaskParser, use_kwargs
 
@@ -160,6 +159,7 @@ View for frontend pages
 """
 # TODO: maybe consider http://www.flaskapi.org/
 # TODO: or maybe better https://github.com/OAI/OpenAPI-Specification
+# TODO: or even bettest : https://github.com/rantav/flask-restful-swagger
 
 
 class FrontEnd(MethodView):
@@ -582,6 +582,18 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
 
 ### Setting up routes here for now
+
+
+@app.route('/help', methods=['GET'])
+def help():
+    """Print available functions."""
+    func_list = {}
+    for rule in app.url_map.iter_rules():
+        if rule.endpoint != 'static':
+            func_list[rule.rule] = app.view_functions[rule.endpoint].__doc__
+    return jsonify(func_list)
+
+
 
 # Usual Flask : This is not REST
 # self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))

@@ -21,6 +21,17 @@ app = Flask(
     template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
     instance_relative_config=True
 )
+# Implementing rostful default config as early as possible.
+app.config.from_object(config)
+
+# Config Workflow
+# 1. load hardcoded (in source) defaults, minimum expected to not break / crash.
+# 2. load config from default location (overriding hardcoded defaults).
+#    if not there, create it (at runtime, with the hardcoded default values)
+# 3. load user provided config from envvar if any, otherwise silently ignore.
+# 4. load user provided config from command arg if any, if missing file then except (user provided arg is wrong).
+#    if intent is to use file from default location, then no config arg should be provided,
+#    and optional override is available via envvar.
 
 # Adding CORS middleware
 app.cors = cors.CORS(app, resources=r'/*', allow_headers='*')
@@ -44,6 +55,18 @@ app.reverse_proxied = FlaskReverseProxied(app)
 # api = restful.Api(app)
 
 
+# Attempting to set up default configuration
+app.config.from_pyfile('rostful.cfg')
+# TODO : if except, we create the file ( on runtime, not on package install)
+
+# Attempting to load optional override (at import time because it doesnt matter who uses this WSGI app).
+if 'ROSTFUL_SETTINGS' in os.environ:
+    app.logger.info("Loading config override using envvar ROSTFUL_SETTINGS: {0}".format(
+        os.environ.get('ROSTFUL_SETTINGS'))
+    )
+    app.config.from_envvar('ROSTFUL_SETTINGS')
+
+
 # TODO : improve that into using app context.
 # Creating pyros client should be simple and fast to be created everytime a request arrives.
 # Pyros should also be able to support multiple client at the same time...
@@ -58,13 +81,3 @@ def set_pyros_client(pyros_client):
 def get_pyros_client():
     return app.pyros_client
 
-# Following http://flask.pocoo.org/docs/0.10/patterns/packages/ with circular late import
-# import rostful.flask_views
-
-
-### TODO This package also contains a Client
-
-__all__ = [
-    'config',
-    'app',
-]

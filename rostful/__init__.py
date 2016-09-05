@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+from ._version import __version__
+
 import os
 from . import config
 
@@ -24,13 +26,15 @@ def set_pyros_client(pyros_client):
 def get_pyros_client():
     return app.pyros_client
 
+
 # Following http://flask.pocoo.org/docs/0.10/patterns/packages/ with circular late import
-from rostful.flask_views import WrongMessageFormat, ServiceNotFound, ServiceTimeout
+from .flask_views import WrongMessageFormat, ServiceNotFound, ServiceTimeout
 
 
 ### TODO This package also contains a Client
 
 __all__ = [
+    '__version__',
     'WrongMessageFormat',
     'ServiceNotFound',
     'ServiceTimeout',

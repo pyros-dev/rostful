@@ -10,7 +10,7 @@ import errno
 #importing current package if needed ( solving relative package import from __main__ problem )
 if __package__ is None:
     sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
-    from rostful import Server
+    from rostful.server import Server
 else:
     from .server import Server
 
@@ -26,12 +26,13 @@ def cli():
 @cli.command()
 def init():
     """
-    Create useful configuration files and database on first install
+    Create missing configuration files.
+    Useful just after install
     """
     # Start Server with default config
     rostful_server = Server()
     # Create instance config file name, to make it easy to modify when deploying
-    filename = os.path.join(rostful_server.app.instance_path, 'flask_config.py')
+    filename = os.path.join(rostful_server.app.instance_path, 'rostful.cfg')
     if not os.path.isfile(filename) :
         #this will create the directories if needed
         try:
@@ -40,29 +41,39 @@ def init():
             if exception.errno != errno.EEXIST:
                 raise
         #this will create the file
-        rostful_server.app.open_instance_resource('flask_config.py', 'w')
+        rostful_server.app.open_instance_resource('rostful.cfg', 'w')
 
 
+#
+# Arguments' default value is None here
+# to use default values from config file if one is provided.
+# If no config file is provided, internal defaults are used.
+#
 @cli.command()
-@click.option('-h', '--host', default='')
-@click.option('-p', '--port', default=8000)
-@click.option('-s', '--server_type', default='tornado', type=click.Choice(['flask', 'tornado']))
-@click.option('-c', '--config', default='rostful.config')
+@click.option('-h', '--host', default=None)
+@click.option('-p', '--port', default=None)
+@click.option('-s', '--server', default=None, type=click.Choice(['flask', 'tornado']))
+@click.option('-c', '--config', default=None)  # this is the last possible config override, and has to be explicit.
 @click.option('ros_args', '-r', '--ros-arg', multiple=True, default='')
-def run(host, port, server_type, config, ros_args):
-    if isinstance(port, basestring):
-        port = int(port)
+def run(host, port, server, config, ros_args):
+    """
+    Start rostful server.
+    :param host: the local IP on which to serve rostful (0.0.0.0 for all)
+    :param port: the local port on which to serve rostful
+    :param server: the server to run our WSGI app (flask or tornado)
+    :param config: the config file path, relative to the instance folder
+    :param ros_args: the ros arguments (useful to absorb additional args when launched with roslaunch)
+    """
 
     # Start Server with config passed as param
     rostful_server = Server(config)
 
-    rostful_server.app.logger.info('host %r port %r', host, port)
-    rostful_server.app.logger.info('config %r', config)
-    rostful_server.app.logger.info('ros_args %r', ros_args)
+    rostful_server.app.logger.info(
+        'arguments passed : host {host} port {port} config {config} ros_args {ros_args}'.format(
+            host=host, port=port, config=config, ros_args=ros_args))
 
-    #TODO : when called from python and no master found, do as roslaunch : create a master so it still can work from python
-    #Launch the server
-    rostful_server.launch(host, port, list(ros_args), server_type)
+    # Launch the server, potentially overriding host, port and server from config settings.
+    rostful_server.launch(host, port, list(ros_args), server)
 
 if __name__ == '__main__':
     cli()

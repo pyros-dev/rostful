@@ -1,5 +1,5 @@
 #!/bin/sh
-# TOD : use https://pypi.python.org/pypi/twine
+# TODO : use https://pypi.python.org/pypi/twine or pypi_publisher
 
 #TODO : find ~/.pypirc and extract repository
 if [ $# -lt 1 ]; then
