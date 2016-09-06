@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from __future__ import absolute_import
 
+import logging
 import os
 from . import config
 
@@ -15,10 +16,19 @@ from flask import Flask
 import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
 from flask_reverse_proxy import FlaskReverseProxied
 
+# Special case : if we are running on ROS, we need to setup our instance path in ros home
+instance_path = None  # to use flask default in usual cases
+try:
+    import rospkg
+    instance_path = os.path.join(rospkg.get_ros_home(), 'rostful')
+except ImportError as exc:
+    logging.warn("ERROR import rospkg : we cannot find ros home to dump log and read config")
+
 app = Flask(
     'rostful',
     static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
     template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
+    instance_path=instance_path,
     instance_relative_config=True
 )
 # Implementing rostful default config as early as possible.
@@ -61,7 +71,7 @@ try:
 except IOError:
     # TODO : if except, we create the file ( on runtime, not on package install)
     # CAREFUL here. on install space, the instance folder ends up in dist_packages/instance for some reason... needs debugging...
-    app.logger.exception("rostful.cfg NOT FOUND ! It s fine we don't really need it right now... should be fixed though...")
+    app.logger.warning("rostful.cfg NOT FOUND ! It s fine we don't really need it right now... should be fixed though...")
 
 # Attempting to load optional override (at import time because it doesnt matter who uses this WSGI app).
 if 'ROSTFUL_SETTINGS' in os.environ:

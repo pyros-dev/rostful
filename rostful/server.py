@@ -103,6 +103,10 @@ class Server(object):
             #    self.logger.setLevel(logging.WARN)
 
             # adding file logging for everything to help debugging
+
+            # done already by flask it seems...
+            if not os.path.exists(self.app.instance_path):
+                os.makedirs(self.app.instance_path)
             file_handler = logging.handlers.RotatingFileHandler(os.path.join(self.app.instance_path, 'rostful.log'), maxBytes=10000, backupCount=1)
             file_handler.setLevel(logging.INFO)
             self.app.logger.addHandler(file_handler)
