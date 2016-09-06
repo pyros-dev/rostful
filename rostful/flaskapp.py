@@ -56,8 +56,12 @@ app.reverse_proxied = FlaskReverseProxied(app)
 
 
 # Attempting to set up default configuration
-app.config.from_pyfile('rostful.cfg')
-# TODO : if except, we create the file ( on runtime, not on package install)
+try:
+    app.config.from_pyfile('rostful.cfg')
+except IOError:
+    # TODO : if except, we create the file ( on runtime, not on package install)
+    # CAREFUL here. on install space, the instance folder ends up in dist_packages/instance for some reason... needs debugging...
+    app.logger.exception("rostful.cfg NOT FOUND ! It s fine we don't really need it right now... should be fixed though...")
 
 # Attempting to load optional override (at import time because it doesnt matter who uses this WSGI app).
 if 'ROSTFUL_SETTINGS' in os.environ:
