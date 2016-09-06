@@ -11,7 +11,31 @@ setup(
     author='AlexV',
     author_email='asmodehn@gmail.com',
     license='BSD',
-    packages=['rostful'],
+    packages=[
+        'rostful',
+        'rostful.tests',
+        # This can create potential conflicts in install space,
+        # If another package install the same pthon package dependency.
+        # TODO : The proper solution is to create ThirdPartyRelease for these packages
+        'rester',
+        'testfixtures',
+        'flask_cors',
+        'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
+        'passlib', 'passlib.ext', 'passlib.ext.django', 'passlib.handlers', 'passlib.tests', 'passlib.utils', 'passlib.utils._blowfish', 'passlib._setup',  # TODO : rosdep has a DEB package for this
+        'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
+        'webargs',
+        'marshmallow',
+    ],
+    package_dir={
+        'rester': 'deps/Rester/rester',
+        'testfixtures': 'deps/testfixtures/testfixtures',
+        'flask_cors': 'deps/flask-cors/flask_cors',
+        'flask_restful': 'deps/flask-restful/flask_restful',
+        'passlib': 'deps/passlib/passlib',
+        'click': 'deps/click/click',
+        'webargs': 'deps/webargs/webargs',
+        'marshmallow': 'deps/marshmallow/marshmallow',
+    },
     entry_points={
         'console_scripts': [
             'rostful = rostful.__main__:cli'
