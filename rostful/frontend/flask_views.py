@@ -95,6 +95,10 @@ View for frontend pages
 # TODO: or maybe better https://github.com/OAI/OpenAPI-Specification
 # TODO: or probably best : https://github.com/rantav/flask-restful-swagger
 
+# TODO : maybe this can remove the need for a separate blueprint all together...
+# http://flask.pocoo.org/snippets/45/
+# https://flask-restful.readthedocs.io/en/0.3.2/extending.html#content-negotiation
+
 
 @app_blueprint.route('/', strict_slashes=False, endpoint='ros_list')
 def ros_list():

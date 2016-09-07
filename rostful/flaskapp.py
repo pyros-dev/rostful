@@ -31,8 +31,7 @@ from .frontend import app_blueprint as frontend_blueprint
 # Utility to dynamically create redirects (useful for bwcompat implementation)
 def generate_redirect(endpoint, new_endpoint):
     def redirect_view():
-        return redirect(url_for(endpoint))
-    # DOES renaming to be nice for user breaks somehting ?
+        return redirect(url_for(endpoint, _external=True))  # external is needed to generate correct url behind a proxy
     redirect_view.__name__ = new_endpoint
     redirect_view.__doc__ = "Redirected URL route for " + endpoint
     return redirect_view
@@ -141,15 +140,16 @@ def setup_app_routes(app):
     #
     # RESTful
     #
-    app.logger.info('Registering api Blueprint on /api/v0.1')
-    app.register_blueprint(api_1_blueprint, url_prefix='/api/v0.1')
+    app.logger.info('Registering api Blueprint on {0}'.format(app.config.get('BASEPATH', '/ros')))
+    app.register_blueprint(api_1_blueprint, url_prefix=app.config.get('BASEPATH', '/ros'))
 
     # Building BWcompat routes with explicit redirects
-    app.add_url_rule(app.config.get('BASEPATH', '/ros'), view_func=generate_redirect('api_0_1.backend', new_endpoint="_redirect_.ros._to_.api_0_1.backend"))
+    # TODO : double check, maybe not such a good idea ?
+    #app.add_url_rule(app.config.get('BASEPATH', '/ros'), view_func=generate_redirect('api_0_1.backend', new_endpoint="_redirect_.ros._to_.api_0_1.backend"))
 
     # Next API : currently in development
-    app.logger.info('Registering api Blueprint on /api/v0.2_dev')
-    app.register_blueprint(api_2_blueprint, url_prefix='/api/v0.2_dev')
+    #app.logger.info('Registering api Blueprint on /api/v0.2_dev')
+    #app.register_blueprint(api_2_blueprint, url_prefix='/api/v0.2_dev')
 
     # Usual Flask : This is not REST
     # Front Pages
