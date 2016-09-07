@@ -4,31 +4,13 @@ from __future__ import absolute_import
 from ._version import __version__
 
 import os
-from . import config
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
 
 # HACK for ROS
-from .flaskapp import app
-
-
-# TODO : improve that into using app context.
-# Creating pyros client should be simple and fast to be created everytime a request arrives.
-# Pyros should also be able to support multiple client at the same time...
-
-app.pyros_client = None
-
-
-def set_pyros_client(pyros_client):
-    app.pyros_client = pyros_client
-
-
-def get_pyros_client():
-    return app.pyros_client
-
-
-# Following http://flask.pocoo.org/docs/0.10/patterns/packages/ with circular late import
-from .flask_views import WrongMessageFormat, ServiceNotFound, ServiceTimeout
+from .flaskapp import create_app, setup_app_routes
+from .exceptions import WrongMessageFormat, ServiceNotFound, ServiceTimeout, NoPyrosClient
+from .context import set_pyros_client, get_pyros_client
 
 
 ### TODO This package also contains a Client
@@ -38,8 +20,10 @@ __all__ = [
     'WrongMessageFormat',
     'ServiceNotFound',
     'ServiceTimeout',
+    'NoPyrosClient',
 
-    'config',
-    'app',
+    'create_app',
+    'setup_app_routes',
     'set_pyros_client',
+    'get_pyros_client',
 ]

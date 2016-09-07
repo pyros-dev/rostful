@@ -7,14 +7,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 import mock
 import unittest
 
-import os
-import flask
-import tempfile
-
-import nose
-
 import pyros
-from rostful import app, set_pyros_client, ServiceNotFound
+from rostful import create_app, set_pyros_client, ServiceNotFound
 
 
 class TestServicesNoPyros(unittest.TestCase):
@@ -28,6 +22,7 @@ class TestServicesNoPyros(unittest.TestCase):
         pass
 
     def setUp(self):
+        app = create_app()
         app.config['TESTING'] = True
         app.testing = True  # required to check for exceptions
         self.client = app.test_client()

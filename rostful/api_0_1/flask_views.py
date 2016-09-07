@@ -4,16 +4,8 @@ from __future__ import absolute_import
 import re
 import sys
 
-from flask import Flask, request, make_response, render_template, jsonify, redirect, views, url_for
-import flask_restful as restful
-
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
-from rostful import app
 from rostful import context
-
-api = restful.Api(app)
-
-import collections
 
 import time
 
@@ -32,14 +24,10 @@ def get_suffix(path):
 # TODO : remove ROS usage here, keep this a pure Flask App as much as possible
 
 import simplejson
-import logging
-import logging.handlers
 import tblib
 
 from StringIO import StringIO
 
-from pyros.rosinterface import definitions
-from pyros import PyrosServiceTimeout, PyrosServiceNotFound
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
 def ROS_MSG_MIMETYPE_WITH_TYPE(rostype):
@@ -69,10 +57,12 @@ def get_query_bool(query_string, param_name):
     return re.search(r'(^|&)%s((=(true|1))|&|$)' % param_name, query_string, re.IGNORECASE)
 
 
-from flask import Flask, request, make_response, render_template, jsonify, redirect
+from flask import request, make_response, render_template, jsonify, redirect
 from flask.views import MethodView
 from flask_restful import reqparse
 import flask_restful as restful
+
+from . import api, current_app
 
 from webargs.flaskparser import FlaskParser, use_kwargs
 
@@ -80,59 +70,7 @@ parser = FlaskParser()
 
 import urllib
 from pyros import PyrosException
-
-
-### EXCEPTION CLASSES
-# should be used to return anything that is not 2xx, python style.
-class WrongMessageFormat(Exception):
-    status_code = 400
-
-    def __init__(self, message, status_code=None, traceback=None):
-        Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        self.traceback = traceback
-
-    def to_dict(self):
-        rv = dict({})
-        rv['message'] = self.message
-        rv['traceback'] = self.traceback
-        return rv
-
-
-class ServiceTimeout(Exception):
-    status_code = 504
-
-    def __init__(self, message, status_code=None, traceback=None):
-        Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        self.traceback = traceback
-
-    def to_dict(self):
-        rv = dict({})
-        rv['message'] = self.message
-        rv['traceback'] = self.traceback
-        return rv
-
-
-class ServiceNotFound(Exception):
-    status_code = 404
-
-    def __init__(self, message, status_code=None, traceback=None):
-        Exception.__init__(self)
-        self.message = message
-        if status_code is not None:
-            self.status_code = status_code
-        self.traceback = traceback
-
-    def to_dict(self):
-        rv = dict({})
-        rv['message'] = self.message
-        rv['traceback'] = self.traceback
-        return rv
+from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
 
 
 class Timeout(object):
@@ -154,155 +92,25 @@ class Timeout(object):
         return time.time() > self.die_after
 
 
-"""
-View for frontend pages
-"""
-# TODO: maybe consider http://www.flaskapi.org/
-# TODO: or maybe better https://github.com/OAI/OpenAPI-Specification
-# TODO: or even bettest : https://github.com/rantav/flask-restful-swagger
-
-
-class FrontEnd(MethodView):
-    def __init__(self, logger):
-        super(FrontEnd, self).__init__()
-        self.logger = logger
-        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
-
-    #TMP @login.login_required
-    def get(self, rosname=None):
-        self.logger.debug('in FrontEnd with rosname: %r', rosname)
-
-        if self.node_client is None:
-            if rosname:
-                raise ServiceNotFound("{0} not found: Pyros Client not initialized.")
-            else:
-                # TODO : return error instead ?
-                return render_template('index.html',
-                                       pathname2url=urllib.pathname2url,
-                                       topics=[],
-                                       services=[],
-                                       params=[],
-                )
-        else:
-            if not rosname:
-                return render_template('index.html',
-                                       pathname2url=urllib.pathname2url,
-                                       topics=self.node_client.topics(),
-                                       services=self.node_client.services(),
-                                       params=self.node_client.params(),
-                )
-
-            else:
-
-                # we need to add "/" to rosname passed as url to match absolute service/topics names listed
-                if not rosname.startswith("/"):
-                    rosname = "/" + rosname
-
-                services = None
-                topics = None
-                with Timeout(30) as t:
-                    while not t.timed_out and (services is None or topics is None):
-                        try:
-                            services = self.node_client.services()
-                        except pyros.PyrosServiceTimeout:
-                            services = None
-                        try:
-                            topics = self.node_client.topics()
-                        except pyros.PyrosServiceTimeout:
-                            topics = None
-
-                if t.timed_out:
-                    raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
-
-                if rosname in services:
-                    mode = 'service'
-                    service = services[rosname]
-                    return render_template('service.html', service=service)
-                elif rosname in topics:
-                    mode = 'topic'
-                    topic = topics[rosname]
-                    return render_template('topic.html', topic=topic)
-                else:
-                    raise ServiceNotFound("{0} not found among Pyros exposed services and topics".format(rosname))
-
-
-class Rostful(restful.Resource):
-    """
-    Additional REST services provided by Rostful itself
-    TMP : these should ideally be provided by a Ros node ( rostful-node ? RosAPI ? )
-    """
-    def __init__(self, logger):
-        super(Rostful, self).__init__()
-        self.logger = logger
-        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
-
-    # TODO: think about login rest service before disabling REST services if not logged in
-    def get(self, rostful_name=None):
-        self.logger.debug('in Rostful with rostful_name: %r', rostful_name)
-        if not rostful_name:
-            return make_response(jsonify(name="Rostful",
-                                         description="REST Services for ROS",
-                                         version="v0.1"))
-        else:
-            spliturl = rostful_name.split('/')
-
-            # fail early if no pyros client
-            if self.node_client is None:
-                return make_response('', 404)
-
-
-            if len(spliturl) > 0 and spliturl[0] == 'services':
-                services = self.node_client.services()
-                if len(spliturl) > 1 and spliturl[1] in services:
-                    svc_resp = None
-                    with Timeout(30) as t:
-                        while not t.timed_out and svc_resp is None:
-                            try:
-                                svc_resp = self.node_client.service_call(spliturl[1])
-                            except pyros.PyrosServiceTimeout:
-                                svc_resp = None
-                    if t.timed_out or svc_resp is None:
-                        raise ServiceNotFound("No response from pyros service interface.")
-                    else:
-                        return make_response(jsonify(svc_resp))
-                else:
-                    return make_response(jsonify(services))
-
-            if len(spliturl) > 0 and spliturl[0] == 'topics':
-                topics = self.node_client.topics()
-                if len(spliturl) > 1 and spliturl[1] in topics:
-                    tpc_resp = None
-                    with Timeout(30) as t:
-                        while not t.timed_out and tpc_resp is None:
-                            try:
-                                tpc_resp = self.node_client.topic_extract(spliturl[1])
-                            except pyros.PyrosServiceTimeout:
-                                tpc_resp = None
-                    if t.timed_out or tpc_resp is None:
-                        raise ServiceNotFound("No response from pyros topic interface.")
-                    else:
-                        return make_response(jsonify(tpc_resp))
-                else:
-                    return make_response(jsonify(topics))
-
-            else:
-                return make_response('', 404)
-
-
 # TODO : check if we can simplify this by dynamically generating usual simple flask route (one for each service/topic)
 # this way we could use url_for simply and rely on flask url build scheme...
+@api.route('/', '/<path:rosname>', strict_slashes=False)
 class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
     """
     View for backend pages
     """
-    def __init__(self, logger):
+    def __init__(self):
         super(BackEnd, self).__init__()
-        self.logger = logger
+
+        # dynamic import
+        from pyros.rosinterface import definitions
+        from pyros import PyrosServiceTimeout, PyrosServiceNotFound
+
         self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
     # TODO: think about login rest service before disabling REST services if not logged in
-    def get(self, rosname):
-        #self.logger.debug('in BackEnd with rosname: %r', rosname)
+    def get(self, rosname=None):
+        current_app.logger.debug('in BackEnd with rosname: %r', rosname)
 
         # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()
@@ -311,7 +119,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         # parser.add_argument('json', type=bool)
         args = parser.parse_args()
 
-        path = '/' + rosname
+        path = '/' + (rosname or '')
         full = args.get('full', True)
         jsn = args.get('json', True)
 
@@ -319,12 +127,20 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         # fail early if no pyros client
         if self.node_client is None:
-            self.logger.warn('404 : %s', path)
+            current_app.logger.warn('404 : %s', path)
             return make_response('', 404)
 
         services = self.node_client.services()
         topics = self.node_client.topics()
         params = self.node_client.params()
+
+        # Handling special case empty rosname and suffix
+        if path == '/' and not suffix:
+            return jsonify({
+                "services": services,
+                "topics": topics,
+                "params": params
+            })
 
         # special case to get rosdef of all services and topics
         if path == CONFIG_PATH:
@@ -346,10 +162,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             elif topics is not None and path in topics:
                 msg = self.node_client.topic_extract(path)
             else:
-                self.logger.warn('404 : %s', path)
+                current_app.logger.warn('404 : %s', path)
                 return make_response('', 404)
 
-            #self.logger.debug('mimetypes : %s', request.accept_mimetypes)
+            #current_app.logger.debug('mimetypes : %s', request.accept_mimetypes)
 
             if msg is None:
                 return make_response('', 204)  # returning no content if the message is not there
@@ -367,7 +183,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             #        msg.serialize(output_data)
             #    output_data = output_data.getvalue()
             #else:  # we default to json
-            #    # self.logger.debug('sending back json')
+            #    # current_app.logger.debug('sending back json')
             #    mime_type = 'application/json'
             #    output_data = msgconv.extract_values(msg) if msg is not None else None
             #    output_data = json.dumps(output_data)
@@ -381,7 +197,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         if suffix == MSG_PATH and path in topics:
             if jsn:
                 # TODO : find a better way to interface here...
-                sfx_resp = make_response(simplejson.dumps(topics[path].get('msgtype', None)), 200)
+                sfx_resp = make_response(simplejson.dumps(topics[path].get('msgtype')), 200)
                 sfx_resp.mimetype = 'application/json'
             else:
                 # broken now, cannot access pyros.rosinterface.topic.get_topic_msg
@@ -393,7 +209,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 pass
         elif suffix == SRV_PATH and path in services:
             if jsn:
-                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype', None), ignore_nan=True), 200)
+                sfx_resp = make_response(simplejson.dumps(services[path].get('srvtype'), ignore_nan=True), 200)
                 sfx_resp.mimetype = 'application/json'
             else:
                 # broken now, cannot access pyros.rosinterface.service.get_service_srv
@@ -430,7 +246,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             else:
                 sfx_resp = make_response('', 404)
         else:
-            self.logger.warn('404 : %s', path)
+            current_app.logger.warn('404 : %s', path)
             sfx_resp = make_response('', 404)
         return sfx_resp
 
@@ -439,12 +255,12 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         # fail early if no pyros client
         if self.node_client is None:
-            self.logger.warn('404 : %s', rosname)
+            current_app.logger.warn('404 : %s', rosname)
             return make_response('', 404)
 
         try:
             rosname = '/' + rosname
-            #self.logger.debug('POST')
+            #current_app.logger.debug('POST')
             length = int(request.environ['CONTENT_LENGTH'])
             use_ros = ('CONTENT_TYPE' in request.environ and
                        ROS_MSG_MIMETYPE == request.environ['CONTENT_TYPE'].split(';')[0].strip())
@@ -463,7 +279,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 mode = 'param'
                 param = params[rosname]
             else:
-                self.logger.warn('404 : %s', rosname)
+                current_app.logger.warn('404 : %s', rosname)
                 return make_response('', 404)
 
             # we are now sending via the client node, which will convert the
@@ -483,7 +299,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                 )
 
             # input_msg = input_msg_type() # was topic.rostype but we dont have it here ( cant serialize and transfer easily )
-            # self.logger.debug('input_msg:%r', input_msg)
+            # current_app.logger.debug('input_msg:%r', input_msg)
             # if use_ros:
             #     input_msg.deserialize(input_data)
             # else:
@@ -494,7 +310,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             response = None
             try:
                 if mode == 'service':
-                    self.logger.debug('calling service %s with msg : %s', service.get('name', None), input_data)
+                    current_app.logger.debug('calling service %s with msg : %s', service.get('name'), input_data)
                     ret_msg = self.node_client.service_call(rosname, input_data)
 
                     if use_ros:
@@ -515,12 +331,12 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     response.mimetype = content_type
 
                 elif mode == 'topic':
-                    self.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name', None))
+                    current_app.logger.debug('publishing \n%s to topic %s', input_data, topic.get('name'))
                     self.node_client.topic_inject(rosname, input_data)
                     response = make_response('{}', 200)
                     response.mimetype = 'application/json'
                 elif mode == 'param':
-                    self.logger.debug('setting \n%s param %s', input_data, param.get('name', None))
+                    current_app.logger.debug('setting \n%s param %s', input_data, param.get('name'))
                     self.node_client.param_set(rosname, input_data)
                     response = make_response('{}', 200)
                     response.mimetype = 'application/json'
@@ -545,21 +361,21 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
 
         # returning local exceptions
         except WrongMessageFormat as wmf:
-            self.logger.error('Wrong message format! => {status} \n{exc}'.format(
+            current_app.logger.error('Wrong message format! => {status} \n{exc}'.format(
                 status=wmf.status_code,
                 exc=wmf.message
             ))
             return make_response(simplejson.dumps(wmf.to_dict(), ignore_nan=True), wmf.status_code)
 
         except ServiceTimeout as st:
-            self.logger.error('Service Timeout! => {status} \n{exc}'.format(
+            current_app.logger.error('Service Timeout! => {status} \n{exc}'.format(
                 status=st.status_code,
                 exc=st.message
             ))
             return make_response(simplejson.dumps(st.to_dict(), ignore_nan=True), st.status_code)
 
         except ServiceNotFound as snf:
-            self.logger.error('Service Not Found! => {status} \n{exc}'.format(
+            current_app.logger.error('Service Not Found! => {status} \n{exc}'.format(
                 status=snf.status_code,
                 exc=snf.message
             ))
@@ -576,36 +392,9 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
                     'exc_value': str(exc_value.message) if isinstance(exc_value, PyrosException) else str(exc_value),
                     'traceback': tb.to_dict()
                  }
-            self.logger.error('An exception occurred! => 500 \n{exc}'.format(exc=exc_dict))
+            current_app.logger.error('An exception occurred! => 500 \n{exc}'.format(exc=exc_dict))
             return make_response(simplejson.dumps(exc_dict, ignore_nan=True), 500)
             # return make_response(e, 500)
 
 
-### Setting up routes here for now
-
-
-@app.route('/help', methods=['GET'])
-def help():
-    """Print available functions."""
-    func_list = {}
-    for rule in app.url_map.iter_rules():
-        if rule.endpoint != 'static':
-            func_list[rule.rule] = app.view_functions[rule.endpoint].__doc__
-    return jsonify(func_list)
-
-
-
-# Usual Flask : This is not REST
-# self.app.add_url_rule('/favicon.ico', redirect_to=url_for('static', filename='favicon.ico'))
-# Follow pluggable views design : http://flask.pocoo.org/docs/0.10/views/
-frontend = FrontEnd.as_view('frontend', app.logger)
-app.add_url_rule('/', 'rostfront', view_func=frontend, methods=['GET'])
-app.add_url_rule('/<path:rosname>', 'rostfront', view_func=frontend, methods=['GET'])
-
-#
-# RESTful
-#
-api.add_resource(BackEnd, app.config.get('BASEPATH', '/ros') + '/<path:rosname>', resource_class_args=(app.logger,), methods=['GET', 'POST'])
-
-# TODO : find a better way than reimplementing the thing here...
-api.add_resource(Rostful, '/rostful', '/rostful/<path:rostful_name>', resource_class_args=(app.logger,), methods=['GET'])
+# TO have more than json representation : http://stackoverflow.com/a/28520065
