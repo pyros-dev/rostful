@@ -9,8 +9,13 @@
   <arg name="connection_cache_list" default="/rocon/connection_cache/list" doc="topic to listen for connection cache list of connections"/>
   <arg name="connection_cache_diff" default="/rocon/connection_cache/diff" doc="topic to listen for differences in connection cache list of connections"/>
 
+  <!-- default here matches flask config default when running from source -->
+  <arg name="logfile" default="$(find rostful)/instance/rostful.log"/>
+  <arg name="configfile" default="$(find rostful)/instance/rostful.cfg"/>
+  <!-- TODO : better default when installed -->
+
   <!-- rostful dev server -->
-  <node pkg="rostful" name="rostful" type="devserver" args="-h 0.0.0.0 -p $(arg rostful_port) -s $(arg rostful_server)">
+  <node pkg="rostful" name="rostful" type="devserver" args="-h 0.0.0.0 -p $(arg rostful_port) -s $(arg rostful_server) -c $(arg configfile) -l $(arg logfile)">
     <param name="topics" value="$(arg topics)" type="str" />
     <param name="services" value="$(arg services)" type="str" />
     <param name="params" value="$(arg params)" type="str" />

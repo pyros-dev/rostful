@@ -605,7 +605,7 @@ app.add_url_rule('/<path:rosname>', 'rostfront', view_func=frontend, methods=['G
 #
 # RESTful
 #
-api.add_resource(BackEnd, '/ros/<path:rosname>', resource_class_args=(app.logger,), methods=['GET', 'POST'])
+api.add_resource(BackEnd, app.config.get('BASEPATH', '/ros') + '/<path:rosname>', resource_class_args=(app.logger,), methods=['GET', 'POST'])
 
 # TODO : find a better way than reimplementing the thing here...
 api.add_resource(Rostful, '/rostful', '/rostful/<path:rostful_name>', resource_class_args=(app.logger,), methods=['GET'])
