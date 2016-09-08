@@ -14,6 +14,9 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
     setup_args = generate_distutils_setup(
         packages=[
             'rostful',
+            'rostful.api_0_1',
+            'rostful.api_0_2',
+            'rostful.frontend',
             'rostful.tests',
             # This can create potential conflicts in install space,
             # If another package install the same pthon package dependency.
@@ -78,6 +81,9 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
         license='BSD',
         packages=[
             'rostful',
+            'rostful.api_0_1',
+            'rostful.api_0_2',
+            'rostful.frontend',
             'rostful.tests',
             # This can create potential conflicts in install space,
             # If another package install the same pthon package dependency.
