@@ -122,7 +122,8 @@ def ros_list():
             services=[],
             params=[],
         )
-    except Exception:
+    except Exception as exc:
+        # TODO : properly display exception (debug mode at least, currently "localhost didn’t send any data. ERR_EMPTY_RESPONSE")
         # failing request if unknown exception triggered
         raise
 
