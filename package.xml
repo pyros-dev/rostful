@@ -18,11 +18,12 @@
   <build_depend>catkin_pip</build_depend>
 
   <depend version_gte="0.3.0">pyros</depend>
-  <depend version_gte="1.5.3">passlib</depend>
   <depend version_gte="6.2.0">click</depend>
   <depend version_gte="1.3.4">webargs</depend>
   <depend version_gte="2.9.1">marshmallow</depend>
 
+
+  <!--<depend version_gte="1.5.3">python-passlib</depend>-->
   <!--<build_depend>dynamic_reconfigure</build_depend>-->
   <!--<build_depend>roslint</build_depend>-->
   <!--<build_depend>python-flask</build_depend>-->
