@@ -128,6 +128,7 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
             'webargs',
             'pyros==0.1.0',
             'tornado == 4.0.2',
+            'simplejson',
         ],
         test_suite="nose.collector",
         tests_require=[

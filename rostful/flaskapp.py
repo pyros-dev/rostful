@@ -36,14 +36,29 @@ def generate_redirect(endpoint, new_endpoint):
     return redirect_view
 
 
-def create_app(configfile_override=None, logfile=None):
+def create_app(configfile_override=None, logfile=None, instance_path=None):
+
+    # Rely on ROS to find this package
+    try:
+        # TODO : put that at a lower level ? (pyros_utils / pyros_config ?)
+        import rospkg
+        r = rospkg.RosPack()
+        path = r.get_path(__package__)  # find rospkg with same name as this python package
+        instance_path = os.path.join(path, 'instance')
+    except ImportError:
+        # ROS is not setup, lets rely on flask...
+        instance_path = None
 
     app = Flask(
         'rostful',
         static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
         template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
+        instance_path=instance_path,
         instance_relative_config=True
     )
+    # TODO : When running from ros in devel mode, instance path in inside devel/lib/python2.7/dist-packages/
+    # TODO : because ROS import our package from there => FIX IT !
+    # Note : we do need instance relative config to be able to run from installed package...
 
     ### LOGGER SETUP ###
 
@@ -89,7 +104,6 @@ def create_app(configfile_override=None, logfile=None):
         try:
             app.logger.info(
                 "Loading config from {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
-
 
         except IOError as e:
             # If failed we create it from current default in package

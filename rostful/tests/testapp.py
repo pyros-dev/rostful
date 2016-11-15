@@ -29,8 +29,10 @@ class TestAppNoPyros(unittest.TestCase):
     def setUp(self):
         # forcing dev config to not rely on the complex ROS/python/flask path mess,
         # tests can be started in all kinds of weird ways (nose auto import, etc.)
-        config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'instance', 'rostful.cfg')
-        self.app = create_app(configfile_override=config_path)
+        #config_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'instance', 'rostful.cfg')
+        #self.app = create_app(configfile_override=config_path)
+        # TESTS needs to work for BOTH installed and source package -> we have to rely on flask instance configuration mechanism...
+        self.app = create_app()
         self.app.debug = True
         self.app.config['TESTING'] = True
         self.app.testing = True  # required to check for exceptions

@@ -36,7 +36,7 @@
   <!--<build_depend>python-sqlalchemy</build_depend>-->
 
   <!-- we need version 1.2.0 (with to_dict). available from ubuntu package from xenial only. using ros third party released package-->
-  <depend version_gte="1.2.0">tblib</depend>
+  <depend version_gte="1.2.0">tblib</depend>  <!-- TODO python-tblib since kinetic -->
 
   <depend>python-flask</depend>
 
