@@ -1,4 +1,5 @@
-<package>
+<?xml version="1.0"?>
+<package format="2">
   <name>rostful</name>
   <version>0.1.0</version>
   <description>
@@ -10,37 +11,37 @@
   <url type="repository">https://github.com/asmodehn/rostful</url>
   <url type="bugtracker">https://github.com/asmodehn/rostful/issues</url>
 
-  <author email="benkehoe@somewhere.net">Ben Kehoe</author>
+  <author>Ben Kehoe</author>
   <maintainer email="asmodehn@gmail.com">AlexV</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
   <build_depend>catkin_pip</build_depend>
 
-  <build_depend>dynamic_reconfigure</build_depend>
-  <build_depend>roslint</build_depend>
-  <build_depend>python-flask</build_depend>
-  <build_depend>actionlib_msgs</build_depend>
-  <build_depend>gunicorn</build_depend>
-  <build_depend>rospy</build_depend>
-  <build_depend>python-requests</build_depend>
-  <build_depend>python-wtforms</build_depend>
-  <build_depend>python-sqlalchemy</build_depend>
+  <depend version_gte="0.3.0">pyros</depend>
+  <depend version_gte="1.5.3">passlib</depend>
+  <depend version_gte="6.2.0">click</depend>
+  <depend version_gte="1.3.4">webargs</depend>
+  <depend version_gte="2.9.1">marshmallow</depend>
+
+  <!--<build_depend>dynamic_reconfigure</build_depend>-->
+  <!--<build_depend>roslint</build_depend>-->
+  <!--<build_depend>python-flask</build_depend>-->
+  <!--<build_depend>gunicorn</build_depend>-->
+  <!--<build_depend>rospy</build_depend>-->
+  <!--<build_depend>python-requests</build_depend>-->
+  <!--<build_depend>python-wtforms</build_depend>-->
+  <!--<build_depend>python-sqlalchemy</build_depend>-->
 
   <!-- we need version 1.2.0 (with to_dict). available from ubuntu package from xenial only. using ros third party released package-->
-  <build_depend>tblib</build_depend>
+  <depend version_gte="1.2.0">tblib</depend>
 
-  <run_depend>dynamic_reconfigure</run_depend>
-  <run_depend>python-flask</run_depend>
-  <run_depend>actionlib_msgs</run_depend>
-  <run_depend>gunicorn</run_depend>
-  <run_depend>rospy</run_depend>
-  <run_depend>python-requests</run_depend>
-  <run_depend>python-wtforms</run_depend>
-  <run_depend>python-sqlalchemy</run_depend>
-  <run_depend>python-simplejson</run_depend>
+  <depend>python-flask</depend>
+
+  <depend>rospy</depend>
+  <depend>python-simplejson</depend>
 
   <!-- these dependencies are only for testing -->
-  <run_depend>python-yaml</run_depend>
+  <depend>python-yaml</depend>
   <build_depend>rostest</build_depend>
   <test_depend>rosunit</test_depend>
 

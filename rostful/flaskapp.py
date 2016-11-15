@@ -36,7 +36,7 @@ def generate_redirect(endpoint, new_endpoint):
     return redirect_view
 
 
-def create_app(config_overload=None, logfile=None):
+def create_app(configfile_override=None, logfile=None):
 
     app = Flask(
         'rostful',
@@ -85,30 +85,40 @@ def create_app(config_overload=None, logfile=None):
     # 3. load user provided config from command arg if any, if missing file then except (user provided arg is wrong).
     #    if intent is to use file from default location, then no config arg should be provided.
 
-    try:
-        app.logger.info(
-            "Loading config from {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
-        # Attempting to set up default user configuration
-        app.config.from_pyfile('rostful.cfg')
-    except IOError as e:
-        # If failed we create it from current default in package
-        app.logger.warning("Cannot find rostful.cfg file to setup rostful. Creating it from default template...")
-        with app.open_resource('config_template.py', 'r') as default_cfg_file:
-            # Create instance config file name, to make it easy to modify when deploying
-            filename = os.path.join(app.instance_path, 'rostful.cfg')
-            if not os.path.isfile(filename):
-                # this will create the directories if needed
-                try:
-                    os.makedirs(os.path.dirname(filename))
-                except OSError as exception:  # preventing race condition just in case
-                    if exception.errno != errno.EEXIST:
-                        raise
-            with open(os.path.join(app.instance_path, 'rostful.cfg'), 'w') as instance_cfg_file:
-                for line in default_cfg_file:
-                    instance_cfg_file.write(line)
+    if not configfile_override:
+        try:
+            app.logger.info(
+                "Loading config from {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
 
-        app.logger.warning("Configuration file created at {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
-        app.config.from_pyfile('rostful.cfg')
+
+        except IOError as e:
+            # If failed we create it from current default in package
+            app.logger.warning("Cannot find rostful.cfg file to setup rostful. Creating it from default template...")
+            with app.open_resource('config_template.py', 'r') as default_cfg_file:
+                # Create instance config file name, to make it easy to modify when deploying
+                filename = os.path.join(app.instance_path, 'rostful.cfg')
+                if not os.path.isfile(filename):
+                    # this will create the directories if needed
+                    try:
+                        os.makedirs(os.path.dirname(filename))
+                    except OSError as exception:  # preventing race condition just in case
+                        if exception.errno != errno.EEXIST:
+                            raise
+                with open(os.path.join(app.instance_path, 'rostful.cfg'), 'w') as instance_cfg_file:
+                    for line in default_cfg_file:
+                        instance_cfg_file.write(line)
+
+            app.logger.warning("Configuration file created at {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
+
+        # Attempting to set up default user configuration
+        config_filepath = os.path.join(app.instance_path, 'rostful.cfg')
+    else:
+        config_filepath = configfile_override
+
+    app.config.from_pyfile(config_filepath)
+
+    # config can influence routes, so this needs to be done afterwards
+    setup_app_routes(app)
 
     return app
 

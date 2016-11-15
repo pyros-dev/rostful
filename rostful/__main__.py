@@ -101,15 +101,7 @@ def run(host, port, server, config, logfile, ros_args):
     if port and isinstance(port, (str, unicode)):
         port = int(port)
 
-    app = create_app(config_overload=config, logfile=logfile)
-
-    # Setup app with config passed as param
-    if config:
-        # if error we do need to raise and break here : the config file is not where the user expects it.
-        app.config.from_pyfile(config)
-
-    # config can influence routes, so this needs to be done afterwards
-    setup_app_routes(app)
+    app = create_app(configfile_override=config, logfile=logfile)
 
     # Some logic for defaults value (might depend on config)
     server = server or app.config.get('SERVER_TYPE', 'tornado')
