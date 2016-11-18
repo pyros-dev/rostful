@@ -90,13 +90,13 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
             # TODO : The proper solution is to create ThirdPartyRelease for these packages
             # 'rester',
             #'testfixtures',
-            'flask_cors',
-            'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
-            'flask_reverse_proxy',
+            #'flask_cors',
+            #'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
+            #'flask_reverse_proxy',
             # 'passlib', 'passlib.ext', 'passlib.ext.django', 'passlib.handlers', 'passlib.tests', 'passlib.utils', 'passlib.utils._blowfish', 'passlib._setup',  # TODO : rosdep has a DEB package for this
-            'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
-            'webargs',
-            'marshmallow',
+            #'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
+            #'webargs',
+            #'marshmallow',
         ],
         package_dir={
             # 'rester': 'deps/Rester/rester',
@@ -116,16 +116,30 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
         },
         # this is better than using package data ( since behavior is a bit different from distutils... )
         include_package_data=True,  # use MANIFEST.in during install.
+        package_data={
+            'rostful': [
+                'static/favicon.ico',
+                'static/js/moment/*',
+                'static/js/jquery/*',
+                'static/js/jquery-mobile/*',
+                'static/js/jquery-mobile/images/*',
+                'static/js/jquery-mobile/images/icons-png/*',
+                'static/js/jquery-mobile/images/icons-svg/*',
+                'templates/*',
+                'templates/security/*',
+                'templates/security/email/*',
+            ],
+        },
         install_requires=[
-            'futures == 3.0.2',
+            'futures==3.0.2',
             'Flask==0.10.1',
             'Flask-Cors==2.0.1',
             #'Flask-Script',
-            'Flask-Restful',
+            'Flask-Restful==0.3.4',
             'Flask-reverse-proxy',
             #'Rester',
-            'click',
-            'webargs',
+            'click==6.4.0',
+            'webargs==1.3.4',
             'pyros==0.1.0',
             'tornado == 4.0.2',
             'simplejson',
