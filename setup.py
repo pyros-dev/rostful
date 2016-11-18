@@ -135,6 +135,7 @@ setup(
         'click>=6.4.0',
         'webargs>=1.3.4',
         'pyros>=0.3.0',
+        'pyros_setup>=0.1.5',  # pyros should provide this...
         'tornado>=4.2.1',
         'simplejson',
     ],
