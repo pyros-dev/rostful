@@ -23,7 +23,7 @@
   <depend version_gte="2.9.1">marshmallow</depend>
 
   <!--TEMPORARY until pyros declares it properly ( >0.3.0)-->
-  <depend version_gte="1.0.1">python-mock</depend>
+  <!-- <depend version_gte="1.0.1">python-mock</depend> PYROS SHOULD HAVE IT NOW-->
 
   <!--<depend version_gte="1.5.3">python-passlib</depend>-->
   <!--<build_depend>dynamic_reconfigure</build_depend>-->

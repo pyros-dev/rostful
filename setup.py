@@ -23,7 +23,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
             # TODO : The proper solution is to create ThirdPartyRelease for these packages if needed or
             # TODO : Use existing ros package for these
             # 'rester',
-            'testfixtures',
+            # 'testfixtures',
             'flask_cors',
             'flask_reverse_proxy',
             'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
@@ -34,7 +34,7 @@ if _CATKIN:  # using distutils : https://docs.python.org/2/distutils
         ],
         package_dir={
             # 'rester': 'deps/Rester/rester',
-            'testfixtures': 'deps/testfixtures/testfixtures',
+            #'testfixtures': 'deps/testfixtures/testfixtures',
             'flask_cors': 'deps/flask-cors/flask_cors',
             'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
             'flask_restful': 'deps/flask-restful/flask_restful',
@@ -89,7 +89,7 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
             # If another package install the same pthon package dependency.
             # TODO : The proper solution is to create ThirdPartyRelease for these packages
             # 'rester',
-            'testfixtures',
+            #'testfixtures',
             'flask_cors',
             'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
             'flask_reverse_proxy',
@@ -100,7 +100,7 @@ else:  # using setuptools : http://pythonhosted.org/setuptools/
         ],
         package_dir={
             # 'rester': 'deps/Rester/rester',
-            'testfixtures': 'deps/testfixtures/testfixtures',
+            #'testfixtures': 'deps/testfixtures/testfixtures',
             'flask_cors': 'deps/flask-cors/flask_cors',
             'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
             'flask_restful': 'deps/flask-restful/flask_restful',

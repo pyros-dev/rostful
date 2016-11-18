@@ -15,7 +15,7 @@ from .context import register_teardown
 # TODO : move to __init__ if we ever get rid of ROS dependency
 
 # external dependencies
-from flask import Flask, url_for, redirect
+from flask import Flask, url_for, redirect, helpers
 
 # python package dependencies
 import flask_cors as cors  # TODO : replace with https://github.com/may-day/wsgicors. seems more active.
@@ -36,21 +36,34 @@ def generate_redirect(endpoint, new_endpoint):
     return redirect_view
 
 
-def create_app(configfile_override=None, logfile=None, instance_path=None):
+def create_app(configfile_override=None, logfile=None):
 
     # Rely on ROS to find this package
-    try:
-        # TODO : put that at a lower level ? (pyros_utils / pyros_config ?)
-        import rospkg
-        r = rospkg.RosPack()
-        path = r.get_path(__package__)  # find rospkg with same name as this python package
-        instance_path = os.path.join(path, 'instance')
-    except ImportError:
-        # ROS is not setup, lets rely on flask...
-        instance_path = None
+
+    # TODO : put that at a lower level ? (pyros_setup / pyros_utils / pyros_config ?)
+    prefix, package_path = helpers.find_package(__package__)  # find ROS pkg with same name as this python package
+    if prefix is None:  # not a python installed package (following flask detection logic)
+        # we are probably installed with ROS
+        try:
+            import rospkg
+            r = rospkg.RosPack()
+            ros_path = r.get_path(__package__)  # find rospkg with same name as this python package
+            if ros_path.endswith(os.path.join('share', __package__)):  # ROS installed package
+                instance_path = ros_path  # using the ROS share path for configuration
+                # TODO: check if there is a better choice ?
+            else:
+                package_path = ros_path  # fixing detected package_path in ROS devel case (to access config template file)
+                instance_path = os.path.join(ros_path, 'instance')  # getting instance folder from source
+
+        except ImportError:
+            # ROS is not setup, lets rely on flask detection : this is a develop package
+            instance_path = os.path.join(package_path, 'instance')
+    else:
+        # python installed package -> use rostful-instance from prefix/
+        instance_path = os.path.join(prefix, 'var', __package__ + '-instance')
 
     app = Flask(
-        'rostful',
+        __package__,
         static_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static'),
         template_folder=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'templates'),
         instance_path=instance_path,
@@ -102,15 +115,23 @@ def create_app(configfile_override=None, logfile=None, instance_path=None):
 
     if not configfile_override:
         try:
+
+            # Attempting to set up default user configuration
+            config_filepath = os.path.join(app.instance_path, 'rostful.cfg')
             app.logger.info(
                 "Loading config from {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
+
+            app.config.from_pyfile(config_filepath)
 
         except IOError as e:
             # If failed we create it from current default in package
             app.logger.warning("Cannot find rostful.cfg file to setup rostful. Creating it from default template...")
-            with app.open_resource('config_template.py', 'r') as default_cfg_file:
+
+            cfg_template_path = os.path.join(package_path, __package__, 'config_template.py')
+
+            with app.open_resource(cfg_template_path, 'r') as default_cfg_file:
                 # Create instance config file name, to make it easy to modify when deploying
-                filename = os.path.join(app.instance_path, 'rostful.cfg')
+                filename = config_filepath
                 if not os.path.isfile(filename):
                     # this will create the directories if needed
                     try:
@@ -118,18 +139,15 @@ def create_app(configfile_override=None, logfile=None, instance_path=None):
                     except OSError as exception:  # preventing race condition just in case
                         if exception.errno != errno.EEXIST:
                             raise
-                with open(os.path.join(app.instance_path, 'rostful.cfg'), 'w') as instance_cfg_file:
+                with open(config_filepath, 'w') as instance_cfg_file:
                     for line in default_cfg_file:
                         instance_cfg_file.write(line)
 
-            app.logger.warning("Configuration file created at {0}".format(os.path.join(app.instance_path, 'rostful.cfg')))
+            app.logger.warning("Configuration file created at {0}".format(config_filepath))
 
-        # Attempting to set up default user configuration
-        config_filepath = os.path.join(app.instance_path, 'rostful.cfg')
     else:
         config_filepath = configfile_override
-
-    app.config.from_pyfile(config_filepath)
+        app.config.from_pyfile(config_filepath)
 
     # config can influence routes, so this needs to be done afterwards
     setup_app_routes(app)
