@@ -20,7 +20,9 @@
   <depend version_gte="0.3.0">pyros</depend>
   <depend version_gte="6.2.0">click</depend>
   <depend version_gte="1.3.4">webargs</depend>
-  <depend version_gte="2.9.1">marshmallow</depend>
+  <!-- via webargs <depend version_gte="2.9.1">marshmallow</depend> -->
+
+  <depend version_gte="3.0.2">flask_cors</depend>
 
   <!--TEMPORARY until pyros declares it properly ( >0.3.0)-->
   <!-- <depend version_gte="1.0.1">python-mock</depend> PYROS SHOULD HAVE IT NOW-->
