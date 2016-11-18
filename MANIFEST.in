@@ -1,11 +1,2 @@
 include requirements.txt
 include package.xml
-recursive-include rostful/static *
-recursive-include rostful/static/js *
-recursive-include rostful/static/js/jquery *
-recursive-include rostful/static/js/jquery-mobile *
-recursive-include rostful/static/js/jquery-mobile/images *
-recursive-include rostful/static/js/jquery-mobile/images/icons-png *
-recursive-include rostful/static/js/jquery-mobile/images/icons-png *
-recursive-include rostful/static/js/moment *
-recursive-include rostful/templates *

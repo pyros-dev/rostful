@@ -9,24 +9,24 @@ branches:
 
 env:
   global:
-    - CONTAINER_NAME=pyros_docker
+    - CONTAINER_NAME=rostful_docker
   # This will check any ROS distro with any python interpreter supported on this OS
   # checking devel and install separately so that they don't influence each other (dependencies, path, env, etc.)
   matrix:
   - ROS_DISTRO=indigo ROS_FLOW=devel
-  # Pyros is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
   - ROS_DISTRO=indigo ROS_FLOW=install
   - ROS_DISTRO=indigo PYTHON=2.7
   - ROS_DISTRO=indigo PYTHON=3.4
 
   - ROS_DISTRO=jade ROS_FLOW=devel
-  # Pyros is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
   - ROS_DISTRO=jade ROS_FLOW=install
   - ROS_DISTRO=jade PYTHON=2.7
   - ROS_DISTRO=jade PYTHON=3.4
 
   - ROS_DISTRO=kinetic ROS_FLOW=devel
-  # Pyros is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
   - ROS_DISTRO=kinetic ROS_FLOW=install
   - ROS_DISTRO=kinetic PYTHON=2.7
   - ROS_DISTRO=kinetic PYTHON=3.4
