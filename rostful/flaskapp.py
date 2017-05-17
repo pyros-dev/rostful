@@ -55,8 +55,8 @@ def create_app(configfile_override=None, logfile=None):
                 package_path = ros_path  # fixing detected package_path in ROS devel case (to access config template file)
                 instance_path = os.path.join(ros_path, 'instance')  # getting instance folder from source
 
-        except ImportError:
-            # ROS is not setup, lets rely on flask detection : this is a develop package
+        except (ImportError, rospkg.ResourceNotFound):  # ROS is not setup OR the package was not found by rospack
+            # lets rely on flask detection : this is a develop package
             instance_path = os.path.join(package_path, 'instance')
     else:
         # python installed package -> use rostful-instance from prefix/
