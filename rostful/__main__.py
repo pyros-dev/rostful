@@ -42,7 +42,8 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
     # rv should now contain a dictionary of namespaced key:value from config
 
     try:
-        from pyros import pyros_ctx, PyrosClient
+        from pyros.server.ctx_server import pyros_ctx
+        from pyros.client.client import PyrosClient
     except Exception as e:
         logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
         logging.error("sys.path = {0}".format(sys.path))

@@ -8,7 +8,7 @@ from rostful import context
 
 import time
 
-import pyros
+from pyros.client.client import PyrosServiceTimeout
 
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
@@ -64,7 +64,6 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
-from pyros import PyrosException
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat, NoPyrosClient
 
 
@@ -128,7 +127,6 @@ def ros_list():
         raise
 
 
-
 @app_blueprint.route('/<path:rosname>', strict_slashes=False, endpoint='ros_interface')
 def ros_interface(rosname):
     current_app.logger.debug('in ros_interface with rosname: %r', rosname)
@@ -145,11 +143,11 @@ def ros_interface(rosname):
         while not t.timed_out and (services is None or topics is None):
             try:
                 services = node_client.services()
-            except pyros.PyrosServiceTimeout:
+            except PyrosServiceTimeout:
                 services = None
             try:
                 topics = node_client.topics()
-            except pyros.PyrosServiceTimeout:
+            except PyrosServiceTimeout:
                 topics = None
 
     if t.timed_out:
