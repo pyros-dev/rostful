@@ -42,8 +42,9 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
     # rv should now contain a dictionary of namespaced key:value from config
 
     try:
-        from pyros import pyros_ctx, PyrosClient
-    except Exception as e:
+        from pyros.server.ctx_server import pyros_ctx
+        from pyros.client.client import PyrosClient
+    except ImportError as e:
         logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
         logging.error("sys.path = {0}".format(sys.path))
         raise
@@ -111,6 +112,9 @@ def run(host, port, server, config, logfile, ros_args):
             host=host, port=port, config=config, logfile=logfile, ros_args=ros_args))
 
     # Starting pyros with latest config
+    # TODO : move this out of here and let the user do it :
+    # in ROS case : it should be done in launch file, and connect on user request (maybe even pass the zmq socket url)
+    # in pyzmp case : it should be done dynamically, as much as possible outside of here.
     with pyros_start(config=app.config, ros_args=ros_args) as node_ctx:
 
         set_pyros_client(app, node_ctx.client)

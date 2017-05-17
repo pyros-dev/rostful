@@ -69,7 +69,7 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
-from pyros import PyrosException
+from pyros_interfaces_common.exceptions import PyrosException
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
 
 
@@ -102,15 +102,15 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
     def __init__(self):
         super(BackEnd, self).__init__()
 
-        # dynamic import
-        from pyros.rosinterface import definitions
-        from pyros import PyrosServiceTimeout, PyrosServiceNotFound
-
         self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname=None):
         current_app.logger.debug('in BackEnd with rosname: %r', rosname)
+
+        # dynamic import
+        from pyros_interfaces_ros import definitions
+        from pyros.client.client import PyrosServiceTimeout, PyrosServiceNotFound
 
         # TODO : replace this with webargs ( less buggy )
         parser = reqparse.RequestParser()

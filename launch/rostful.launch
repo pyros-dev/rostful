@@ -5,6 +5,7 @@
   <arg name="rostful_server" default="flask"/>
   <!-- <arg name="rostful_config" default=""/> -->
 
+  <!-- TODO : move these out of here, they depend on pyros and underlayed system -->
   <arg name="topics" default="['turtle1/pose']" />
   <arg name="services" default="[]" />
   <arg name="params" default="[]" />
