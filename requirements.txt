@@ -1,7 +1,9 @@
 --index-url https://pypi.python.org/simple/
 --extra-index-url https://testpypi.python.org/simple/
 
-nose
+# nose
+# switching to because of nose annoying import problems
+pytest
 
 # To divert/prevent uninstalling attempt from tornado dependencies
 # since pip requirements install is ignoring already installed packages for catkin_pip
