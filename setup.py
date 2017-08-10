@@ -139,6 +139,7 @@ setup(
         'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1',
         'simplejson',
+        'tblib>=1.2',
     ],
     test_suite="nose.collector",
     tests_require=[
