@@ -33,6 +33,7 @@
   <run_depend>python-flask</run_depend>
   <run_depend>actionlib_msgs</run_depend>
   <run_depend>gunicorn</run_depend>
+  <run_depend>pyros</run_depend>
   <run_depend>rospy</run_depend>
   <run_depend>python-requests</run_depend>
   <run_depend>python-wtforms</run_depend>
