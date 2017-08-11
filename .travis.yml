@@ -18,18 +18,12 @@ env:
   - ROS_DISTRO=indigo ROS_FLOW=install
   - ROS_DISTRO=indigo PYTHON=2.7
   - ROS_DISTRO=indigo PYTHON=3.4
-
-  - ROS_DISTRO=jade ROS_FLOW=devel
-  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
-  - ROS_DISTRO=jade ROS_FLOW=install
-  - ROS_DISTRO=jade PYTHON=2.7
-  - ROS_DISTRO=jade PYTHON=3.4
-
-  - ROS_DISTRO=kinetic ROS_FLOW=devel
-  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
-  - ROS_DISTRO=kinetic ROS_FLOW=install
-  - ROS_DISTRO=kinetic PYTHON=2.7
-  - ROS_DISTRO=kinetic PYTHON=3.4
+#
+#  - ROS_DISTRO=kinetic ROS_FLOW=devel
+#  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+#  - ROS_DISTRO=kinetic ROS_FLOW=install
+#  - ROS_DISTRO=kinetic PYTHON=2.7
+#  - ROS_DISTRO=kinetic PYTHON=3.4
 
   # TODO : pypy + pypy3
 
