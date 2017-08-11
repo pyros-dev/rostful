@@ -14,13 +14,14 @@ api = flask_restful.Api(api_blueprint)
 # TODO : check https://github.com/jmcarp/flask-apispec
 
 # TODO : double check if needed or already in flask-restful
-def api_route(self, *args, **kwargs):
-    def wrapper(cls):
-        self.add_resource(cls, *args, **kwargs)
-        return cls
-    return wrapper
-
-api.route = types.MethodType(api_route, api)
+# -> already in flask_restful : resource decorator
+# def api_route(self, *args, **kwargs):
+#     def wrapper(cls):
+#         self.add_resource(cls, *args, **kwargs)
+#         return cls
+#     return wrapper
+#
+# api.route = types.MethodType(api_route, api)
 
 # importing package content mandatory to setup routes for blueprint
 from . import flask_views

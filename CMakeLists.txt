@@ -3,7 +3,6 @@ project(rostful)
 
 find_package(catkin REQUIRED COMPONENTS
     catkin_pip
-    rospy
 )
 
 # We need to install the pip dependencies in the workspace being created
@@ -17,8 +16,9 @@ find_package(catkin REQUIRED COMPONENTS
 # defining current package as a package that should be managed by pip (not catkin - even though we make it usable with workspaces)
 catkin_pip_package(rostful)
 
-
-# Install executable scripts
+#HACK
+catkin_destinations()
+# TODO : FIX THIS
 install(DIRECTORY scripts/
         DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
         USE_SOURCE_PERMISSIONS)
@@ -34,6 +34,6 @@ if (CATKIN_ENABLE_TESTING)
     # Nose Tests
     ##############################################################################
 
-    catkin_add_nosetests(rostful/tests)
+    catkin_add_pytests(rostful/tests)
 
 endif()

@@ -7,7 +7,6 @@ import logging.handlers
 
 import errno
 
-from . import config_template  # config template
 from .context import register_teardown
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/

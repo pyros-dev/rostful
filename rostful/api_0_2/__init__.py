@@ -12,6 +12,8 @@ api_blueprint = Blueprint('api_0_2', __name__)
 api = flask_restful.Api(api_blueprint)
 
 
+# TODO get rid of flask-restful dependency here (seems no longer maintained), and implement functionality directly with flask.
+
 # TODO : double check if needed or already in flask-restful
 def api_route(self, *args, **kwargs):
     def wrapper(cls):

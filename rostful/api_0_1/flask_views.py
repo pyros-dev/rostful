@@ -62,7 +62,7 @@ from flask.views import MethodView
 from flask_restful import reqparse
 import flask_restful as restful
 
-from . import api, current_app
+from . import api, api_blueprint, current_app
 
 from webargs.flaskparser import FlaskParser, use_kwargs
 
@@ -70,6 +70,7 @@ parser = FlaskParser()
 
 import urllib
 from pyros_interfaces_common.exceptions import PyrosException
+from pyros.client.client import PyrosServiceNotFound, PyrosServiceTimeout
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
 
 
@@ -94,7 +95,11 @@ class Timeout(object):
 
 # TODO : check if we can simplify this by dynamically generating usual simple flask route (one for each service/topic)
 # this way we could use url_for simply and rely on flask url build scheme...
-@api.route('/', '/<path:rosname>', strict_slashes=False)
+#@api.resource('/', '/<path:rosname>', strict_slashes=False)
+# TO FIX flask restful problem
+# TODO : get rid of flask restful dependency, it is apparently not maintained any longer
+@api_blueprint.route('/')
+@api_blueprint.route('/<path:rosname>')
 class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
     """
     View for backend pages

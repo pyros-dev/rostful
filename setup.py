@@ -110,17 +110,17 @@ setup(
     },
     # this is better than using package data ( since behavior is a bit different from distutils... )
     include_package_data=True,  # use MANIFEST.in during install.
-    package_data={
+    package_data={  # TODO : might be better to do this in MANIFEST
         'rostful': [
             'static/favicon.ico',
             'static/js/moment/*',
             'static/js/jquery/*',
-            'static/js/jquery-mobile/*',
-            'static/js/jquery-mobile/images/*',
+            'static/js/jquery-mobile/jquery.*',
+            'static/js/jquery-mobile/images/ajax-loader.gif',
             'static/js/jquery-mobile/images/icons-png/*',
             'static/js/jquery-mobile/images/icons-svg/*',
-            'templates/*',
-            'templates/security/*',
+            'templates/*.html',
+            'templates/security/*.html',
             'templates/security/email/*',
         ],
     },
@@ -139,6 +139,7 @@ setup(
         'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1',
         'simplejson',
+        'tblib>=1.2',
     ],
     test_suite="nose.collector",
     tests_require=[
