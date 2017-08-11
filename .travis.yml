@@ -1,22 +1,63 @@
 sudo: required
-dist: trusty
 language: generic
+services:
+  - docker
+
+branches:
+  except:
+    - gh-pages
+
+env:
+  global:
+    - CONTAINER_NAME=rostful_docker
+  # This will check any ROS distro with any python interpreter supported on this OS
+  # checking devel and install separately so that they don't influence each other (dependencies, path, env, etc.)
+  matrix:
+  - ROS_DISTRO=indigo
+  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+  - ROS_DISTRO=indigo
+#
+#  - ROS_DISTRO=kinetic ROS_FLOW=devel
+#  # Rostful is released as a pip package as well as a ros deb package : dependencies should work from install space as well
+#  - ROS_DISTRO=kinetic ROS_FLOW=install
+
+  # TODO : pypy + pypy3
+
+# We need to get a ROS distro to be able to test rostful
+# from different ros environments, or
+# from different virtualenv using site-packages.
+before_install:
+  # Getting docker ros image
+  - docker pull ros:${ROS_DISTRO}-ros-core
+  # Running as daemon
+  - docker run --name ${CONTAINER_NAME} -d -t ros:${ROS_DISTRO}-ros-core /bin/bash | tee container.id
+  # Switching to use ros shadow fixed packages
+  - docker exec -ti ${CONTAINER_NAME} /bin/bash -c "sed -i.bak -e s,packages.ros.org/ros/ubuntu,packages.ros.org/ros-shadow-fixed/ubuntu, /etc/apt/sources.list.d/ros-latest.list"
+  # Checking current container
+  - docker ps -a
+  - docker exec -ti ${CONTAINER_NAME} hostname
+  - docker exec -ti ${CONTAINER_NAME} uname -a
+  - docker exec -ti ${CONTAINER_NAME} cat /etc/lsb-release
+
 install:
-  - export CI_ROS_DISTRO=indigo
-  - echo $CI_ROS_DISTRO
-# Add ROS repositories
-  - sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu trusty main" > /etc/apt/sources.list.d/ros-latest.list'
-  - wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
-  - sudo apt-get update
-# Install and initialize rosdep
-  - sudo apt-get install python-rosdep -y
-  - sudo `which rosdep` init
-  - rosdep update
-# Use rosdep to install rostful-node's dependencies
-  - rosdep install --default-yes --from-paths ./ --rosdistro $CI_ROS_DISTRO
+  # refreshing packages
+  - docker exec -ti ${CONTAINER_NAME} apt-get update
+  - docker exec -ti ${CONTAINER_NAME} rosdep update
+  # TMP Patch because rosdep doesnt declare a dependency to sudo yet (2016-08-25) and it doesnt come with xenial
+  - docker exec -ti ${CONTAINER_NAME} apt-get install sudo -y
+  # copying local clone to the running container (volume is currently broken)
+  - docker cp . ${CONTAINER_NAME}:/git_clone
+  # Installing package dependencies
+  - docker exec -ti ${CONTAINER_NAME} rosdep install --default-yes --from-paths /git_clone --rosdistro $ROS_DISTRO
+
 script:
-  - mkdir build && cd build
-  - source /opt/ros/$CI_ROS_DISTRO/setup.bash && cmake .. -DCMAKE_INSTALL_PREFIX=./install
-  - source devel/setup.bash && make -j1 run_tests && catkin_test_results . && make -j1 install
+  - CONTAINER_ID=$(cat container.id)
+  - docker ps -a
+  - docker exec -ti ${CONTAINER_NAME} /bin/bash -c "source /opt/ros/$ROS_DISTRO/setup.bash && rospack profile"); fi
+  # Passing env vars here since passing in docker run currently breaks (2016-08-25)
+  - docker exec -ti ${CONTAINER_NAME} /bin/bash -c "mkdir /git_clone/build && cd /git_clone/build && source /opt/ros/$ROS_DISTRO/setup.bash && cmake .. -DCMAKE_INSTALL_PREFIX=./install && source devel/setup.bash && make -j1 run_tests && catkin_test_results . && make -j1 install"
+  - docker stop "${CONTAINER_ID}"
+
+
 notifications:
   email: false
