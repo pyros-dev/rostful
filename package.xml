@@ -15,7 +15,7 @@
   <maintainer email="asmodehn@gmail.com">AlexV</maintainer>
 
   <buildtool_depend>catkin</buildtool_depend>
-  <build_depend version_gte="0.2.0">catkin_pip</build_depend>
+  <build_depend version_gte="0.2.3">catkin_pip</build_depend>
 
   <depend version_gte="0.3.0">pyros</depend>
   <depend version_gte="6.2.0">click</depend>
