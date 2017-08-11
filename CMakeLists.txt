@@ -34,6 +34,6 @@ if (CATKIN_ENABLE_TESTING)
     # Nose Tests
     ##############################################################################
 
-    catkin_add_nosetests(rostful/tests)
+    catkin_add_pytests(rostful/tests)
 
 endif()

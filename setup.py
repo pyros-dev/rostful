@@ -110,7 +110,7 @@ setup(
     },
     # this is better than using package data ( since behavior is a bit different from distutils... )
     include_package_data=True,  # use MANIFEST.in during install.
-    package_data={
+    package_data={  # TODO : might be better to do this in MANIFEST
         'rostful': [
             'static/favicon.ico',
             'static/js/moment/*',
