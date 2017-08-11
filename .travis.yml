@@ -9,7 +9,7 @@ install:
   - wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
   - sudo apt-get update
 # Install and initialize rosdep
-  - sudo apt-get install python-rosdep python-catkin-pkg -y
+  - sudo apt-get install python-rosdep -y
   - sudo `which rosdep` init
   - rosdep update
 # Use rosdep to install rostful-node's dependencies
