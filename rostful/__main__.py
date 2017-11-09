@@ -44,7 +44,7 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
     try:
         from pyros.server.ctx_server import pyros_ctx
         from pyros.client.client import PyrosClient
-        from pyros_interfaces_ros import PyrosROS
+        from pyros_interfaces_ros.pyros_ros import PyrosROS
 
     except Exception as e:
         logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
