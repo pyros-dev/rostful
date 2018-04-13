@@ -98,13 +98,13 @@ class Timeout(object):
 #@api.resource('/', '/<path:rosname>', strict_slashes=False)
 # TO FIX flask restful problem
 # TODO : get rid of flask restful dependency, it is apparently not maintained any longer
-@api_blueprint.route('/')
-@api_blueprint.route('/<path:rosname>')
+# @api.route('/')
+# @api.route('/<path:rosname>')
 class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flask.pocoo.org/docs/0.10/testing/
     """
     View for backend pages
     """
-    def __init__(self):
+    def __init__(self, rosname=None):
         super(BackEnd, self).__init__()
 
         self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
@@ -256,7 +256,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
         return sfx_resp
 
     # TODO: think about login rest service before disabling REST services if not logged in
-    def post(self, rosname):
+    def post(self, rosname, *args, **kwargs):
 
         # fail early if no pyros client
         if self.node_client is None:
@@ -401,5 +401,5 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
             return make_response(simplejson.dumps(exc_dict, ignore_nan=True), 500)
             # return make_response(e, 500)
 
-
+api.add_resource(BackEnd, '/','/<path:rosname>')
 # TO have more than json representation : http://stackoverflow.com/a/28520065
