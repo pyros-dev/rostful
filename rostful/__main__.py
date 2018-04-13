@@ -44,6 +44,8 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
     try:
         from pyros.server.ctx_server import pyros_ctx
         from pyros.client.client import PyrosClient
+        #TMP until interface can be chosen otherwise...
+        from pyros_interfaces_ros.pyros_ros import PyrosROS
     except ImportError as e:
         logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
         logging.error("sys.path = {0}".format(sys.path))
@@ -55,11 +57,13 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
     # One PyrosNode is needed for Flask.
     # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
 
+    logging.warning("ROSTFUL CONFIG {}".format(rv))
+
     try:
-        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args, pyros_config=rv)
+        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args, node_impl=PyrosROS, pyros_config=rv)
     except TypeError as te:
         # bwcompat trick
-        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args,
+        node_ctx_gen = pyros_ctx_impl(name='rostful', argv=ros_args, node_impl=PyrosROS,
                             base_path=os.path.join(os.path.dirname(__file__), '..', '..', '..'))
     return node_ctx_gen
 
