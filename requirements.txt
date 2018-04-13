@@ -12,5 +12,5 @@ futures
 tornado
 
 # adds dependency packages for development only
--e git+https://github.com/asmodehn/pyros.git#egg=pyros
--e git+https://github.com/asmodehn/pyros-rosinterface.git#egg=pyros_interfaces_ros
+#-e git+https://github.com/asmodehn/pyros.git#egg=pyros
+#-e git+https://github.com/asmodehn/pyros-rosinterface.git#egg=pyros_interfaces_ros
