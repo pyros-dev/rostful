@@ -37,13 +37,13 @@ setup(
     package_dir={
         # 'rester': 'deps/Rester/rester',
         #'testfixtures': 'deps/testfixtures/testfixtures',
-        'flask_cors': 'deps/flask-cors/flask_cors',
-        'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
-        'flask_restful': 'deps/flask-restful/flask_restful',
+        #'flask_cors': 'deps/flask-cors/flask_cors',
+        #'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
+        #'flask_restful': 'deps/flask-restful/flask_restful',
         # 'passlib': 'deps/passlib/passlib',
-        'click': 'deps/click/click',
-        'webargs': 'deps/webargs/webargs',
-        'marshmallow': 'deps/marshmallow/marshmallow',
+        #'click': 'deps/click/click',
+        #'webargs': 'deps/webargs/webargs',
+        #'marshmallow': 'deps/marshmallow/marshmallow',
     },
     entry_points={
         'console_scripts': [
