@@ -7,6 +7,13 @@ from setuptools import setup
 with open('rostful/_version.py') as vf:
     exec(vf.read())
 
+# https://hynek.me/articles/conditional-python-dependencies/
+import sys
+sys_requires = []
+if sys.version_info[0:3] <= (2, 7, 9) or (3, 0) < sys.version_info[0:2] <= (3, 4):
+    sys_requires += ['backports.ssl-match-hostname']
+
+
 setup(
     name='rostful',
     version=__version__,
@@ -66,7 +73,7 @@ setup(
             'templates/security/email/*',
         ],
     },
-    install_requires=[
+    install_requires=sys_requires + [
         'futures>=3.0.2',
         'Flask>=0.10.1',
         'Flask-Cors>=3.0.2',
@@ -80,7 +87,6 @@ setup(
         'pyros_setup>=0.1.5',  # pyros should provide this...
         'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1',
-        'backports.ssl-match-hostname; python_version <= 3.4'
         'simplejson',
         'tblib>=1.2',
     ],
