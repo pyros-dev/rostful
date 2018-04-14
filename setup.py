@@ -80,6 +80,7 @@ setup(
         'pyros_setup>=0.1.5',  # pyros should provide this...
         'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1',
+        'backports.ssl-match-hostname; python_version <= 3.4'
         'simplejson',
         'tblib>=1.2',
     ],
