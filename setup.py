@@ -86,7 +86,7 @@ setup(
         'pyros>=0.3.0',
         'pyros_setup>=0.1.5',  # pyros should provide this...
         'pyros_config>=0.1.4',  # pyros should provide this...
-        'tornado>=4.2.1',
+        'tornado>=4.2.1, <5.0',  # untested with tornado > 5.0
         'simplejson',
         'tblib>=1.2',
     ],
