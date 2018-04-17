@@ -9,10 +9,10 @@ env:
   # These will be used to determine the proper version of our dependencies
   # We will NOT rely on a full ROS installation.
   - ROS_DISTRO=indigo
-  - ROS_DISTRO=kinetic TOX_PARAMS="--hypothesis-profile travis"
+  - ROS_DISTRO=kinetic #TOX_PARAMS="--hypothesis-profile travis"
 
   # to get latest dependencies (not released in a ROS distro yet)
-  - ROS_DISTRO=latest TOX_PARAMS="--hypothesis-profile travis"
+  - ROS_DISTRO=latest #TOX_PARAMS="--hypothesis-profile travis"
 
 python:
   - 2.7
