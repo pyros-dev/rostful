@@ -59,7 +59,6 @@ install:
   # getting virtualenv setup with dependencies if we need to work with pure python setup
   - if [ ! -z ${PYTHON+undef} ]; then docker exec -ti ${CONTAINER_NAME} /bin/bash -c "source /usr/share/virtualenvwrapper/virtualenvwrapper.sh && mkvirtualenv --system-site-packages -i /git_clone -a /git_clone -q python_${PYTHON}_ros"; fi
 
-
 script:
   - CONTAINER_ID=$(cat container.id)
   - docker ps -a

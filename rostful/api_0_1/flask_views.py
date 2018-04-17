@@ -69,8 +69,8 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
-from pyros_interfaces_common.exceptions import PyrosException
-from pyros.client.client import PyrosServiceNotFound, PyrosServiceTimeout
+from pyros.client.client import PyrosException
+
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
 
 
@@ -106,6 +106,10 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
     """
     def __init__(self, rosname=None):
         super(BackEnd, self).__init__()
+
+        # dynamic import
+        from pyros_interfaces_ros import definitions
+        from pyros.client.client import PyrosServiceTimeout, PyrosServiceNotFound
 
         self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
 
