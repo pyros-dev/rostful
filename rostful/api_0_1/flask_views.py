@@ -5,7 +5,7 @@ import re
 import sys
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
-from rostful import context
+from rostful import get_pyros_client
 
 import time
 
@@ -26,7 +26,12 @@ def get_suffix(path):
 import simplejson
 import tblib
 
-from StringIO import StringIO
+try:
+    # Python 2
+    from cStringIO import StringIO
+except ImportError:
+    # Python 3
+    from io import StringIO
 
 
 ROS_MSG_MIMETYPE = 'application/vnd.ros.msg'
@@ -69,7 +74,7 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
-from pyros_interfaces_common.exceptions import PyrosException
+from pyros_common.exceptions import PyrosException
 from pyros.client.client import PyrosServiceNotFound, PyrosServiceTimeout
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
 
@@ -107,7 +112,7 @@ class BackEnd(restful.Resource):   # TODO : unit test that stuff !!! http://flas
     def __init__(self, rosname=None):
         super(BackEnd, self).__init__()
 
-        self.node_client = context.get_pyros_client()  # we retrieve pyros client from app context
+        self.node_client = get_pyros_client()  # we retrieve pyros client from app context
 
     # TODO: think about login rest service before disabling REST services if not logged in
     def get(self, rosname=None):

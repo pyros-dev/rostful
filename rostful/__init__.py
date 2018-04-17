@@ -6,11 +6,12 @@ from ._version import __version__
 import os
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
+from .context import set_pyros_client, get_pyros_client
 
 # HACK for ROS
 from .flaskapp import create_app, setup_app_routes
 from .exceptions import WrongMessageFormat, ServiceNotFound, ServiceTimeout, NoPyrosClient
-from .context import set_pyros_client, get_pyros_client
+
 
 
 ### TODO This package also contains a Client

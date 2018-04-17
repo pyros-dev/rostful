@@ -1,0 +1,10 @@
+# Requirements for running on top of indigo
+
+# trusty packages versions to validate behavior with these versions for a potential ROS package for rostful
+pytest==2.5.1
+pytest-xdist==1.8  # for --boxed
+hypothesis==3.0.1  # backported to indigo as https://github.com/asmodehn/hypothesis-rosrelease
+numpy>=1.8.1
+
+
+

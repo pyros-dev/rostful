@@ -27,30 +27,9 @@ setup(
         'rostful.api_0_1',
         'rostful.api_0_2',
         'rostful.frontend',
-        'rostful.tests',
-        # This can create potential conflicts in install space,
-        # If another package install the same pthon package dependency.
-        # TODO : The proper solution is to create ThirdPartyRelease for these packages
-        # 'rester',
-        #'testfixtures',
-        #'flask_cors',
-        #'flask_restful', 'flask_restful.utils', 'flask_restful.representations',  # TODO ROSDEP has pip package
-        #'flask_reverse_proxy',
-        # 'passlib', 'passlib.ext', 'passlib.ext.django', 'passlib.handlers', 'passlib.tests', 'passlib.utils', 'passlib.utils._blowfish', 'passlib._setup',  # TODO : rosdep has a DEB package for this
-        #'click',  # TODO : use deb package http://packages.ubuntu.com/search?keywords=python-click-cli ROSDEP also has python-click from pip
-        #'webargs',
-        #'marshmallow',
+        #'rostful.tests',  # not embedding tests in package for now...
     ],
     package_dir={
-        # 'rester': 'deps/Rester/rester',
-        #'testfixtures': 'deps/testfixtures/testfixtures',
-        #'flask_cors': 'deps/flask-cors/flask_cors',
-        #'flask_reverse_proxy': 'deps/flask-reverse-proxy/flask_reverse_proxy',
-        #'flask_restful': 'deps/flask-restful/flask_restful',
-        # 'passlib': 'deps/passlib/passlib',
-        #'click': 'deps/click/click',
-        #'webargs': 'deps/webargs/webargs',
-        #'marshmallow': 'deps/marshmallow/marshmallow',
     },
     entry_points={
         'console_scripts': [
@@ -78,7 +57,7 @@ setup(
         'Flask>=0.10.1',
         'Flask-Cors>=3.0.2',
         #'Flask-Script',
-        'Flask-Restful<=0.3.4',
+        'Flask-Restful>=0.3.6',
         'Flask-reverse-proxy',
         #'Rester',
         'click>=6.4.0',

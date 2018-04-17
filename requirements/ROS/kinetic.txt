@@ -1,0 +1,8 @@
+# Requirements for running on top of kinetic
+
+# xenial packages versions to validate behavior with these versions for a potential ROS package for rostful
+pytest==2.8.7
+pytest-xdist==1.8  # for --boxed
+hypothesis==3.0.1
+numpy==1.11.0
+
