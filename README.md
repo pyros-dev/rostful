@@ -31,7 +31,7 @@ PYTHON VIRTUALENV SETUP
 How to setup your python virtual environment on Ubuntu (tested on Trusty
 14.04)
  - Install and Setup virtualenvwrapper if needed
-``` sudo apt-get install virtualenvwrapper echo "source /etc/bash_completion.d/virtualenvwrapper" >> ~/.bashrc ```
+``` sudo apt-get install virtualenvwrapper && echo "source /etc/bash_completion.d/virtualenvwrapper" >> ~/.bashrc ```
 
  - Create your virtual environment for your project
 ``` mkvirtualenv myproject --no-site-packages workon myproject ```

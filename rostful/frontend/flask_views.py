@@ -64,6 +64,7 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 parser = FlaskParser()
 
 import urllib
+from pyros.client.client import PyrosException
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat, NoPyrosClient
 
 
