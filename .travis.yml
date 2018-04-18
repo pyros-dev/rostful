@@ -39,7 +39,7 @@ matrix:
     #  env: ROS_DISTRO=kinetic TOX_PARAMS="--hypothesis-profile travis"
 
 install:
-  - pip install tox-travis
+  - pip install tox==2.9.1 tox-travis
 
 script:
   - tox #-- $TOX_PARAMS
