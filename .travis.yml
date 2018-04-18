@@ -24,14 +24,14 @@ python:
   #- pypy3
 
 # Add specific python3 versions
-matrix:
-  include:
+#matrix:
+#  include:
     # explicitely matching python version to the version on the ubuntu distro supported by the ROS LTS distro
     #TODO - python: 3.4
     #  env: ROS_DISTRO=indigo
     #TODO - python: 3.5
     #  env: ROS_DISTRO=kinetic TOX_PARAMS="--hypothesis-profile travis"
-  exclude:
+#  exclude:
     # explicitely exclude python3 version not supported by matching linux distro
     #- python: 3.6
     #  env: ROS_DISTRO=indigo
