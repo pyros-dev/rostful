@@ -46,13 +46,17 @@ def pyros_start(config, ros_args='', pyros_ctx_impl=None):
         from pyros.client.client import PyrosClient
         #TMP until interface can be chosen otherwise...
         from pyros_interfaces_ros.pyros_ros import PyrosROS
-    except ImportError as e:
+
+    except Exception as e:
         logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
         logging.error("sys.path = {0}".format(sys.path))
         raise
 
     # default to real module, if no other implementation passed as parameter (used for mock)
     pyros_ctx_impl = pyros_ctx_impl or pyros_ctx
+    
+    # very basic ROS choice. probably not the right way to get this ROS client to start the ROS node server.
+    #  BUT we have no choice until pyros node can be launched directly...
 
     # One PyrosNode is needed for Flask.
     # TODO : check everything works as expected, even if the WSGI app is used by multiple processes
