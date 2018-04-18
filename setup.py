@@ -53,18 +53,16 @@ setup(
         ],
     },
     install_requires=sys_requires + [
-        'futures>=3.0.2',
+        #'futures>=3.0.2',
         'Flask>=0.10.1',
         'Flask-Cors>=3.0.2',
-        #'Flask-Script',
-        'Flask-Restful>=0.3.6',
+        'Flask-Restful>=0.3.4',
         'Flask-reverse-proxy',
-        #'Rester',
-        'click>=6.4.0',
+        'click>=6.2.0',
         'webargs>=1.3.4',
         'pyros>=0.3.0',
-        'pyros_setup>=0.1.5',  # pyros should provide this...
-        'pyros_config>=0.1.4',  # pyros should provide this...
+        #'pyros_setup>=0.1.5',  # pyros should provide this...
+        #'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1, <5.0',  # untested with tornado > 5.0
         'simplejson',
         'tblib>=1.2',
