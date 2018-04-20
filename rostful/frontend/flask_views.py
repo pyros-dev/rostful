@@ -4,7 +4,7 @@ from __future__ import absolute_import
 import re
 
 # Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
-from rostful import context
+from rostful import get_pyros_client
 
 import time
 
@@ -105,7 +105,7 @@ def ros_list():
     current_app.logger.debug('in ros_list ')
 
     try:
-        node_client = context.get_pyros_client()  # we retrieve pyros client from app context
+        node_client = get_pyros_client()  # we retrieve pyros client from app context
         return render_template(
                 'index.html',
                 pathname2url=urllib.pathname2url,

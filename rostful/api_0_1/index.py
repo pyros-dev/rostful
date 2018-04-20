@@ -9,9 +9,6 @@ from flask import jsonify, url_for
 import flask_restful as restful
 
 
-# Reference for package structure since this is a flask app : http://flask.pocoo.org/docs/0.10/patterns/packages/
-from .. import context
-
 from webargs.flaskparser import FlaskParser, use_kwargs
 from webargs import fields
 

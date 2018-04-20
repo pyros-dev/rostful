@@ -39,22 +39,27 @@ def create_app(configfile_override=None, logfile=None):
 
     # Rely on ROS to find this package
 
-    # TODO : put that at a lower level ? (pyros_setup / pyros_utils / pyros_config ?)
+    # TODO : put that at a lower level (pyros_setup / pyros_utils / pyros_config ?)
     prefix, package_path = helpers.find_package(__package__)  # find ROS pkg with same name as this python package
     if prefix is None:  # not a python installed package (following flask detection logic)
         # we are probably installed with ROS
         try:
             import rospkg
             r = rospkg.RosPack()
-            ros_path = r.get_path(__package__)  # find rospkg with same name as this python package
-            if ros_path.endswith(os.path.join('share', __package__)):  # ROS installed package
-                instance_path = ros_path  # using the ROS share path for configuration
-                # TODO: check if there is a better choice ?
-            else:
-                package_path = ros_path  # fixing detected package_path in ROS devel case (to access config template file)
-                instance_path = os.path.join(ros_path, 'instance')  # getting instance folder from source
+            try:
+                ros_path = r.get_path(__package__)  # find rospkg with same name as this python package
+                if ros_path.endswith(os.path.join('share', __package__)):  # ROS installed package
+                    instance_path = ros_path  # using the ROS share path for configuration
+                    # TODO: check if there is a better choice ?
+                else:
+                    package_path = ros_path  # fixing detected package_path in ROS devel case (to access config template file)
+                    instance_path = os.path.join(ros_path, 'instance')  # getting instance folder from source
 
-        except (ImportError, rospkg.ResourceNotFound):  # ROS is not setup OR the package was not found by rospack
+            except rospkg.ResourceNotFound:  # the package was not found by rospack
+                # lets rely on flask detection : this is a develop package
+                instance_path = os.path.join(package_path, 'instance')
+
+        except ImportError:  # ROS is not setup
             # lets rely on flask detection : this is a develop package
             instance_path = os.path.join(package_path, 'instance')
     else:
