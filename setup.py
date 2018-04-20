@@ -60,7 +60,7 @@ setup(
         'Flask-reverse-proxy',
         'click>=6.2.0',
         'webargs>=1.3.4',
-        'pyros>=0.3.0',
+        'pyros>=0.4.3',
         #'pyros_setup>=0.1.5',  # pyros should provide this...
         #'pyros_config>=0.1.4',  # pyros should provide this...
         'tornado>=4.2.1, <5.0',  # untested with tornado > 5.0

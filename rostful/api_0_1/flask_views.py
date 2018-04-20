@@ -9,8 +9,6 @@ from rostful import get_pyros_client
 
 import time
 
-import pyros
-
 CONFIG_PATH = '_rosdef'
 SRV_PATH = '_srv'
 MSG_PATH = '_msg'
@@ -73,7 +71,6 @@ from webargs.flaskparser import FlaskParser, use_kwargs
 
 parser = FlaskParser()
 
-import urllib
 from pyros_common.exceptions import PyrosException
 
 from rostful.exceptions import ServiceNotFound, ServiceTimeout, WrongMessageFormat
