@@ -8,7 +8,8 @@ import logging
 import logging.handlers
 
 try:
-    from pyros import pyros_ctx, PyrosClient
+    from pyros.server.ctx_server import pyros_ctx
+    from pyros.client.client import PyrosClient
 except Exception as e:
     logging.error("pyros module is not accessible in sys.path. It is required to run rostful.", exc_info=True)
     logging.error("sys.path = {0}".format(sys.path))
@@ -31,8 +32,23 @@ from rostful import app, set_pyros_client
 # TODO : check serving rostful with other web servers (nginx, etc.)
 class Server(object):
 
-    def __init__(self, config=None):
+    def __init__(self, config=None, logfile=None):
         self.app = app
+
+        if logfile:
+            # adding file logging for everything to help debugging
+            logdir = os.path.dirname(logfile)
+            if not os.path.exists(logdir):
+                os.makedirs(logdir)
+            file_handler = logging.handlers.RotatingFileHandler(logfile, maxBytes=10000, backupCount=1)
+        else:
+            # adding file logging for everything to help debugging
+            if not os.path.exists(self.app.instance_path):
+                os.makedirs(self.app.instance_path)
+            file_handler = logging.handlers.RotatingFileHandler(os.path.join(self.app.instance_path, 'rostful.log'), maxBytes=10000, backupCount=1)
+
+        file_handler.setLevel(logging.DEBUG)
+        self.app.logger.addHandler(file_handler)
 
         if config:
             # if error we do need to raise and break here : the config file is not where the user expects it.
@@ -101,11 +117,6 @@ class Server(object):
             # add log handler for warnings and more to sys.stderr.
             #    self.logger.addHandler(logging.StreamHandler())
             #    self.logger.setLevel(logging.WARN)
-
-            # adding file logging for everything to help debugging
-            file_handler = logging.handlers.RotatingFileHandler(os.path.join(self.app.instance_path, 'rostful.log'), maxBytes=10000, backupCount=1)
-            file_handler.setLevel(logging.INFO)
-            self.app.logger.addHandler(file_handler)
 
             import socket  # just to catch the "Address already in use" error
             port_retries = 5

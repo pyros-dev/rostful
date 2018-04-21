@@ -1,0 +1,5 @@
+# latest version to validate behavior on pure python env
+pytest
+pytest-xdist  # for --boxed
+hypothesis
+numpy

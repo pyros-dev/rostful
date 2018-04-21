@@ -1,5 +1,5 @@
 # This should gather all unit tests for the flask server.
-# - using the mockinterface in pyros
+# - using the mock in pyros
 # - using the ros interface
 # - using other mp systems interface
 

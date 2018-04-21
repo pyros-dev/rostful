@@ -2,6 +2,68 @@
 Changelog for package rostful
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+0.1.0 (2017-01-13)
+------------------
+* Revert "using tblib 1.2 from ros TPR package"
+  This reverts commit cf1a9c8989a778d4a1096c45f3cb9960e1727c05.
+* Merge remote-tracking branch 'origin/gopher-devel' into gopher-devel
+* using tblib 1.2 from ros TPR package
+* Merge pull request `#94 <https://github.com/asmodehn/rostful/issues/94>`_ from asmodehn/gopher_bugfix
+  changed default connection cache topics. comments.
+* changed default connection cache topics. comments.
+* resolving import name collision
+* now also installing blueprints.
+* Merge pull request `#88 <https://github.com/asmodehn/rostful/issues/88>`_ from asmodehn/gopher_basepath
+  Gopher basepath
+* fixing urls behind proxy. simplified routing.
+* Merge branch 'blueprint_api' of https://github.com/asmodehn/rostful into gopher_basepath
+  Conflicts:
+  launch/rostful.launch
+  rostful/__main_\_.py
+  rostful/api_0_1/flask_views.py
+  rostful/flaskapp.py
+  rostful/server.py
+  rostful/templates/service.html
+  rostful/templates/topic.html
+* now passing logfile and config from roslaunch to the app.
+* now explicitely setting the instance path to ros home. especially useful when using from install space.
+* catching exception when we cannot find rostful.cfg
+* adding tblib as a ros dependency
+* revert to catkin build until all dependencies are released to get install space to work.
+* adding flask-reverse-proxy as dependency in setup.py
+* readding submodules to setup.py until we get thirdparty releases in.
+* Merge pull request `#86 <https://github.com/asmodehn/rostful/issues/86>`_ from asmodehn/master
+  For Rostful in Gopher to not be too picky about Pyros version
+* now rostful listening on all IPs. for now. unsecure but easier to use out of the box
+* Merge branch 'gopher-devel' of https://github.com/asmodehn/rostful
+  Conflicts:
+  setup.py
+* adding comment about using apispec to generate swagger spec
+* describing improved repository structure
+* python cosmetics
+* fixing nopyrosclient test and various python issues.
+* adding logformatter.
+* now using blueprint to be able to hold multiple version of API.
+  lost of structure changes and simplifications.
+* adding pyros pypi package version
+* adding bwcompat to be able to use old pyros as well
+* Merge branch 'indigo-devel' into config_refactor
+  Conflicts:
+  setup.py
+* improving configuration loading and overloading.
+  added /help to list avialable URLs.
+  stop using SERVER_NAME : changes URL generation, and strange problems appear...
+* fixes (some are tmp) to run with current pyros config_refactor branch and catkin_pip
+* added requirements to build from source with catkin_pure_python.
+* removed now useless flask_login link
+* improving command line behavior, regarding default arguments and config file.
+* added configuration file.
+  added version number.
+  cleanup to run as pure python package.
+* removing obsolete install rules. setup.py should manage this now.
+* now using catkin_pure_python
+* Contributors: AlexV, Daniel Stonier, alexv
+
 0.0.10 (2016-08-25)
 -------------------
 * Update tutorial.rst

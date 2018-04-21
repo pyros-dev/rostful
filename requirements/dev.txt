@@ -1,0 +1,5 @@
+# Requirements to get specific development version fo various dependencies
+
+# -e git+https://github.com/pyros-dev/pyros-common.git#egg=pyros_common
+# -e git+https://github.com/pyros-dev/pyros.git@fix_exceptions#egg=pyros
+

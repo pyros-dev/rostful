@@ -1,28 +1,49 @@
-sudo: required
-dist: trusty
-language: generic
+sudo: false
+language: python
+
+branches:
+  except:
+    - gh-pages
+
+
+env:
+  # These will be used to determine the proper version of our dependencies
+  # We will NOT rely on a full ROS installation.
+  - ROS_DISTRO=indigo
+  - ROS_DISTRO=kinetic #TOX_PARAMS="--hypothesis-profile travis"
+
+  # to get latest dependencies (not released in a ROS distro yet)
+  - ROS_DISTRO=latest #TOX_PARAMS="--hypothesis-profile travis"
+
+python:
+  - 2.7
+  # NOT READY FOR PY3 YET... (see pyzmp)
+  #- 3.4
+  #- 3.5
+  #- 3.6
+  #- pypy
+  #- pypy3
+
+# Add specific python3 versions
+#matrix:
+#  include:
+    # explicitely matching python version to the version on the ubuntu distro supported by the ROS LTS distro
+    #TODO - python: 3.4
+    #  env: ROS_DISTRO=indigo
+    #TODO - python: 3.5
+    #  env: ROS_DISTRO=kinetic TOX_PARAMS="--hypothesis-profile travis"
+#  exclude:
+    # explicitely exclude python3 version not supported by matching linux distro
+    #- python: 3.6
+    #  env: ROS_DISTRO=indigo
+    #- python: 3.6
+    #  env: ROS_DISTRO=kinetic TOX_PARAMS="--hypothesis-profile travis"
+
 install:
-  - export CI_ROS_DISTRO=indigo
-  - echo $CI_ROS_DISTRO
-# Add ROS repositories
-  - sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu trusty main" > /etc/apt/sources.list.d/ros-latest.list'
-  - wget http://packages.ros.org/ros.key -O - | sudo apt-key add -
-  - sudo apt-get update
-# Install and initialize rosdep
-  - sudo apt-get install python-rosdep -y
-  - sudo `which rosdep` init
-  - rosdep update
-# Use rosdep to install rostful-node's dependencies
-  - rosdep install --default-yes --from-paths ./ --rosdistro $CI_ROS_DISTRO
+  - pip install tox tox-travis
+
 script:
-  - source /opt/ros/$CI_ROS_DISTRO/setup.bash
-  - mkdir build
-  - cd build
-  - cmake .. -DCMAKE_INSTALL_PREFIX=./install
-  - make -j1
-  - make -j1 tests
-  - make -j1 run_tests
-  - catkin_test_results .
-  - make -j1 install
+  - tox #-- $TOX_PARAMS
+
 notifications:
   email: false
