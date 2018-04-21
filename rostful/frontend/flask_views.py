@@ -132,7 +132,7 @@ def ros_list():
 def ros_interface(rosname):
     current_app.logger.debug('in ros_interface with rosname: %r', rosname)
 
-    node_client = context.get_pyros_client()  # we retrieve pyros client from app context
+    node_client = get_pyros_client()  # we retrieve pyros client from app context
 
     # we might need to add "/" to rosname passed as url to match absolute service/topics names listed
     if not rosname.startswith("/"):
@@ -140,8 +140,13 @@ def ros_interface(rosname):
 
     services = None
     topics = None
+    params = None
     with Timeout(30) as t:
-        while not t.timed_out and (services is None or topics is None):
+        while not t.timed_out and (services is None or topics is None or params is None):
+            try:
+                params = node_client.params()
+            except PyrosServiceTimeout:
+                params = None
             try:
                 services = node_client.services()
             except PyrosServiceTimeout:
@@ -152,7 +157,7 @@ def ros_interface(rosname):
                 topics = None
 
     if t.timed_out:
-        raise ServiceNotFound("Cannot list services and topics. No response from pyros.")
+        raise ServiceNotFound("Cannot list services, topics or params. No response from pyros.")
 
     if rosname in services:
         mode = 'service'
@@ -162,6 +167,10 @@ def ros_interface(rosname):
         mode = 'topic'
         topic = topics[rosname]
         return render_template('topic.html', topic=topic)
+    elif rosname in params:
+        mode = 'param'
+        param = params[rosname]
+        return render_template('param.html', param=param)
     else:
-        raise ServiceNotFound("{0} not found among Pyros exposed services and topics".format(rosname))
+        raise ServiceNotFound("{0} not found among Pyros exposed services, topics and params".format(rosname))
 

@@ -1,0 +1,46 @@
+{% extends "layout.html" %}
+{% block title %}Param {{ param.fullname }}{% endblock %}
+{% block header %}Param {{ param.fullname }}{% endblock %}
+{% block GET %}
+
+  <h2>Receive message</h2>
+  <button class="ui-btn ui-corner-all ui-btn-inline ui-shadow" id="get_latest{{param.fullname|replace('/','_')}}">
+    GET VALUE
+  </button>
+  <pre id="get_result{{param.fullname|replace('/','_')}}"></pre>
+{% endblock %}
+
+{% block GET_ajax %}
+<script type=text/javascript>
+$(document).on('pageinit', '#mainlayout', function(){
+  $(document).on('click', '#get_latest{{param.fullname|replace('/','_')}}', function(e){
+    $.ajax({
+      url: '{{ url_for('api_0_1.backend', rosname=param.fullname[1:], _external=True) }}',
+      dataType: 'json',
+      beforeSend: function(xhr, opts) {
+          // This callback function will trigger before data is sent
+          $.mobile.loading('show');// This will show ajax spinner
+      },
+      complete: function() {
+          // This callback function will trigger on data sent/received complete
+          $.mobile.loading('hide');// This will hide ajax spinner
+      },
+      success: function(data) {
+        $("#get_result{{param.fullname|replace('/','_')}}").text(JSON.stringify(data,null,2));
+      },
+      error: function (request,error) {
+          // This callback function will trigger on unsuccessful action
+          alert('Network error has occurred please try again!');
+      }
+    });
+    return false; // cancel original event
+  });
+});
+</script>
+{% endblock %}
+
+
+{% from 'macros.html' import content_navbar %}
+{% block footer %}{{ content_navbar() }}{% endblock %}
+
+
