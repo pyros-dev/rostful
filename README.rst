@@ -1,59 +1,44 @@
-.. image:: https://travis-ci.org/asmodehn/rostful.svg?branch=indigo-devel
-    :target: https://travis-ci.org/asmodehn/rostful
+|Build Status| |Documentation Status|
 
-Overview
-========
+ROSTful
+=======
 
 ROStful - A REST API for ROS.
 
-This repository has a few main branches:
+We follow a `feature branching workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow>`_
 
-- master : main branch, python dev workflow, releasing version tags into a pip package.
-- indigo-devel : current indigo-based ongoing development. catkin dev workflow.
-- indigo : current indigo-based release (ROS pkg - tags attempting to match)
-- <ros_distro> : current <ros_distro>-based release (ROS pkg)
-
-Apart from these we follow a `feature branching workflow <https://www.atlassian.com/git/tutorials/comparing-workflows/feature-branch-workflow>`_
-
-WARNING: This repository structure is currently being implemented...
-
-Rostful is intended to be the outside layer of a ros system. meaning it will interface other software systems with ros.
-As such this should be launched either :
-* as a python code with the de facto python standard behaviors ( venv, pip requirements, etc. ),
+Rostful is intended to be the outside layer of ROS (and eventualy any multiprocess system). Meaning it will interface ROS with other systems, over the internet, via HTTP and through a REST API.
+As such, this should be used as any python program, from a virtual environment. We also need to install the specific pyros interface for the system we want to expose.
 
 ```
-python -m rostful flask
+$ mkvirtualenv rostful
+(rostful)$ pip install rostful pyros[ros]
+(rostful)$ python -m rostful flask
 ```
 
-* as a ros package, with the de facto ros standard behaviors.
-
-```
-roslaunch rostful rostful.launch
-```
-
-so that users from both world can use it efficiently.
+A ROS package is provided as a third party release, for ease of deployment within a ROS system.
+However it is heavily recommended to do development the "python way", dynamically, using virtual environments, with quick iterations.
+The rostful PyPI package is released more often than the ROS package, and will have latest updates available for use.
 
 
 PYTHON VIRTUALENV SETUP
 =======================
 
-How to setup your python virtual environment on Ubuntu (tested on Trusty 14.04)
+How to setup your python virtual environment on Ubuntu (tested on Xenial 16.04)
 * Install and Setup virtualenvwrapper if needed
 ```
-sudo apt-get install virtualenvwrapper
-echo "source /etc/bash_completion.d/virtualenvwrapper" >> ~/.bashrc
+sudo apt install virtualenvwrapper
 ```
 * Create your virtual environment for your project
 ```
-mkvirtualenv myproject --no-site-packages
-workon myproject
+$ mkvirtualenv myproject
 ```
 * Populate it to use rostful. The catkin dependency is temporarily needed to be able to use the setup.py currently provided in rostful.
 ```
-pip install catkin-pkg rostful
+(myproject)$ pip install rostful pyros[ros]
+(myproject)$ pip install rostful
 ```
 
-|Build Status| # ROSTful
 
 Try it now
 ----------
@@ -64,8 +49,7 @@ Go check the `examples`_
 ---------
 
 ROStful is a lightweight web server for making ROS services, topics, and
-actions available as RESTful web services. It also provides a client
-proxy to expose a web service locally over ROS.
+actions available as RESTful web services.
 
 ROStful web services primarily use the `rosbridge`_ JSON mapping for ROS
 messages. However, binary serialized ROS messages can be used to
@@ -119,14 +103,23 @@ serialized ROS messages can be sent with the ``Content-Header`` set to
 header for queries without input (i.e., publishing topic methods) will
 cause the server to return serialized messages.
 
- The ROStful client
-~~~~~~~~~~~~~~~~~~~
 
-The ROStful client is a node that connects to a ROStful web service and
-makes its services, topics, a
+
+What will not be in Rostful
+===========================
+ - Security related stuff ( Authentication/Authorization ) implementation.
+ We will not provide here any Authentication/Authorization mechanisms without ROS providing one first.
+ And even after that, the implications of such an implementation would probably fit better in another specific microservice, that we would rely on in rostful.
+
+
 
 .. _examples: https://github.com/asmodehn/rostful/tree/indigo-devel/rostful_examples
 .. _rosbridge: http://wiki.ros.org/rosbridge_suite
 
-.. |Build Status| image:: https://travis-ci.org/asmodehn/rostful.svg?branch=indigo-devel
+.. |Build Status| image:: https://travis-ci.org/asmodehn/rostful.svg?branch=master
    :target: https://travis-ci.org/asmodehn/rostful
+   :alt: Build Status
+
+.. |Documentation Status| image:: https://readthedocs.org/projects/rostful/badge/?version=latest
+   :target: http://rostful.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status

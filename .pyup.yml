@@ -1,0 +1,76 @@
+# configure updates globally
+# default: all
+# allowed: all, insecure, False
+update: all
+
+# configure dependency pinning globally
+# default: True
+# allowed: True, False
+pin: True
+
+# set the default branch
+# default: empty, the default branch on GitHub
+branch: master
+
+# update schedule
+# default: empty
+# allowed: "every day", "every week", ..
+schedule: "every week"
+
+# search for requirement files
+# default: True
+# allowed: True, False
+search: False
+
+# Specify requirement files by hand, default is empty
+# default: empty
+# allowed: list
+requirements:
+  # These need to be manually pinned to match ROS distros versions
+  - requirements/ROS/indigo.txt:
+      # don't update dependencies, don't try to auto pin
+      update: False
+      pin: False
+  - requirements/ROS/kinetic.txt:
+      # don't update dependencies, don't try to auto pin
+      update: False
+      pin: False
+
+  - requirements/dev.txt:
+      # update all dependencies, use global 'pin' default
+      update: all
+
+  - requirements/tests.txt:
+      # update all dependencies, use global 'pin' default
+      update: all
+
+  - requirements/tools.txt:
+      # update all dependencies,  never pin (dev will use whatever is latest for them)
+      update: all
+      pin: False
+
+
+# TODO : review tests nd default values after ROS things are out of the python repo
+
+# add a label to pull requests, default is not set
+# requires private repo permissions, even on public repos
+# default: empty
+label_prs: update
+
+# assign users to pull requests, default is not set
+# requires private repo permissions, even on public repos
+# default: empty
+assignees:
+ - asmodehn
+
+# configure the branch prefix the bot is using
+# default: pyup-
+branch_prefix: pyup/
+
+# set a global prefix for PRs
+# default: empty
+#pr_prefix: "Bug #12345"
+
+# allow to close stale PRs
+# default: True
+#close_prs: True
