@@ -1,4 +1,4 @@
-|Build Status| |Documentation Status|
+|Build Status| |Documentation Status| |Updates| |Python 3|
 
 ROSTful
 =======
@@ -123,3 +123,11 @@ What will not be in Rostful
 .. |Documentation Status| image:: https://readthedocs.org/projects/rostful/badge/?version=latest
    :target: http://rostful.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
+
+.. |Updates| image:: https://pyup.io/repos/github/asmodehn/rostful/shield.svg
+    :target: https://pyup.io/repos/github/asmodehn/rostful/
+    :alt: Updates
+
+.. |Python 3| image:: https://pyup.io/repos/github/asmodehn/rostful/python-3-shield.svg
+     :target: https://pyup.io/repos/github/asmodehn/rostful/
+     :alt: Python 3
