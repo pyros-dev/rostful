@@ -1,5 +1,5 @@
 # latest version to validate behavior on pure python env
 pytest==3.5.0
-pytest-xdist  # for --boxed
+pytest-xdist==1.22.2  # for --boxed
 hypothesis
 numpy
