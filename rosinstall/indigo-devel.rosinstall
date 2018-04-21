@@ -1,3 +1,0 @@
-- git: {local-name: rostful, version: indigo-devel, uri: 'https://github.com/asmodehn/rostful.git'}
-- git: {local-name: rostful-examples, version: indigo-devel, uri: 'https://github.com/asmodehn/rostful-examples.git'}
-- git: {local-name: pyros, version: indigo, uri: 'https://github.com/asmodehn/pyros.git'}
