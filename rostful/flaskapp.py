@@ -49,8 +49,8 @@ def create_app(configfile_override=None, logfile=None):
             try:
                 ros_path = r.get_path(__package__)  # find rospkg with same name as this python package
                 if ros_path.endswith(os.path.join('share', __package__)):  # ROS installed package
-                    instance_path = ros_path  # using the ROS share path for configuration
-                    # TODO: check if there is a better choice ?
+                    instance_path = os.path.join(os.environ.get('ROS_HOME', os.path.join(os.environ['HOME'], '.ros')), 'rostful')  # using ROS_HOME/rostful as instance path
+                    # instance_path = ros_path  # using the ROS share path for configuration  # BAD IDEA : might not be writeable
                 else:
                     package_path = ros_path  # fixing detected package_path in ROS devel case (to access config template file)
                     instance_path = os.path.join(ros_path, 'instance')  # getting instance folder from source

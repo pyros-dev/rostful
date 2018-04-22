@@ -10,7 +10,7 @@ with open('rostful/_version.py') as vf:
 # Best Flow :
 # Clean previous build & dist
 # $ gitchangelog >CHANGELOG.rst
-# change version in code and changelog (AND in package .xml for ROS !)
+# change version in code and changelog
 # $ python setup.py prepare_release
 # WAIT FOR TRAVIS CHECKS
 # $ python setup.py publish
@@ -142,10 +142,6 @@ setuptools.setup(
         'tornado>=4.2.1, <5.0',  # untested with tornado > 5.0
         'simplejson',
         'tblib>=1.2',
-    ],
-    test_suite="nose.collector",
-    tests_require=[
-        'nose>=1.3.7'
     ],
     cmdclass={
         'prepare_release': PrepareReleaseCommand,
