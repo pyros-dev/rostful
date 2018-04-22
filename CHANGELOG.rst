@@ -2,8 +2,16 @@ Changelog
 =========
 
 
+
+0.2.1 (2018-04-22)
+------------------
+- Now storing log in ROS_HOME when running on ROS as installed package.
+  cosmetics. [AlexV]
+
+
 0.2.0 (2018-04-21)
 ------------------
+- V0.2.0. [AlexV]
 - Integrated release commands to setup.py. [AlexV]
 - Cleaning up param interface to only keep a working minimum view.
   [AlexV]
