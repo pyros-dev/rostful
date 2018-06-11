@@ -2,4 +2,4 @@
 pytest==3.6.1
 pytest-xdist==1.22.2  # for --boxed
 hypothesis==3.57.0
-numpy==1.14.2
+numpy==1.14.4
