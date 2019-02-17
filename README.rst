@@ -113,7 +113,7 @@ What will not be in Rostful
 
 
 
-.. _examples: https://github.com/asmodehn/rostful/tree/indigo-devel/rostful_examples
+.. _examples: https://github.com/asmodehn/rostful-examples
 .. _rosbridge: http://wiki.ros.org/rosbridge_suite
 
 .. |Build Status| image:: https://travis-ci.org/asmodehn/rostful.svg?branch=master
