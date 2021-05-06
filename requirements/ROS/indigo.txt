@@ -11,7 +11,7 @@
 # Package Dependencies need to match ROS (or trusty's) package version
 
 Flask==0.10.1
-Flask-Cors==3.0.2
+Flask-Cors==3.0.9
 Flask-Restful==0.3.4
 Flask-reverse-proxy==0.2.0
 click==6.2.0
